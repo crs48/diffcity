@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-publish-review"
+description = "Enables the publish_review command without any pre-configured scope."
+commands.allow = ["publish_review"]
+
+[[permission]]
+identifier = "deny-publish-review"
+description = "Denies the publish_review command without any pre-configured scope."
+commands.deny = ["publish_review"]

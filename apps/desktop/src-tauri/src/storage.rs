@@ -1,0 +1,109 @@
+use crate::contracts::*;
+use anyhow::{Context, Result};
+use rusqlite::{Connection, OptionalExtension, params};
+use serde::{Serialize, de::DeserializeOwned};
+use std::{
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
+
+pub struct Store {
+    connection: Mutex<Connection>,
+    pub directory: PathBuf,
+}
+
+impl Store {
+    pub fn open(directory: &Path) -> Result<Self> {
+        std::fs::create_dir_all(directory)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(directory, std::fs::Permissions::from_mode(0o700))?;
+        }
+        let connection = Connection::open(directory.join("diffcity.sqlite"))?;
+        connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;
+          CREATE TABLE IF NOT EXISTS documents (kind TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, updated TEXT NOT NULL, PRIMARY KEY(kind,key));
+          PRAGMA user_version=1;")?;
+        Ok(Self {
+            connection: Mutex::new(connection),
+            directory: directory.to_path_buf(),
+        })
+    }
+    pub fn get<T: DeserializeOwned>(&self, kind: &str, key: &str) -> Result<Option<T>> {
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        let text: Option<String> = db
+            .query_row(
+                "SELECT value FROM documents WHERE kind=?1 AND key=?2",
+                params![kind, key],
+                |r| r.get(0),
+            )
+            .optional()?;
+        text.map(|s| serde_json::from_str(&s).context("Local data could not be decoded"))
+            .transpose()
+    }
+    pub fn put<T: Serialize>(&self, kind: &str, key: &str, value: &T) -> Result<()> {
+        let text = serde_json::to_string(value)?;
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        db.execute("INSERT INTO documents(kind,key,value,updated) VALUES(?1,?2,?3,?4) ON CONFLICT(kind,key) DO UPDATE SET value=excluded.value,updated=excluded.updated", params![kind,key,text,chrono::Utc::now().to_rfc3339()])?;
+        Ok(())
+    }
+    pub fn list<T: DeserializeOwned>(&self, kind: &str) -> Result<Vec<T>> {
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        let mut stmt = db.prepare("SELECT value FROM documents WHERE kind=?1 ORDER BY updated")?;
+        stmt.query_map([kind], |r| r.get::<_, String>(0))?
+            .map(|s| Ok(serde_json::from_str(&s?)?))
+            .collect()
+    }
+    pub fn delete(&self, kind: &str, key: &str) -> Result<()> {
+        self.connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?
+            .execute(
+                "DELETE FROM documents WHERE kind=?1 AND key=?2",
+                params![kind, key],
+            )?;
+        Ok(())
+    }
+    pub fn settings(&self) -> Result<Settings> {
+        Ok(self.get("settings", "main")?.unwrap_or(Settings {
+            repositories: vec!["crs48/diffcity".into()],
+            theme: "system".into(),
+            ..Settings::default()
+        }))
+    }
+    pub fn notes(&self, snapshot: &str) -> Result<Vec<Note>> {
+        Ok(self
+            .list::<Note>("note")?
+            .into_iter()
+            .filter(|n| n.snapshot_id == snapshot)
+            .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn drafts_survive_connection_restart() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::open(dir.path()).unwrap();
+        store
+            .put("draft", "id", &vec!["private", "line 4"])
+            .unwrap();
+        drop(store);
+        let restored = Store::open(dir.path()).unwrap();
+        assert_eq!(
+            restored.get::<Vec<String>>("draft", "id").unwrap().unwrap(),
+            vec!["private", "line 4"]
+        );
+    }
+}

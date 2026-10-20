@@ -1,0 +1,27 @@
+name: Validate desktop
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm contracts && git diff --exit-code -- packages/contracts
+      - run: pnpm check
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm desktop:build

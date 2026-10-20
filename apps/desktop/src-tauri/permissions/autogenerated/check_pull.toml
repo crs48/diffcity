@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-check-pull"
+description = "Enables the check_pull command without any pre-configured scope."
+commands.allow = ["check_pull"]
+
+[[permission]]
+identifier = "deny-check-pull"
+description = "Denies the check_pull command without any pre-configured scope."
+commands.deny = ["check_pull"]

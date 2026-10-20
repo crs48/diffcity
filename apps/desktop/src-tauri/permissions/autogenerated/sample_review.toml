@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-sample-review"
+description = "Enables the sample_review command without any pre-configured scope."
+commands.allow = ["sample_review"]
+
+[[permission]]
+identifier = "deny-sample-review"
+description = "Denies the sample_review command without any pre-configured scope."
+commands.deny = ["sample_review"]

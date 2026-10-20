@@ -1,0 +1,76 @@
+{
+  "pull": {
+    "number": 42,
+    "title": "Add team invitations with seven-day expiry",
+    "body": "Allow administrators to invite teammates. Includes persistence, expiry behavior, docs, and translated copy. Synthetic review fixture with deliberately incomplete migration and tenant scoping.",
+    "user": {
+      "login": "demo-author"
+    },
+    "html_url": "https://github.com/crs48/diffcity",
+    "draft": false,
+    "state": "open",
+    "head": {
+      "sha": "demo-head-1",
+      "ref": "feat/invitations"
+    },
+    "base": {
+      "sha": "demo-base-1",
+      "ref": "main"
+    },
+    "updated_at": "2026-10-20T12:00:00Z",
+    "additions": 26,
+    "deletions": 0,
+    "changed_files": 7
+  },
+  "files": [
+    {
+      "filename": "db/migrations/042_invitation_expiry.sql",
+      "status": "added",
+      "additions": 2,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,2 @@\n+ALTER TABLE invitations ADD COLUMN expires_at TIMESTAMPTZ NOT NULL;\n+CREATE INDEX invitation_expiry ON invitations (expires_at);"
+    },
+    {
+      "filename": "src/auth/invitations.ts",
+      "status": "added",
+      "additions": 6,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,6 @@\n+export async function inviteMember(db, actor, email) {\n+  if (!actor.roles.includes('admin')) throw new Error('Forbidden');\n+  const existing = await db.invitations.findFirst({ email });\n+  if (existing) return existing;\n+  return db.invitations.create({ email, tenant_id: actor.tenant_id });\n+}"
+    },
+    {
+      "filename": "src/invitations.ts",
+      "status": "added",
+      "additions": 2,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,2 @@\n+export const invitationExpiry = (now: Date) =>\n+  new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);"
+    },
+    {
+      "filename": "tests/invitations.test.ts",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,4 @@\n+it('expires invitations after seven days', () => {\n+  const now = new Date('2026-01-01T00:00:00Z');\n+  expect(invitationExpiry(now).toISOString()).toBe('2026-01-08T00:00:00.000Z');\n+});"
+    },
+    {
+      "filename": "docs/invitations.md",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,4 @@\n+# Team invitations\n+\n+Admins can invite team members from the Members page.\n+Invitations expire after seven days."
+    },
+    {
+      "filename": "locales/en.json",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,4 @@\n+{\n+  \"invite.title\": \"Invite a teammate\",\n+  \"invite.help\": \"They will receive a link to join your team.\"\n+}"
+    },
+    {
+      "filename": "locales/fr.json",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "patch": "@@ -0,0 +1,4 @@\n+{\n+  \"invite.title\": \"Inviter un collègue\",\n+  \"invite.help\": \"Un lien lui permettra de rejoindre votre équipe.\"\n+}"
+    }
+  ]
+}

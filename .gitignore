@@ -13,3 +13,8 @@ coverage/
 *.db-*
 .local/
 artifacts/
+target/
+test-results/
+.wdio/
+apps/desktop/src-tauri/gen/
+*.tsbuildinfo
