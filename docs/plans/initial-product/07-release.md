@@ -45,7 +45,7 @@ Add contribution instructions, development setup, architecture overview, issue t
 - [ ] Meet agreed large-diff and accessibility targets.
 - [ ] Document local storage, model data flow, cache deletion, and diagnostic export.
 - [ ] Produce and verify signed/notarized private-alpha artifacts.
-- [ ] Verify the shipped Tauri build has no test-driver or backend-debug access enabled.
+- [x] Verify the shipped Tauri build has no test-driver or backend-debug access enabled.
 - [ ] Test the update channel and previous-version recovery.
 - [x] Add repeatable source-build and contributor instructions.
 - [ ] Audit exact dependency licenses and third-party attribution.

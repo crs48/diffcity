@@ -29,15 +29,16 @@ GitHub publication has a persisted operation journal. The successful result and 
 ## Validation evidence
 
 - [x] Strict TypeScript, ESLint, Rust formatting, and Clippy pass.
-- [x] Unit and integration tests cover canonical additions/deletions, multiline anchors, incomplete patches, attention floors, invalid model output, omitted coverage, unchanged progress transfer, and explicit publication payload selection.
+- [x] All 23 Rust tests and 3 TypeScript tests pass. Unit and integration tests cover canonical additions/deletions, multiline anchors, incomplete patches, attention floors, invalid model output, omitted coverage, unchanged progress transfer, and explicit publication payload selection.
 - [x] Live local GitHub identity, repository inbox, Codex handshake/model catalog, guide generation, and selected-line discussion succeed.
 - [x] The packaged WKWebView reaches a real GitHub PR, generates and displays a grounded Codex guide, saves a line discussion, and previews only deliberately prepared GitHub feedback.
 - [x] Native restart, cancellation, and new-revision recovery pass. A real push changed the migration hunk, invalidated its review mark, and left earlier notes accessible.
-- [x] The explicitly authorized [test review](https://github.com/crs48/diffcity/pull/1#pullrequestreview-5593137216) was posted through the native app and reconciled into its line discussion. GitHub contains exactly the approved inline text at RIGHT line 1 plus the labeled summary; the private question and model reply are absent.
-- [ ] A normal production bundle is built, installed, opened, and verified without the test driver.
-- [x] [GitHub Actions](https://github.com/crs48/diffcity/actions/runs/39515711051) passed contract generation, formatting, types, lint, tests, and the unsigned desktop build.
+- [x] The explicitly authorized [test review](https://github.com/crs48/diffcity/pull/1#pullrequestreview-5593137216) was posted through the native app and reconciled into its line discussion. The original submission targeted RIGHT line 1; after the synthetic push GitHub reanchored it to line 2. The remote feedback contains exactly the approved inline text plus the labeled summary; the private question and model reply are absent.
+- [x] A normal production bundle was built and installed at `~/Applications/diffcity.app` (28.82 MiB). Its release dependency features exclude the WebDriver plugin, and the installed executable hash matches the built executable.
+- [ ] Open the installed production app for the final visible check; macOS requires a manual unlock.
+- [x] [GitHub Actions](https://github.com/crs48/diffcity/actions/runs/39517167547) passed contract generation, formatting, types, lint, tests, and the unsigned desktop build.
 
-The native harness initially exposed a stale-analysis race and two test synchronization problems (clicking before refresh completed and an unbounded driver request). Snapshot guards, readiness waits, and request timeouts were added. The final resumed run completed without reposting the approved review.
+The native harness initially exposed a stale-analysis race and two test synchronization problems (clicking before refresh completed and an unbounded driver request). Snapshot guards, readiness waits, and request timeouts were added. The final resumed run completed without reposting the approved review. The machine subsequently reported a locked screen during production-app verification.
 
 Native screenshots, logs, and isolated test databases live under ignored `.local/native-e2e/`. They are development artifacts, not shipped assets. The synthetic draft PR contains deliberate migration and authorization issues and is not intended to merge.
 
