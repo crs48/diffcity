@@ -1,0 +1,141 @@
+# diffcity: product and implementation plan
+
+**Prepared:** October 20, 2026 · **Status:** proposed implementation; ready for product review
+
+diffcity makes GitHub pull requests easy to understand, discuss, and revisit. Its central experience is a personal PR inbox connected to an evidence-based Codex walkthrough and a reliable GitHub feedback loop.
+
+The plan folder name `initial-product` is inferred from this being the project's first specification. Product details live in [product-spec.md](product-spec.md); engineering contracts live in [architecture.md](architecture.md). Read those before executing the numbered steps.
+
+## Motivation
+
+A file-by-file diff does not explain why a change exists, how its parts fit together, or where the reviewer should concentrate. Reviewing one's own agent-generated code has the same problem: understanding the change is a separate task from producing it.
+
+diffcity should answer three questions immediately: **What needs my attention? What does this PR do? What changed since I last looked?** The user should then be able to discuss a specific line with Codex and publish precisely the feedback they choose.
+
+## Current state
+
+The workspace `/Users/crs/Code/diffcity` was empty and was not a Git repository when inspected. There were no existing plans, source files, dependencies, or build conventions to preserve. This planning package is the initial project content. Every application path below is proposed.
+
+The authenticated personal GitHub account is `crs48`, whose profile name is Christopher Smothers. The requested repository is `crs48/diffcity`, initially private. This is an independent personal project.
+
+The reference project's README, license, dependency manifest, repository tree, and selected GitHub integration source were inspected. See the [research brief](../../explorations/0000_[_]_DIFFCITY_ARCHITECTURE_AND_INTEGRATION.md). No application code was copied.
+
+## Decisions and assumptions
+
+| Decision | Status and rationale |
+| --- | --- |
+| Desktop app first; diff.city for downloads and docs | Confirmed by the user |
+| GitHub PR review and Codex are the initial focus | Confirmed by the user |
+| Private personal repository, later public MIT project | Confirmed by the user; license can exist before public release |
+| macOS first, initially Apple Silicon | Recommended launch target; Intel and other OS support follow validation |
+| Electron, React, TypeScript, SQLite | Recommended for one implementation language across the UI and integrations; evaluate resource use in step 01 |
+| Original implementation, informed by Diffity | Recommended; selectively reuse only with explicit provenance and attribution |
+| Repositories are called projects in the sidebar | Product interpretation; GitHub Projects boards are outside the first release |
+| One GitHub account and one local machine initially | Deliberate MVP boundary; persist stable account IDs to allow expansion |
+| Read-only Codex analysis and discussion | MVP scope; code editing, commits, and automatic fixes are later features |
+| Local storage and direct API access | Recommended; no diffcity account or hosted source-code database required |
+
+## Goals
+
+- Show pinned GitHub repositories and a cross-repository inbox, with My PRs first, requested reviews next, assigned PRs after that, then other open PRs.
+- Review without disturbing the user's current checkout or requiring a clone for basic diff browsing.
+- Explain a PR in ordered, meaningful sections grounded in actual code ranges.
+- Support private notes, line-scoped Codex discussions, and GitHub feedback from the same review surface.
+- Preserve drafts, viewed state, and discussions across restarts and PR revisions.
+- Keep updates timely and visible without unnecessary API traffic or automatic model spending.
+- Ship a project that others can eventually build and contribute to under MIT.
+
+## Non-goals for the first release
+
+GitHub Projects boards, a full editor, local uncommitted-change review, autonomous fixes, merge controls, other AI providers, GitLab/Bitbucket, GitHub Enterprise Server, multi-user shared workspaces, hosted agents, a mobile client, and billing are deferred. Review remains useful when Codex is disconnected.
+
+## Experience and architecture
+
+```mermaid
+flowchart LR
+  Repos[Projects and PR inbox] --> Snapshot[Exact PR revision]
+  Snapshot --> Files[Files and raw diff]
+  Snapshot --> Guide[Codex walkthrough]
+  Guide --> Discuss[Private line discussion]
+  Files --> Discuss
+  Discuss --> Draft[Selected GitHub drafts]
+  Draft --> Preview[Review and publish]
+  Preview --> GitHub[GitHub PR]
+  GitHub --> Sync[Adaptive refresh]
+  Sync --> Repos
+  Sync --> Changes[Changed since review]
+  Changes --> Snapshot
+```
+
+The renderer presents immutable view models. A desktop service owns credentials, SQLite, GitHub requests, snapshot construction, and the Codex subprocess. Pure reducers and selectors determine ordering, sync transitions, anchor validity, and review readiness. Effects stay behind narrow interfaces.
+
+GitHub is authoritative for public review state. The local database is authoritative for private notes and review progress. Codex produces explanations and suggestions; it cannot publish a comment or mark code reviewed.
+
+## Step index and milestones
+
+| Step | Deliverable | Exit demonstration |
+| --- | --- | --- |
+| [01 — Foundation](01-foundation.md) | Desktop shell, storage, integration feasibility | A packaged app restores a sample review and completes a Codex protocol handshake |
+| [02 — GitHub inbox](02-github-inbox.md) | Authentication, repository selection, live PR lists | Real PRs appear in the requested priority order and refresh correctly |
+| [03 — Diff review](03-diff-review.md) | Revision snapshots, file navigation, durable notes | Read a PR, annotate additions/deletions, restart without losing work |
+| [04 — Codex walkthrough](04-codex-walkthrough.md) | Topic sections, evidence links, line discussions | Generate a grounded walkthrough and ask a question about a selected range |
+| [05 — GitHub publishing](05-github-publishing.md) | Draft review, comments, replies, submission | Publish chosen feedback under the user's identity and reconcile it back |
+| [06 — Review updates](06-review-updates.md) | Changed-since-review, stale-state recovery | A new push invalidates affected progress without losing prior work |
+| [07 — Release](07-release.md) | Hardened private alpha, distribution, public-readiness | A clean machine completes the full workflow; public release has a concrete checklist |
+
+**First useful slice:** steps 01–04, using one real PR and local notes. **Complete review MVP:** steps 01–06. **Public launch:** step 07 after private dogfooding.
+
+Plan by exit criteria rather than promising calendar dates before the integration spikes. Authentication, diff anchors, and publishing recovery are likely to dominate reliability work; Electron versus Tauri is a smaller decision than those contracts.
+
+## Risks and open questions
+
+| Risk or question | Default / resolution |
+| --- | --- |
+| Electron resource footprint | Measure during step 01; Tauri remains the alternative if the shell misses agreed targets |
+| GitHub App installation blocked by an organization | Readable onboarding error and personal-alpha `gh` connection; never imply all accessible repositories are available through every credential |
+| Codex executable/version mismatch | Verify app-server capabilities, not just a binary named `codex`; local shell inspection found an incompatible-looking `0.2.3` executable |
+| Model invents groups, anchors, or evidence | Validate every reference and show explicit coverage gaps; deterministic file view always available |
+| Head/base changes during analysis or publication | Immutable snapshots, freshness checks, conservative remapping, and visible stale outcomes |
+| Publish succeeds but response is lost | Durable operation journal and reconciliation; ambiguous operations require inspection before retry |
+| Desktop polling has latency and rate cost | Budgeted adaptive polling initially; optional authenticated webhook relay later |
+| Huge or incomplete PR patches | Explicit partial coverage, bounded loading, Git object fallback; never claim full review |
+| Open-source distribution dependencies | Confirm licenses and required notices for exact pinned versions; keep signing and app credentials outside Git |
+
+The owner can change the recommended shell or initial OS targets during plan review. These choices do not need to prevent specification or the first feasibility work.
+
+## Implementation checklist
+
+- [x] Inspect the empty workspace and applicable instructions.
+- [x] Research Diffity and primary GitHub/Codex documentation.
+- [x] Confirm desktop-first product direction.
+- [x] Specify product behavior, architecture, phases, and release gates.
+- [x] Check local document links, fenced blocks, sequential steps, and exit criteria.
+- [ ] Complete step 01.
+- [ ] Complete step 02.
+- [ ] Complete step 03.
+- [ ] Complete step 04.
+- [ ] Complete step 05.
+- [ ] Complete step 06.
+- [ ] Complete private-alpha release gates in step 07.
+- [ ] Make the repository public when the owner chooses to launch.
+
+Check off implementation items only after their exit criteria are demonstrated. Use conventional commits with detailed bullets for completed implementation slices.
+
+## Validation checklist
+
+- [ ] An author reviews their own PR, asks Codex a question, and publishes a selected comment.
+- [ ] A requested reviewer submits a multi-line review on someone else's PR.
+- [ ] A push, force-push, base change, or remote reply is surfaced with accurate review state.
+- [ ] Offline work, restart, expired credentials, rate limits, and interrupted publication preserve drafts.
+- [ ] No private notes or model transcript reach GitHub unless explicitly selected.
+- [ ] Large, renamed, deleted, generated, binary, and incomplete files report honest coverage.
+- [ ] A clean-machine installation and source build both work.
+
+## References
+
+- [Product specification](product-spec.md) and [architecture](architecture.md)
+- [Research findings and alternatives](../../explorations/0000_[_]_DIFFCITY_ARCHITECTURE_AND_INTEGRATION.md)
+- [Diffity](https://github.com/nilbuild/diffity)
+- [Codex app-server](https://learn.chatgpt.com/docs/app-server)
+- [GitHub API integration practices](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api)
+- [GitHub review comments](https://docs.github.com/en/rest/pulls/comments) and [reviews](https://docs.github.com/en/rest/pulls/reviews)
