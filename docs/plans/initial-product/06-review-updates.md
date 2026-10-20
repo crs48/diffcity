@@ -6,7 +6,7 @@ Make returning to a PR feel continuous: identify new work, preserve context, and
 
 ## Proposed touchpoints
 
-`packages/domain/{revisions,progress,anchors,sync}`, snapshot retention, GitHub resource refresh, and renderer features for activity, changed-since-review, and stale discussions.
+Rust modules under `apps/desktop/src-tauri/src/{domain,storage,github}` for revisions, progress, anchors, sync, snapshot retention, and remote refresh; React features under `apps/desktop/src/features` for activity, changed-since-review, and stale discussions.
 
 ## Implementation
 

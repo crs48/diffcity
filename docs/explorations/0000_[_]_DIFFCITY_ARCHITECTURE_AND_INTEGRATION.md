@@ -4,7 +4,7 @@
 
 ## Problem and summary
 
-Build a desktop GitHub PR review workspace with a useful inbox, Codex-guided explanations, contextual discussion, and dependable publication. The recommended design is a new Electron/TypeScript application with local persistence and revision-based review state. Desktop-first is confirmed by the owner; the other choices are recommendations.
+Build a desktop GitHub PR review workspace with a useful inbox, Codex-guided explanations, contextual discussion, and dependable publication. The owner selected Tauri 2 for the first implementation: React/TypeScript UI, Rust backend, local SQLite persistence, and revision-based review state. Desktop-first is also confirmed; initial OS targets remain recommendations.
 
 ## Current workspace
 
@@ -32,14 +32,16 @@ The [Codex SDK guide](https://learn.chatgpt.com/docs/codex-sdk) distinguishes au
 
 | Option | Benefit | Cost | Recommendation |
 | --- | --- | --- | --- |
-| Electron + React + TypeScript | Shared integration/domain/UI language and direct process management | Bundled runtime size and memory | Preferred initial implementation; benchmark early |
-| Tauri + React + Rust | Follows the reference's general technology shape; native webview | Rust/TypeScript boundary and additional integration work | Strong alternative if footprint is a deciding requirement |
+| Tauri 2 + React + Rust | System webview, native backend, and similar foundation to the reference | Rust/TypeScript contracts and platform webview testing | Selected by the owner for the first implementation |
+| Electron + React + TypeScript | Shared integration/domain/UI language and direct process management | Bundled runtime size and memory | Considered; one-language convenience does not require choosing it for this app |
 | SwiftUI + embedded diff surface | Native macOS integration | Separate UI expertise and reduced cross-platform reuse | Defer unless native-only becomes a product requirement |
 | Web app + local companion | Browser distribution with local Codex access | Two install/runtime surfaces and companion security | Defer; user selected desktop-first |
 | Fork Diffity | Existing rendering and review features | Inherited local-change/Claude assumptions and product migration | Prefer original product structure, with selective attributed reuse if worthwhile |
 | Cloud review backend | Easy event ingestion and multi-device state | Source-data custody, hosting, authentication, and operations | Not needed to prove personal review value |
 
-Electron's [security model](https://www.electronjs.org/docs/latest/tutorial/security) and Tauri's [process model](https://v2.tauri.app/concept/process-model/) both require deliberate privilege boundaries. Neither choice solves untrusted PR content or revision correctness automatically.
+Tauri's [process model](https://v2.tauri.app/concept/process-model/) supports the intended division between a React webview and a Rust core. Use explicit [capabilities and custom-command permissions](https://v2.tauri.app/security/capabilities/), with application validation in Rust. Treat untrusted PR content and revision correctness as application responsibilities.
+
+Codex speaks a stdio protocol that Rust can manage directly; a Node bridge is unnecessary. [Tauri's sidecar support](https://v2.tauri.app/develop/sidecar/) also provides a future packaging path if bundling the runtime becomes appropriate. Verify large-diff rendering, command/event throughput, cancellation, and process cleanup in a packaged macOS app before building out the complete interface.
 
 ## Key findings and recommendation
 
@@ -91,6 +93,7 @@ This illustrative pure function makes precedence explicit. Production behavior a
 - [x] Inspect the local workspace and reference repository directly.
 - [x] Read current primary integration sources.
 - [x] Compare product and architecture alternatives.
+- [x] Incorporate the owner's Tauri 2 selection across the plan and architecture.
 - [x] Transfer recommendations into sequential implementation steps.
 - [ ] Validate proposed behavior with working integration prototypes.
 

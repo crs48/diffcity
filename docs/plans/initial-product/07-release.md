@@ -6,7 +6,7 @@ Make the completed review loop dependable enough for daily use, then prepare a c
 
 ## Proposed touchpoints
 
-Packaging and CI configuration, release scripts, update configuration, `apps/site`, maintained installation/privacy/contribution docs, `LICENSE`, and third-party notices.
+Tauri bundle/capability configuration under `apps/desktop/src-tauri`, Cargo/pnpm build and CI configuration, release scripts, update configuration, `apps/site`, maintained installation/privacy/contribution docs, `LICENSE`, and third-party notices.
 
 ## Private alpha
 
@@ -14,11 +14,11 @@ Dogfood against a representative mix of the owner's PRs and other people's PRs. 
 
 Before inviting external testers, complete the GitHub App onboarding flow, test approval restrictions in an organization, and confirm supported Codex setup on a clean machine. Present actionable errors for unsupported runtime versions, missing credentials, denied repository access, and account policies. Do not rely on the developer's shell PATH or preexisting local tools accidentally making the app work.
 
-Validate renderer isolation, untrusted Markdown, restricted Codex context, secret redaction, dependency licenses, local retention, and recovery from a corrupt or outdated local database. Accessibility and large-diff checks are release gates, not optional post-launch work.
+Validate Tauri capabilities and custom-command authorization, untrusted Markdown, restricted Codex context, secret redaction, dependency licenses, local retention, and recovery from a corrupt or outdated local database. Confirm test-only WebDriver/backend-access plugins are absent from distribution artifacts. Accessibility and large-diff checks are release gates, not optional post-launch work.
 
 ## Packaging and updates
 
-Ship macOS Apple Silicon first, with Intel support only after equivalent verification. Choose the minimum macOS version from the pinned Electron runtime's supported range at build time. Record it in installation docs.
+Ship macOS Apple Silicon first, with Intel support only after equivalent verification. Choose the minimum macOS version from the intersection of Tauri/plugin support, the Rust toolchain, the Codex runtime, and the UI's required WebKit features. Test that minimum and the current supported macOS version in a packaged app and record the resulting policy in installation docs. Tauri uses the OS-provided WKWebView on macOS, so frontend compatibility follows supported system webviews; see [Tauri's webview reference](https://v2.tauri.app/reference/webview-versions/).
 
 Use signed/notarized macOS artifacts for external distribution and a signed update channel with rollback guidance. Signing keys and credentials stay in release secrets. Pull-request CI should build and test without release credentials; trusted release jobs get narrowly scoped permissions. Determine private-alpha artifact access explicitly: private GitHub release assets require authorized access and are not a public download channel.
 
@@ -41,6 +41,7 @@ Add contribution instructions, development setup, architecture overview, issue t
 - [ ] Meet agreed large-diff and accessibility targets.
 - [ ] Document local storage, model data flow, cache deletion, and diagnostic export.
 - [ ] Produce and verify signed/notarized private-alpha artifacts.
+- [ ] Verify the shipped Tauri build has no test-driver or backend-debug access enabled.
 - [ ] Test the update channel and previous-version recovery.
 - [ ] Add repeatable source-build and contributor instructions.
 - [ ] Audit exact dependency licenses and third-party attribution.

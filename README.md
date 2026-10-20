@@ -10,6 +10,8 @@ Start with the [product and implementation plan](docs/plans/initial-product/READ
 
 The first release will be a macOS desktop app. GitHub repositories and open pull requests form the navigation; Codex explains changes as a guided walkthrough, answers questions attached to code, and helps prepare feedback that the user can publish to GitHub.
 
+The first implementation uses **Tauri 2**, **React + TypeScript** for the interface, **Rust** for the backend, and **SQLite** for local state.
+
 The repository starts private under the owner's personal account. Making it public is a later release milestone. The domain is intended for downloads and documentation; no website is deployed yet.
 
 Inspired by [Diffity](https://github.com/nilbuild/diffity). This repository currently contains original planning documents, not imported Diffity implementation code.

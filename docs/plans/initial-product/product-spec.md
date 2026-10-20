@@ -2,7 +2,7 @@
 
 **Product promise:** understand the change, make a confident review, and stay oriented when the PR evolves.
 
-This document defines the proposed MVP. Desktop-first is confirmed; macOS-first is the recommended release sequence. [The plan](README.md) identifies implementation phases.
+This document defines the proposed MVP. Desktop-first and Tauri 2 are confirmed; macOS-first is the recommended release sequence. The interface uses React and TypeScript, with Rust services and local SQLite storage. [The plan](README.md) identifies implementation phases.
 
 ## People and core jobs
 

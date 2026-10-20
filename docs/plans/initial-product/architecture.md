@@ -1,13 +1,13 @@
 # Architecture and integration contracts
 
-All paths and interfaces here are proposed. The workspace currently contains planning documents only. The default implementation uses Electron, React, TypeScript, and SQLite; step 01 confirms this choice with a packaged integration spike.
+All paths and interfaces here are proposed. The workspace currently contains planning documents only. The user selected Tauri 2 for the first implementation, with React and TypeScript for the UI, Rust for the backend, and SQLite for local state. Step 01 verifies Codex streaming, persistence, and large-diff rendering in a packaged Tauri app.
 
 ## Boundaries
 
 ```mermaid
 flowchart TB
   subgraph Desktop[User's computer]
-    UI[React renderer] <-->|Typed IPC| Host[Desktop service]
+    UI[React and TypeScript webview] <-->|Typed Tauri commands and events| Host[Rust core]
     Host --> Domain[Pure domain functions]
     Host <--> DB[(SQLite)]
     Host <--> Secrets[OS protected credentials]
@@ -23,26 +23,38 @@ flowchart TB
   Site[diff.city downloads and docs]
 ```
 
-Keep the renderer free of filesystem, process, and credential access. Use context isolation, a sandboxed renderer, a restrictive content policy, validated IPC senders, and a small preload interface. Render PR descriptions, Markdown, code, and model text as untrusted content. Block unsolicited remote images and active HTML; open validated external links in the system browser. These boundaries follow [Electron's security guidance](https://www.electronjs.org/docs/latest/tutorial/security).
+Keep filesystem, process, database, and credential access in Rust. Expose narrowly scoped Tauri commands to the bundled UI and stream typed results through channels/events. Limit capability grants to the intended windows, configure custom-command permissions explicitly, and validate arguments and resource ownership in Rust. Do not grant the webview arbitrary shell, SQL, filesystem, or remote IPC access. Capabilities control access to commands; application validation still enforces their behavior. See [Tauri capabilities](https://v2.tauri.app/security/capabilities/).
 
-The desktop service orchestrates side effects. Put expensive parsing/highlighting and database work in workers or a utility process so they cannot freeze window interactions. Keep credential ownership in one privileged component; workers receive only scoped data.
+Use a restrictive content policy. Render PR descriptions, Markdown, code, and model text as untrusted content. Block unsolicited remote images and active HTML; open validated external links in the system browser. The UI remains a web application inside the [Tauri process model](https://v2.tauri.app/concept/process-model/), so choosing Rust does not remove web-content security requirements.
+
+The Rust core orchestrates side effects through async tasks and owns credential access. Offload blocking Git, parsing, and database work to bounded workers; use web workers for expensive UI highlighting where supported. Stream bounded batches with cancellation/backpressure so large diffs and Codex output cannot flood IPC or freeze the UI. Diffcity's Node.js dependencies are build tooling; no Node backend service is required. Validate the chosen Codex distribution's runtime requirements separately.
 
 ## Proposed repository layout
 
 ```text
 apps/
   desktop/
-    src/main/          # lifecycle and service composition
-    src/preload/       # validated command/event bridge
-    src/renderer/      # React screens and presentation state
+    src/
+      app/             # React entry point and layout
+      features/        # inbox, diffs, walkthroughs, discussions
+      lib/             # typed invoke/event client and UI selectors
+    src-tauri/
+      src/
+        commands/      # narrow IPC handlers and event/channel adapters
+        domain/        # pure review, anchor, progress, and sync rules
+        github/        # REST/GraphQL adapters and request scheduler
+        codex/         # managed subprocess and JSON-RPC lifecycle
+        diff/          # canonical patch parsing and line maps
+        storage/       # SQLite ownership and transactional repositories
+        contracts/     # serializable wire models and schema definitions
+      migrations/      # versioned SQLite migrations
+      capabilities/    # window-specific capability grants
+      permissions/     # explicit custom-command permissions
+      tauri.conf.json  # desktop build and bundle configuration
+      Cargo.toml
   site/                # later: downloads, docs, release notes
 packages/
-  domain/              # immutable models, reducers, selectors, anchor rules
-  github/              # typed REST/GraphQL adapters and capability checks
-  codex/               # subprocess protocol and version compatibility
-  diff/                # patch parsing, line maps, revision comparison
-  storage/             # SQLite schema, migrations, transactional repositories
-  contracts/           # schemas for IPC, model output, persisted records
+  contracts/           # generated TypeScript wire types and JSON schemas
 tests/
   fixtures/            # synthetic PRs and recorded, sanitized responses
   integration/         # protocol, sync, publication, persistence tests
@@ -52,7 +64,9 @@ docs/
   explorations/
 ```
 
-Use a small pnpm workspace, strict TypeScript, runtime validation at trust boundaries, and a lockfile. Do not introduce a general plugin framework, event bus, or hosted service before a concrete requirement needs it. React renders selectors over immutable state; query caching supports presentation and does not replace the durable sync database.
+Use a small pnpm workspace for frontend/build tooling and a Cargo workspace containing the desktop Rust crate. Pin the Rust toolchain and keep both Cargo and pnpm lockfiles. Start with Rust modules in one crate; extract crates only when a concrete reuse or isolation need appears. Do not introduce a general plugin framework, event bus, or hosted service before a requirement needs it. React renders selectors over immutable state; query caching supports presentation and does not replace the durable sync database.
+
+Define wire contracts once in Rust, generate TypeScript types and JSON schemas, and check for generated-file drift in CI. Validate external input and model output in Rust and validate IPC messages at the UI boundary. Use a consistent tagged error model and deliberate serialization rules for IDs, timestamps, optional fields, and enums. Keep GitHub IDs as strings across IPC when numeric precision could be lost. Generated types do not replace runtime validation.
 
 ## Data model
 
@@ -90,7 +104,7 @@ erDiagram
 
 ## Functional domain design
 
-Prefer pure transformations and explicit effects. For example, the scheduler returns work descriptions from input state and time; the runner executes them and feeds typed results back. Unit tests can exercise rate limits and races with a fake clock.
+Prefer pure transformations and explicit effects. In Rust, the scheduler returns work descriptions from input state and time; the runner executes them and feeds typed results back. Unit tests can exercise rate limits and races with a fake clock. Canonical diff, anchor, publication, and progress rules live in Rust; TypeScript selectors handle presentation without duplicating those invariants. The following TypeScript shapes illustrate the generated wire contract:
 
 ```ts
 type SnapshotKey = Readonly<{
@@ -118,11 +132,8 @@ type AnchorResolution =
   | Readonly<{ kind: "outdated"; reason: string }>
   | Readonly<{ kind: "ambiguous"; candidates: readonly Anchor[] }>;
 
-// Functions do not fetch data or modify a checkout.
+// UI selector over immutable view models; critical review rules live in Rust.
 declare function groupPullRequests(input: InboxInput): readonly InboxGroup[];
-declare function planRefresh(input: SyncState, now: number): readonly SyncTask[];
-declare function remapAnchor(input: RemapInput): AnchorResolution;
-declare function validateWalkthrough(input: AnalysisInput): ValidationResult;
 ```
 
 These are design examples, not an already-implemented API. Use discriminated unions for incomplete, stale, unauthorized, and unavailable states instead of contradictory boolean flags.
@@ -171,6 +182,8 @@ Canonical line maps belong to the domain, independently of the display component
 ## Codex integration
 
 Use the supported local app-server protocol over a managed stdio subprocess. Generate client types/schemas from the pinned runtime; implement initialization, thread lifecycle, streamed turns, cancellation, and account state behind one adapter. Structured turn output is schema-validated before persistence. [Official protocol reference](https://learn.chatgpt.com/docs/app-server).
+
+The Rust Codex module owns process spawning, framing, request IDs, stderr handling, shutdown, and reconnect. The webview receives normalized run events, never a general process handle. Prototype with a verified installed executable; if bundling Codex later, validate per-architecture sidecar packaging, licensing, and signing. [Tauri supports native sidecars](https://v2.tauri.app/develop/sidecar/); this transport requires no Node bridge.
 
 This is a connection to a Codex runtime managed for diffcity, not an assumption that the running Codex desktop app exposes a stable automation socket. Detect exact executable and capabilities. A shell inspection during planning returned `codex 0.2.3` without useful app-server help; it is not a verified integration target. Do not silently replace the user's installation. Prototype with a verified OpenAI runtime and record its version.
 

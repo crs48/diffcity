@@ -6,7 +6,7 @@ Complete the round trip from private review work to GitHub, with clear publicati
 
 ## Proposed touchpoints
 
-`packages/github/{comments,reviews,threads}`, `packages/domain/{drafts,publishing}`, storage for operation journals, and renderer features for draft selection, finish review, and GitHub threads.
+Rust modules under `apps/desktop/src-tauri/src/{github,domain,storage,commands}` for comments/reviews/threads, drafts, publication rules, and operation journals; React features under `apps/desktop/src/features` for draft selection, finish review, and GitHub threads. Rust revalidates the exact payload and account/revision before dispatching any write.
 
 ## Implementation
 

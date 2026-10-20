@@ -6,7 +6,7 @@ Turn selected GitHub repositories into a dependable personal PR inbox. Depends o
 
 ## Proposed touchpoints
 
-`packages/github`, `packages/domain/inbox`, `packages/domain/sync`, `packages/storage`, and `apps/desktop/src/renderer/features/{onboarding,projects,inbox}`.
+Rust modules under `apps/desktop/src-tauri/src/{github,domain,storage,commands}`, generated types in `packages/contracts`, and React features under `apps/desktop/src/features/{onboarding,projects,inbox}`. The Rust core owns API access and the scheduler; TypeScript selectors derive inbox presentation from immutable view models.
 
 ## Implementation
 

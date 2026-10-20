@@ -28,7 +28,7 @@ The reference project's README, license, dependency manifest, repository tree, a
 | GitHub PR review and Codex are the initial focus | Confirmed by the user |
 | Private personal repository, later public MIT project | Confirmed by the user; license can exist before public release |
 | macOS first, initially Apple Silicon | Recommended launch target; Intel and other OS support follow validation |
-| Electron, React, TypeScript, SQLite | Recommended for one implementation language across the UI and integrations; evaluate resource use in step 01 |
+| Tauri 2, React + TypeScript, Rust, SQLite | Confirmed by the user for the first implementation; validate Codex streaming and large diffs in a packaged Tauri app |
 | Original implementation, informed by Diffity | Recommended; selectively reuse only with explicit provenance and attribution |
 | Repositories are called projects in the sidebar | Product interpretation; GitHub Projects boards are outside the first release |
 | One GitHub account and one local machine initially | Deliberate MVP boundary; persist stable account IDs to allow expansion |
@@ -67,7 +67,7 @@ flowchart LR
   Changes --> Snapshot
 ```
 
-The renderer presents immutable view models. A desktop service owns credentials, SQLite, GitHub requests, snapshot construction, and the Codex subprocess. Pure reducers and selectors determine ordering, sync transitions, anchor validity, and review readiness. Effects stay behind narrow interfaces.
+The React webview presents immutable view models. The Rust core owns credentials, SQLite, GitHub requests, snapshot construction, and the Codex subprocess. Typed Tauri commands and events connect them. Pure domain functions determine sync transitions, anchor validity, and review readiness; UI selectors derive presentation state. Effects stay behind narrow interfaces.
 
 GitHub is authoritative for public review state. The local database is authoritative for private notes and review progress. Codex produces explanations and suggestions; it cannot publish a comment or mark code reviewed.
 
@@ -85,13 +85,14 @@ GitHub is authoritative for public review state. The local database is authorita
 
 **First useful slice:** steps 01–04, using one real PR and local notes. **Complete review MVP:** steps 01–06. **Public launch:** step 07 after private dogfooding.
 
-Plan by exit criteria rather than promising calendar dates before the integration spikes. Authentication, diff anchors, and publishing recovery are likely to dominate reliability work; Electron versus Tauri is a smaller decision than those contracts.
+Plan by exit criteria rather than promising calendar dates before the integration spikes. Authentication, diff anchors, publishing recovery, and the Rust/TypeScript boundary are the main early reliability work.
 
 ## Risks and open questions
 
 | Risk or question | Default / resolution |
 | --- | --- |
-| Electron resource footprint | Measure during step 01; Tauri remains the alternative if the shell misses agreed targets |
+| WebKit diff rendering and app responsiveness | Measure large-diff interaction, startup, and resource use in a packaged Tauri app during step 01 |
+| Rust/TypeScript contract drift | Generate shared wire types from one contract definition and validate both sides of IPC |
 | GitHub App installation blocked by an organization | Readable onboarding error and personal-alpha `gh` connection; never imply all accessible repositories are available through every credential |
 | Codex executable/version mismatch | Verify app-server capabilities, not just a binary named `codex`; local shell inspection found an incompatible-looking `0.2.3` executable |
 | Model invents groups, anchors, or evidence | Validate every reference and show explicit coverage gaps; deterministic file view always available |
@@ -101,13 +102,14 @@ Plan by exit criteria rather than promising calendar dates before the integratio
 | Huge or incomplete PR patches | Explicit partial coverage, bounded loading, Git object fallback; never claim full review |
 | Open-source distribution dependencies | Confirm licenses and required notices for exact pinned versions; keep signing and app credentials outside Git |
 
-The owner can change the recommended shell or initial OS targets during plan review. These choices do not need to prevent specification or the first feasibility work.
+Tauri is the selected shell for the first implementation. The initial OS targets remain recommendations; step 01 verifies the concrete platform and integration requirements.
 
 ## Implementation checklist
 
 - [x] Inspect the empty workspace and applicable instructions.
 - [x] Research Diffity and primary GitHub/Codex documentation.
 - [x] Confirm desktop-first product direction.
+- [x] Confirm Tauri 2 for the first implementation and update architecture and milestones.
 - [x] Specify product behavior, architecture, phases, and release gates.
 - [x] Check local document links, fenced blocks, sequential steps, and exit criteria.
 - [ ] Complete step 01.

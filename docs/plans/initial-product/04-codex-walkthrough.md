@@ -6,15 +6,15 @@ Transform a stable PR snapshot into a useful narrative and answer questions abou
 
 ## Proposed touchpoints
 
-`packages/codex`, `packages/contracts/walkthrough`, `packages/domain/analysis`, context builders, and renderer features for walkthroughs, discussion, and run activity.
+Rust modules under `apps/desktop/src-tauri/src/{codex,contracts,domain}`, generated walkthrough types/schemas in `packages/contracts`, Rust context builders, and React features under `apps/desktop/src/features` for walkthroughs, discussion, and run activity.
 
 ## Implementation
 
-Complete the app-server adapter behind typed commands and events: account readiness, model selection from available capabilities, thread creation/resume, streamed turn lifecycle, cancellation, and crash recovery. Follow the [official app-server protocol](https://learn.chatgpt.com/docs/app-server); generated bindings and a pinned compatibility test keep provider details out of UI components.
+Complete the Rust app-server adapter behind typed Tauri commands and events: account readiness, model selection from available capabilities, thread creation/resume, streamed turn lifecycle, cancellation, and crash recovery. Follow the [official app-server protocol](https://learn.chatgpt.com/docs/app-server); generated bindings and a pinned compatibility test keep provider details out of UI components. Rust owns the subprocess and forwards bounded, normalized events to the webview.
 
 Build bounded context from immutable content. Include PR intent, hunk IDs, code excerpts, relevant tests, and clear unavailable-content markers. Large PRs use staged analysis: produce a file inventory, analyze bounded clusters, then synthesize an ordered walkthrough. The orchestrator controls budgets and context; it does not allow the model to fetch arbitrary private data or run repository instructions.
 
-Define a structured walkthrough result:
+Define a structured walkthrough result in the Rust contract module and export its schema and TypeScript view. The generated UI shape should resemble:
 
 ```ts
 type WalkthroughSection = Readonly<{
@@ -37,7 +37,7 @@ type Walkthrough = Readonly<{
 }>;
 ```
 
-Domain validation checks snapshot identity, allowed files, real ranges, nonempty section references, duplicate primary membership, and omitted hunks. Add ungrouped/unavailable buckets deterministically. Invalid citations cannot be made clickable. Distinguish observed code, inferred intent, suggested risk, and unknown behavior. Never report tests passed unless their actual result is present and current.
+Rust domain validation checks snapshot identity, allowed files, real ranges, nonempty section references, duplicate primary membership, and omitted hunks before persistence or UI delivery. Add ungrouped/unavailable buckets deterministically. Invalid citations cannot be made clickable. Distinguish observed code, inferred intent, suggested risk, and unknown behavior. Never report tests passed unless their actual result is present and current.
 
 Store prompts/schema versions, model/runtime identity, input hash, and coverage with each run. The deterministic cache key includes all those inputs. Save completed validated sections, with partial status for interrupted runs. Do not stream arbitrary JSON fragments into trusted UI state. Use ordinary progress messages until a section is valid.
 

@@ -6,7 +6,7 @@ Provide a useful non-AI review surface with trustworthy source positions and dur
 
 ## Proposed touchpoints
 
-`packages/diff`, `packages/domain/{snapshots,anchors,progress}`, `packages/storage`, and renderer features for PR overview, files, diffs, and local threads.
+Rust modules under `apps/desktop/src-tauri/src/{diff,domain,storage}`, generated types in `packages/contracts`, and React features under `apps/desktop/src/features` for PR overview, files, diffs, and local threads. Rust owns canonical snapshots/anchors; the webview renders their typed projections.
 
 ## Implementation
 
