@@ -15,7 +15,13 @@ const binary =
 const port = 4459;
 const base = `http://127.0.0.1:${port}`;
 const artifacts = resolve(root, ".local/native-e2e");
-const dataDirectory = resolve(artifacts, `data-${Date.now()}`);
+const dataDirectory =
+  process.env.DIFFCITY_TEST_DATA_DIR ||
+  resolve(artifacts, `data-${Date.now()}`);
+const path =
+  "tests/fixtures/live-review/db/migrations/042_invitation_expiry.sql";
+const marker =
+  "Diffcity end-to-end test: verified line anchoring and GitHub round-trip sync.";
 await mkdir(artifacts, { recursive: true });
 let child;
 let session;
@@ -26,6 +32,7 @@ async function request(
 ) {
   const r = await fetch(base + path, {
     method,
+    signal: AbortSignal.timeout(20_000),
     headers: { "content-type": "application/json" },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   });
@@ -53,9 +60,11 @@ const text = () => script("return document.body.innerText");
 const waitText = (value, timeout) =>
   until(async () => (await text()).includes(value), timeout);
 const click = (label) =>
-  script(
-    'const b = [...document.querySelectorAll("button")].find(b=>b.textContent.trim()===arguments[0] || b.getAttribute("aria-label")===arguments[0]); if(!b) throw new Error("Button missing: "+arguments[0]); if(b.disabled) throw new Error("Button disabled: "+arguments[0]); b.click(); return true;',
-    [label],
+  until(() =>
+    script(
+      'const b = [...document.querySelectorAll("button")].find(b=>b.textContent.trim()===arguments[0] || b.getAttribute("aria-label")===arguments[0]); if(!b) throw new Error("Button missing: "+arguments[0]); if(b.disabled) throw new Error("Button disabled: "+arguments[0]); b.click(); return true;',
+      [label],
+    ),
   );
 async function input(selector, value) {
   const e = await request(`/session/${session}/element`, {
@@ -105,7 +114,7 @@ async function stop() {
   } catch {
     /* app may already be closed */
   }
-  if (child && child.exitCode === null) {
+  if (child && child.exitCode === null && child.signalCode === null) {
     child.kill("SIGTERM");
     await new Promise((r) => child.once("exit", r));
   }
@@ -114,125 +123,125 @@ async function stop() {
 try {
   await start();
   console.log("PASS: real native app connects to GitHub and Codex");
-  await click("Explore a sample");
-  await waitText("Make existing invitations compatible");
-  await screenshot("01-guide");
-  await click("Review with Codex");
-  await until(() => script('return !!document.querySelector(".run-banner")'));
-  await click("Cancel");
-  await waitText("Codex run cancelled", 90_000);
-  await click("Dismiss error");
-  await waitText("Make existing invitations compatible");
-  console.log("PASS: cancellation preserves the existing guide");
-  await click("Next step");
-  await waitText("Keep invitations inside their team");
-  await click("Next step");
-  await click("Next step");
-  await waitText("Routine changes, kept together");
-  await click("Acknowledge summary");
-  assert.match(await text(), /1 summaries acknowledged/);
-  await click("Expand all changes");
-  await waitText("docs/invitations.md");
-  console.log(
-    "PASS: guide ordering, routine folding, expansion, truthful progress",
-  );
-  await click("Open a PR by URL");
-  await input(
-    '[aria-label="GitHub pull request URL"]',
-    "https://github.com/crs48/diffcity/pull/1",
-  );
-  await click("Open");
-  await until(() =>
-    script(
-      'return document.querySelector(".breadcrumb strong")?.textContent === "#1" && !document.querySelector(".loading-banner")',
-    ),
-  );
-  await click("Review with Codex");
-  await waitText("Your guided review is ready.", 600_000);
-  await click("Open updated guide");
-  await until(async () =>
-    (
-      await script('return document.querySelector(".section-meta")?.innerText')
-    ).includes("High attention"),
-  );
-  await screenshot("02-live-guide");
-  console.log(
-    "PASS: real GitHub PR → immutable diff → Codex guided review in WKWebView",
-  );
-  const path =
-    "tests/fixtures/live-review/db/migrations/042_invitation_expiry.sql";
-  for (
-    let step = 0;
-    step < 2 &&
-    !(await script(
-      'return !!document.querySelector(`[aria-label="${arguments[0]} line 1"]`)',
-      [path],
-    ));
-    step++
-  )
+  if (process.env.DIFFCITY_TEST_RESUME !== "yes") {
+    await click("Explore a sample");
+    await waitText("Make existing invitations compatible");
+    await screenshot("01-guide");
+    await click("Review with Codex");
+    await until(() => script('return !!document.querySelector(".run-banner")'));
+    await click("Cancel");
+    await waitText("Codex run cancelled", 90_000);
+    await click("Dismiss error");
+    await waitText("Make existing invitations compatible");
+    console.log("PASS: cancellation preserves the existing guide");
     await click("Next step");
-  await click(`${path} line 1`);
-  await input(
-    '[aria-label="Review note or Codex question"]',
-    "What happens to existing rows when this migration runs?",
-  );
-  await click("Ask Codex");
-  await until(
-    () =>
-      script(
-        'return document.querySelectorAll(".message.assistant").length > 0',
-      ),
-    180_000,
-  );
-  await until(
-    () => script('return !document.querySelector(".run-banner")'),
-    180_000,
-  );
-  await screenshot("03-discussion");
-  console.log("PASS: selected-line Codex discussion persists");
-  const marker =
-    "Diffcity end-to-end test: verified line anchoring and GitHub round-trip sync.";
-  await input('[aria-label="Review note or Codex question"]', marker);
-  await click("Save note");
-  await waitText(marker);
-  await script(
-    'const article=[...document.querySelectorAll(".message")].find(el=>el.textContent.includes(arguments[0])); const b=[...article.querySelectorAll("button")].find(b=>b.textContent.includes("Prepare GitHub draft")); if(!b) throw new Error("Draft action missing"); b.click(); return true;',
-    [marker],
-  );
-  await waitText("GitHub draft");
-  await click("Close discussion");
-  await click("Mark code reviewed");
-  await click("Finish review");
-  await waitText("Selected GitHub drafts");
-  assert.ok(
-    (
-      await script(
-        'return document.querySelector(".draft-preview")?.textContent',
-      )
-    ).includes(marker),
-  );
-  await screenshot("04-publish-preview");
-  console.log(
-    "PASS: only explicitly prepared draft appears in publication preview",
-  );
-  if (process.env.DIFFCITY_TEST_PUBLISH === "yes") {
-    await input(
-      '[aria-label="GitHub review summary"]',
-      "Diffcity end-to-end test of guided review and explicit comment publishing. Synthetic fixture only.",
+    await waitText("Keep invitations inside their team");
+    await click("Next step");
+    await click("Next step");
+    await waitText("Routine changes, kept together");
+    await click("Acknowledge summary");
+    assert.match(await text(), /1 summaries acknowledged/);
+    await click("Expand all changes");
+    await waitText("docs/invitations.md");
+    console.log(
+      "PASS: guide ordering, routine folding, expansion, truthful progress",
     );
-    await click("Publish review");
-    await waitText("Review published to GitHub", 90_000);
-    console.log("PASS: selected review published through the native app");
-    await click("Back to guide");
+    await click("Open a PR by URL");
+    await input(
+      '[aria-label="GitHub pull request URL"]',
+      "https://github.com/crs48/diffcity/pull/1",
+    );
+    await click("Open");
+    await until(() =>
+      script(
+        'return document.querySelector(".breadcrumb strong")?.textContent === "#1" && !document.querySelector(".loading-banner")',
+      ),
+    );
+    await click("Review with Codex");
+    await waitText("Your guided review is ready.", 600_000);
+    await click("Open updated guide");
+    await until(async () =>
+      (
+        await script(
+          'return document.querySelector(".section-meta")?.innerText',
+        )
+      ).includes("High attention"),
+    );
+    await screenshot("02-live-guide");
+    console.log(
+      "PASS: real GitHub PR → immutable diff → Codex guided review in WKWebView",
+    );
+    for (
+      let step = 0;
+      step < 2 &&
+      !(await script(
+        'return !!document.querySelector(`[aria-label="${arguments[0]} line 1"]`)',
+        [path],
+      ));
+      step++
+    )
+      await click("Next step");
     await click(`${path} line 1`);
-    await waitText("· GitHub");
-    await screenshot("05-github-roundtrip");
-  } else {
-    console.log("SKIP: external publication requires explicit authorization");
-    await click("Back to guide");
+    await input(
+      '[aria-label="Review note or Codex question"]',
+      "What happens to existing rows when this migration runs?",
+    );
+    await click("Ask Codex");
+    await until(
+      () =>
+        script(
+          'return document.querySelectorAll(".message.assistant").length > 0',
+        ),
+      180_000,
+    );
+    await until(
+      () => script('return !document.querySelector(".run-banner")'),
+      180_000,
+    );
+    await screenshot("03-discussion");
+    console.log("PASS: selected-line Codex discussion persists");
+    await input('[aria-label="Review note or Codex question"]', marker);
+    await click("Save note");
+    await waitText(marker);
+    await script(
+      'const article=[...document.querySelectorAll(".message")].find(el=>el.textContent.includes(arguments[0])); const b=[...article.querySelectorAll("button")].find(b=>b.textContent.includes("Prepare GitHub draft")); if(!b) throw new Error("Draft action missing"); b.click(); return true;',
+      [marker],
+    );
+    await waitText("GitHub draft");
+    await click("Close discussion");
+    await click("Mark code reviewed");
+    await click("Finish review");
+    await waitText("Selected GitHub drafts");
+    assert.ok(
+      (
+        await script(
+          'return document.querySelector(".draft-preview")?.textContent',
+        )
+      ).includes(marker),
+    );
+    await screenshot("04-publish-preview");
+    console.log(
+      "PASS: only explicitly prepared draft appears in publication preview",
+    );
+    if (process.env.DIFFCITY_TEST_PUBLISH === "yes") {
+      await input(
+        '[aria-label="GitHub review summary"]',
+        "Diffcity end-to-end test of guided review and explicit comment publishing. Synthetic fixture only.",
+      );
+      await click("Publish review");
+      await waitText("Review published to GitHub", 90_000);
+      console.log("PASS: selected review published through the native app");
+      await click("Back to guide");
+      await click(`${path} line 1`);
+      await waitText("· GitHub");
+      await screenshot("05-github-roundtrip");
+    } else {
+      console.log("SKIP: external publication requires explicit authorization");
+      await click("Back to guide");
+    }
+    await stop();
+    await start();
   }
-  await stop();
-  await start();
   await until(() =>
     script(
       'return document.querySelector(".breadcrumb strong")?.textContent === "#1"',
@@ -254,6 +263,20 @@ try {
   await click(`${path} line 1`);
   await waitText(marker);
   await waitText("What happens to existing rows");
+  if (
+    process.env.DIFFCITY_TEST_PUBLISH === "yes" ||
+    process.env.DIFFCITY_TEST_RESUME === "yes"
+  ) {
+    await until(() =>
+      script(
+        'return [...document.querySelectorAll(".message.remote")].some(e => e.textContent.includes(arguments[0]))',
+        [marker],
+      ),
+    );
+    console.log(
+      "PASS: published GitHub comment reconciled in the native line discussion",
+    );
+  }
   console.log(
     "PASS: native app restart restores the PR, anchored notes, and discussion",
   );
@@ -303,7 +326,9 @@ try {
       {
         dataDirectory,
         completedAt: new Date().toISOString(),
-        published: process.env.DIFFCITY_TEST_PUBLISH === "yes",
+        published:
+          process.env.DIFFCITY_TEST_PUBLISH === "yes" ||
+          process.env.DIFFCITY_TEST_RESUME === "yes",
         revisionTest: process.env.DIFFCITY_TEST_REVISION === "yes",
       },
       null,

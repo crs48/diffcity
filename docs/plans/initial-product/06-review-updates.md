@@ -53,7 +53,7 @@ Pause publication and an analysis run while a push occurs. Confirm each retains 
 - [ ] Separate latest/opened/reviewed revision markers and unread activity.
 - [x] Capture revisions and preserve referenced old context.
 - [ ] Implement changed-since-review and conservative anchor mapping.
-- [ ] Invalidate walkthroughs and progress accurately.
+- [x] Invalidate walkthroughs and progress accurately.
 - [ ] Reassess attention, fold eligibility, summary acknowledgements, and reviewer overrides.
 - [ ] Surface newly consequential changes while preserving the active guide position.
 - [x] Handle metadata, discussions, and checks independently.

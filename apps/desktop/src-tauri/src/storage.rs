@@ -63,6 +63,19 @@ impl Store {
             .map(|s| Ok(serde_json::from_str(&s?)?))
             .collect()
     }
+    pub fn batch(&self, documents: &[(&str, &str, serde_json::Value)]) -> Result<()> {
+        let mut db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        let transaction = db.transaction()?;
+        let updated = chrono::Utc::now().to_rfc3339();
+        for (kind, key, value) in documents {
+            transaction.execute("INSERT INTO documents(kind,key,value,updated) VALUES(?1,?2,?3,?4) ON CONFLICT(kind,key) DO UPDATE SET value=excluded.value,updated=excluded.updated", params![kind,key,serde_json::to_string(value)?,updated])?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
     pub fn delete(&self, kind: &str, key: &str) -> Result<()> {
         self.connection
             .lock()
@@ -104,6 +117,35 @@ mod tests {
         assert_eq!(
             restored.get::<Vec<String>>("draft", "id").unwrap().unwrap(),
             vec!["private", "line 4"]
+        );
+    }
+    #[test]
+    fn failed_publication_batch_rolls_back_all_documents() {
+        let directory = tempfile::tempdir().unwrap();
+        let store = Store::open(directory.path()).unwrap();
+        store.connection.lock().unwrap().execute_batch(
+            "CREATE TRIGGER fail_note BEFORE INSERT ON documents WHEN NEW.kind='note' BEGIN SELECT RAISE(ABORT, 'simulated disk write failure'); END;"
+        ).unwrap();
+        let result = store.batch(&[
+            (
+                "operation",
+                "review",
+                serde_json::json!({"state":"published"}),
+            ),
+            ("note", "draft", serde_json::json!({"published":true})),
+        ]);
+        assert!(result.is_err());
+        assert!(
+            store
+                .get::<serde_json::Value>("operation", "review")
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            store
+                .get::<serde_json::Value>("note", "draft")
+                .unwrap()
+                .is_none()
         );
     }
 }

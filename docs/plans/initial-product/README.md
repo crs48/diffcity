@@ -133,14 +133,14 @@ Check off implementation items only after their exit criteria are demonstrated. 
 
 ## Validation checklist
 
-- [ ] An author reviews their own PR, asks Codex a question, and publishes a selected comment.
+- [x] An author reviews their own PR, asks Codex a question, and publishes a selected comment.
 - [ ] A requested reviewer submits a multi-line review on someone else's PR.
 - [x] Seeded consequential changes appear early and are never automatically folded into routine groups.
-- [ ] A reviewer can read, ask, annotate, and finish within Guide without a forced Files detour.
+- [x] A reviewer can read, ask, annotate, and finish within Guide without a forced Files detour.
 - [x] Summary acknowledgement, deferred work, and actual code review remain distinct in progress reporting.
 - [ ] A push, force-push, base change, or remote reply is surfaced with accurate review state.
 - [ ] Offline work, restart, expired credentials, rate limits, and interrupted publication preserve drafts.
-- [ ] No private notes or model transcript reach GitHub unless explicitly selected.
+- [x] No private notes or model transcript reach GitHub unless explicitly selected.
 - [ ] Large, renamed, deleted, generated, binary, and incomplete files report honest coverage.
 - [ ] A clean-machine installation and source build both work.
 

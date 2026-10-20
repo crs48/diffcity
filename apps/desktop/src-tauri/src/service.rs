@@ -442,6 +442,14 @@ impl Service {
                 return Ok(PublishResult{id,state:"unknown".into(),url:snapshot.pull.url,message:"The previous request has an uncertain outcome. Inspect GitHub before attempting another review; diffcity will not post it twice.".into()});
             }
         }
+        if self.store.list::<Operation>("operation")?.iter().any(|op| {
+            op.request.snapshot_id == request.snapshot_id
+                && matches!(op.result.state.as_str(), "sending" | "unknown")
+        }) {
+            bail!(
+                "An earlier review on this revision has an uncertain outcome. Reconcile the original selected drafts before sending different feedback."
+            );
+        }
         let current = self
             .github
             .pull(&snapshot.pull.repository, snapshot.pull.number)
@@ -504,14 +512,15 @@ impl Service {
             .get("operation", &id)?
             .context("Publication journal missing")?;
         op.result = result.clone();
-        self.store.put("operation", &id, &op)?;
+        let mut documents = vec![("operation", id.as_str(), serde_json::to_value(&op)?)];
         for note_id in &request.note_ids {
             if let Some(mut n) = self.store.get::<Note>("note", note_id)? {
                 n.published_url = Some(result.url.clone());
                 n.github_draft = false;
-                self.store.put("note", note_id, &n)?;
+                documents.push(("note", note_id.as_str(), serde_json::to_value(&n)?));
             }
         }
+        self.store.batch(&documents)?;
         Ok(result)
     }
 }
