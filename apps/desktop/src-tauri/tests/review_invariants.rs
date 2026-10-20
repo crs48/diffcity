@@ -254,3 +254,74 @@ fn multiline_deletion_uses_left_source_coordinates() {
     assert_eq!(p["comments"][0]["start_line"], 8);
     assert_eq!(p["comments"][0]["line"], 9);
 }
+
+#[test]
+fn translation_key_removals_and_placeholder_changes_are_not_routine() {
+    for patch in [
+        "@@ -1 +1 @@\n-  \"greeting\": \"Hello {name}\"\n+  \"greeting\": \"Welcome {user}\"",
+        "@@ -1 +1 @@\n-  \"greeting\": \"Hello\"\n+  \"welcome\": \"Hello\"",
+    ] {
+        let hunks = domain::parse_patch("locales/en.json", patch, "test").unwrap();
+        assert_eq!(domain::rule(&hunks[0]).0, Attention::High);
+    }
+    let copy = domain::parse_patch(
+        "locales/en.json",
+        "@@ -1 +1 @@\n-  \"greeting\": \"Hello {name}\"\n+  \"greeting\": \"Welcome {name}\"",
+        "test",
+    )
+    .unwrap();
+    assert_eq!(domain::rule(&copy[0]).0, Attention::NeedsAssessment);
+}
+
+#[test]
+fn skipped_and_unknown_checks_are_never_reported_as_passed() {
+    let checks = vec![
+        json!({"status":"completed","conclusion":"skipped"}),
+        json!({"status":"completed","conclusion":"new_state"}),
+    ];
+    let summary = github::summarize_checks(&checks, &json!({"total_count":2,"state":"failure"}));
+    assert!(!summary.contains("passed"));
+    assert!(summary.contains("skipped or neutral"));
+    assert!(summary.contains("unknown"));
+    assert!(summary.contains("status contexts failed"));
+}
+
+#[test]
+fn earlier_revision_notes_can_be_reopened_without_changing_latest() {
+    use diffcity_lib::service::Service;
+    let directory = tempfile::tempdir().unwrap();
+    let service = Service::new(directory.path()).unwrap();
+    let mut first = snapshot();
+    first.captured_at = "2026-10-20T00:00:00Z".into();
+    let mut second = first.clone();
+    second.id = "new-revision".into();
+    second.pull.head = "new-head".into();
+    second.captured_at = "2026-10-20T00:01:00Z".into();
+    service.store.put("snapshot", &first.id, &first).unwrap();
+    service.store.put("snapshot", &second.id, &second).unwrap();
+    let key = domain::pull_key(&first.pull);
+    service.store.put("latest", &key, &second.id).unwrap();
+    let note = service
+        .save_note(Note {
+            id: String::new(),
+            snapshot_id: first.id.clone(),
+            anchor: None,
+            body: "Private prior context".into(),
+            role: "user".into(),
+            parent_id: None,
+            github_draft: false,
+            published_url: None,
+            created_at: String::new(),
+        })
+        .unwrap();
+    let current = service.saved(&second.id).unwrap();
+    assert_eq!(current.previous_snapshot_id, Some(first.id.clone()));
+    let previous = service
+        .saved(current.previous_snapshot_id.as_deref().unwrap())
+        .unwrap();
+    assert_eq!(previous.notes[0].id, note.id);
+    assert_eq!(
+        service.store.get::<String>("latest", &key).unwrap(),
+        Some(second.id)
+    );
+}

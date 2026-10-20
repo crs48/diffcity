@@ -30,6 +30,7 @@ export const Discussion = forwardRef<
 ) {
   const [body, setBody] = useState("");
   const [saved, setSaved] = useState(false);
+  const [editingDraft, setEditingDraft] = useState(false);
   const latest = useRef(newNote(w.snapshot.id, selection, ""));
   const queue = useRef<Promise<Note | null>>(Promise.resolve(null));
   const flush = useCallback(() => {
@@ -62,6 +63,7 @@ export const Discussion = forwardRef<
       latest.current = newNote(w.snapshot.id, selection, "");
       setBody("");
       setSaved(false);
+      setEditingDraft(false);
       if (ask) await onAsk(note);
     } catch (e) {
       onError(e);
@@ -143,8 +145,34 @@ export const Discussion = forwardRef<
             >
               {n.body}
             </ReactMarkdown>
+            {n.githubDraft && !n.publishedUrl && (
+              <button
+                className="text-button"
+                onClick={async () => {
+                  try {
+                    await flush();
+                    latest.current = { ...n };
+                    setBody(n.body);
+                    setEditingDraft(true);
+                    setSaved(true);
+                  } catch (e) {
+                    onError(e);
+                  }
+                }}
+              >
+                Edit draft
+              </button>
+            )}
             {!n.githubDraft && !n.publishedUrl && (
-              <button className="text-button" onClick={() => void toDraft(n)}>
+              <button
+                className="text-button"
+                disabled={w.notes.some(
+                  (other) =>
+                    other.parentId === n.id &&
+                    (other.githubDraft || !!other.publishedUrl),
+                )}
+                onClick={() => void toDraft(n)}
+              >
                 <Github size={12} /> Prepare GitHub draft
               </button>
             )}
@@ -155,6 +183,9 @@ export const Discussion = forwardRef<
             <div className="message-label">
               <Github size={13} />
               {c.author} · GitHub
+              {c.commit && c.commit !== w.snapshot.pull.head && (
+                <span className="draft-tag">Earlier revision</span>
+              )}
             </div>
             <p>{c.body}</p>
           </article>
@@ -185,6 +216,8 @@ export const Discussion = forwardRef<
             <>
               <Check size={12} /> Saved locally
             </>
+          ) : editingDraft ? (
+            "GitHub draft · not published"
           ) : (
             "Private · selected code only"
           )}
@@ -195,11 +228,11 @@ export const Discussion = forwardRef<
             disabled={!body.trim()}
             onClick={() => void saveAndReset(false)}
           >
-            Save note
+            {editingDraft ? "Save draft" : "Save note"}
           </button>
           <button
             className="primary"
-            disabled={busy || !body.trim()}
+            disabled={busy || editingDraft || !body.trim()}
             onClick={() => void saveAndReset(true)}
           >
             <Send size={13} /> Ask Codex

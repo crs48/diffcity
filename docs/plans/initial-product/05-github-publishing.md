@@ -57,12 +57,12 @@ Verify one real test PR round trip manually: local draft → GitHub review → f
 
 ## Checklist and exit criteria
 
-- [ ] Add explicit draft conversion and selected-message previews.
+- [x] Add explicit draft conversion and selected-message previews.
 - [ ] Complete review submission from Guide with honest coverage and return links.
 - [ ] Add overall/inline comments, replies, and review events.
 - [ ] Add resolve/unresolve with capability checks.
-- [ ] Validate revision and anchors before every publication.
-- [ ] Persist operation states and reconcile unknown results.
+- [x] Validate revision and anchors before every publication.
+- [x] Persist operation states and reconcile unknown results.
 - [ ] Import canonical remote feedback and external edits.
 - [ ] Demonstrate failure recovery without duplicate feedback.
 

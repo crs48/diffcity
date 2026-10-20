@@ -136,7 +136,7 @@ pub enum Side {
     RIGHT,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Anchor {
     pub hunk_id: String,

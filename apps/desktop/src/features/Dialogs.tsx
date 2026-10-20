@@ -313,7 +313,10 @@ export function Finish({
 }) {
   const drafts = w.notes.filter((n) => n.githubDraft && !n.publishedUrl);
   const [selected, setSelected] = useState(drafts.map((n) => n.id));
-  const [body, setBody] = useState("");
+  const summaryKey = `diffcity.review-summary.${w.snapshot.id}`;
+  const [body, setBody] = useState(
+    () => localStorage.getItem(summaryKey) || "",
+  );
   const [event, setEvent] = useState("COMMENT");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<PublishResult | null>(null);
@@ -409,7 +412,10 @@ export function Finish({
               aria-label="GitHub review summary"
               placeholder="Summarize your review…"
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(e) => {
+                setBody(e.target.value);
+                localStorage.setItem(summaryKey, e.target.value);
+              }}
             />
           </label>
           <label>
@@ -482,7 +488,10 @@ export function Finish({
                   event,
                 });
                 setResult(r);
-                if (r.state === "published") await onPublished(r);
+                if (r.state === "published") {
+                  localStorage.removeItem(summaryKey);
+                  await onPublished(r);
+                }
               } catch (e) {
                 setError(String(e));
               } finally {

@@ -74,7 +74,7 @@ export function GuideView({
           selection={selection}
           onSelect={onSelect}
           notes={w.notes}
-          comments={w.comments}
+          comments={w.comments.filter((c) => c.commit === w.snapshot.pull.head)}
           split={split}
         />
       )

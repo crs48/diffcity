@@ -25,6 +25,7 @@ pub fn run() {
             commands::list_repositories,
             commands::save_settings,
             commands::open_pull,
+            commands::open_saved_review,
             commands::check_pull,
             commands::save_note,
             commands::delete_note,

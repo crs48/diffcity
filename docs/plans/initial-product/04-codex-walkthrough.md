@@ -88,13 +88,13 @@ Run paired, counterbalanced reviews against raw file order and simple topic orde
 ## Checklist and exit criteria
 
 - [ ] Complete lifecycle and runtime compatibility handling.
-- [ ] Enforce restricted context/tool access and data-flow disclosure.
-- [ ] Implement structured generation, validation, caching, and partial results.
-- [ ] Implement evidence-backed assessments, priority floors, coherent grouping, and stable ordering.
+- [x] Enforce restricted context/tool access and data-flow disclosure.
+- [x] Implement structured generation, validation, caching, and partial results.
+- [x] Implement evidence-backed assessments, priority floors, coherent grouping, and stable ordering.
 - [ ] Implement conservative automatic folding, exception extraction, and explicit overrides.
-- [ ] Render the primary Guide with inline code, attention callouts, and distinct progress states.
-- [ ] Add line-scoped and selected-note conversations.
-- [ ] Keep active reading stable during streaming, regrouping, and pending updates.
+- [x] Render the primary Guide with inline code, attention callouts, and distinct progress states.
+- [x] Add line-scoped and selected-note conversations.
+- [x] Keep active reading stable during streaming, regrouping, and pending updates.
 - [ ] Add cancellation, retry, budget, and unavailable-provider states.
 - [ ] Pass the curated corpus gates and record baseline comparisons and failure cases.
 

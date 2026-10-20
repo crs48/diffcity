@@ -47,7 +47,7 @@ Add contribution instructions, development setup, architecture overview, issue t
 - [ ] Produce and verify signed/notarized private-alpha artifacts.
 - [ ] Verify the shipped Tauri build has no test-driver or backend-debug access enabled.
 - [ ] Test the update channel and previous-version recovery.
-- [ ] Add repeatable source-build and contributor instructions.
+- [x] Add repeatable source-build and contributor instructions.
 - [ ] Audit exact dependency licenses and third-party attribution.
 - [ ] Inspect public-release history and all shipped assets.
 - [ ] Prepare diff.city downloads and docs after hosting/DNS is selected.

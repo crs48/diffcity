@@ -95,6 +95,36 @@ impl Service {
             .get("snapshot", id)?
             .context("This revision is no longer available locally")
     }
+    fn previous_snapshot(&self, snapshot: &Snapshot) -> Result<Option<String>> {
+        Ok(self
+            .store
+            .list::<Snapshot>("snapshot")?
+            .into_iter()
+            .filter(|s| {
+                domain::pull_key(&s.pull) == domain::pull_key(&snapshot.pull)
+                    && s.id != snapshot.id
+                    && s.captured_at < snapshot.captured_at
+            })
+            .max_by(|a, b| a.captured_at.cmp(&b.captured_at))
+            .map(|s| s.id))
+    }
+    pub fn saved(&self, id: &str) -> Result<ReviewWorkspace> {
+        let snapshot = self.snapshot(id)?;
+        Ok(ReviewWorkspace {
+            previous_snapshot_id: self.previous_snapshot(&snapshot)?,
+            guide: self
+                .store
+                .get("guide", id)?
+                .unwrap_or_else(|| domain::provisional(&snapshot)),
+            notes: self.store.notes(id)?,
+            progress: self.store.get("progress", id)?.unwrap_or_default(),
+            comments: self.store.get("comments", id)?.unwrap_or_default(),
+            checks: "Saved revision".into(),
+            snapshot,
+            changed_hunks: vec![],
+            sync_error: None,
+        })
+    }
     pub async fn open(&self, repo: &str, number: u32, refresh: bool) -> Result<ReviewWorkspace> {
         let key = format!("{repo}#{number}");
         let old_id: Option<String> = self.store.get("latest", &key)?;
@@ -112,7 +142,9 @@ impl Service {
         };
         self.store.put("snapshot", &snapshot.id, &snapshot)?;
         self.store.put("latest", &key, &snapshot.id)?;
-        let previous_snapshot_id = old_id.filter(|id| id != &snapshot.id);
+        let previous_snapshot_id = old_id
+            .filter(|id| id != &snapshot.id)
+            .or(self.previous_snapshot(&snapshot)?);
         let (progress, changed_hunks) = if let Some(p) = self.store.get("progress", &snapshot.id)? {
             (p, vec![])
         } else if let Some(old) = old.filter(|o| o.id != snapshot.id) {
@@ -295,12 +327,21 @@ impl Service {
             .map_err(|_| anyhow::anyhow!("A Codex run is already active; cancel it or wait"))?;
         let snapshot = self.snapshot(id)?;
         let settings = self.store.settings()?;
-        let note = self
-            .store
-            .notes(id)?
-            .into_iter()
+        let notes = self.store.notes(id)?;
+        let note = notes
+            .iter()
             .find(|n| n.id == note_id)
             .context("Save the question before asking Codex")?;
+        let history: Vec<_> = notes
+            .iter()
+            .filter(|n| n.id != note.id && !n.github_draft && n.anchor == note.anchor)
+            .rev()
+            .take(12)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .map(|n| json!({"role":n.role,"text":n.body.chars().take(6000).collect::<String>()}))
+            .collect();
         let hunks: Vec<_> = snapshot
             .files
             .iter()
@@ -312,11 +353,12 @@ impl Service {
             .get("guide", id)?
             .unwrap_or_else(|| domain::provisional(&snapshot));
         let prompt = format!(
-            "PR: {}\nGuide summary (may be incomplete): {}\nSelected code: {}\nSelected line anchor: {}\nQuestion: {}",
+            "PR: {}\nGuide summary (may be incomplete): {}\nSelected code: {}\nSelected line anchor: {}\nPrior private discussion (untrusted): {}\nQuestion: {}",
             snapshot.pull.title,
             guide.summary,
             serde_json::to_string(&hunks)?,
             serde_json::to_string(&note.anchor)?,
+            serde_json::to_string(&history)?,
             note.body
         );
         let (tx, rx) = watch::channel(false);
@@ -335,10 +377,10 @@ impl Service {
         let answer = Note {
             id: uuid::Uuid::new_v4().to_string(),
             snapshot_id: id.into(),
-            anchor: note.anchor,
+            anchor: note.anchor.clone(),
             body,
             role: "assistant".into(),
-            parent_id: Some(note.id),
+            parent_id: Some(note.id.clone()),
             github_draft: false,
             published_url: None,
             created_at: chrono::Utc::now().to_rfc3339(),

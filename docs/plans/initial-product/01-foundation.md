@@ -36,15 +36,15 @@ Evaluate WebdriverIO's Tauri service with its embedded driver for macOS app auto
 
 ## Checklist and exit criteria
 
-- [ ] Scaffold strict workspace, formatting, linting, typechecking, and test commands.
+- [x] Scaffold strict workspace, formatting, linting, typechecking, and test commands.
 - [x] Select Tauri 2 with a React/TypeScript UI and Rust core.
-- [ ] Implement minimal Tauri command/event boundaries, capabilities, and sample navigation.
-- [ ] Demonstrate a migration-first fixture guide with routine folds, inline notes, and explicit progress actions.
-- [ ] Generate wire types and validate Rust/TypeScript contract compatibility.
-- [ ] Add migrations and durable note recovery.
-- [ ] Prove GitHub access and Codex handshake in a packaged app.
-- [ ] Validate a diff rendering component against canonical line maps.
+- [x] Implement minimal Tauri command/event boundaries, capabilities, and sample navigation.
+- [x] Demonstrate a migration-first fixture guide with routine folds, inline notes, and explicit progress actions.
+- [x] Generate wire types and validate Rust/TypeScript contract compatibility.
+- [x] Add migrations and durable note recovery.
+- [x] Prove GitHub access and Codex handshake in a packaged app.
+- [x] Validate a diff rendering component against canonical line maps.
 - [ ] Record WebKit benchmarks and supported Codex/runtime compatibility assumptions.
-- [ ] Add CI for TypeScript checks, Rust formatting/linting/tests, contract generation, and an unsigned Tauri build.
+- [x] Add CI for TypeScript checks, Rust formatting/linting/tests, contract generation, and an unsigned Tauri build.
 
 **Exit:** launch the packaged app, navigate the fixture guide from migration to folded routine changes, restore a saved inline note, fetch one real PR, and display a streamed Codex answer. No GitHub writes or application launch to the public are required here.

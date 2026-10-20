@@ -326,42 +326,59 @@ impl GitHub {
                 });
             }
         }
+        for review in self.reviews(pull).await? {
+            if review["state"] == "PENDING" || string(&review, "body").trim().is_empty() {
+                continue;
+            }
+            result.push(RemoteComment {
+                id: format!("review-{}", review["id"]),
+                author: string(&review["user"], "login"),
+                body: string(&review, "body"),
+                path: None,
+                line: None,
+                side: None,
+                commit: review["commit_id"].as_str().map(str::to_string),
+                url: string(&review, "html_url"),
+                created_at: string(&review, "submitted_at"),
+            });
+        }
         result.sort_by(|a, b| a.created_at.cmp(&b.created_at));
         Ok(result)
     }
     pub async fn checks(&self, pull: &PullRequest) -> Result<String> {
-        let v = self
+        let base = format!("/repos/{}/commits/{}", pull.repository, pull.head);
+        let mut items = vec![];
+        let mut complete = false;
+        for page in 1..=100 {
+            let value = self
+                .request(
+                    Method::GET,
+                    &format!("{base}/check-runs?filter=latest&per_page=100&page={page}"),
+                    None,
+                    true,
+                )
+                .await?;
+            let runs = value["check_runs"]
+                .as_array()
+                .context("GitHub check runs were incomplete")?;
+            items.extend(runs.iter().cloned());
+            if runs.len() < 100 {
+                complete = true;
+                break;
+            }
+        }
+        if !complete {
+            bail!("Check results exceed the local pagination budget");
+        }
+        let statuses = self
             .request(
                 Method::GET,
-                &format!(
-                    "/repos/{}/commits/{}/check-runs",
-                    pull.repository, pull.head
-                ),
+                &format!("{base}/status?per_page=1"),
                 None,
                 true,
             )
             .await?;
-        let items = v["check_runs"].as_array().cloned().unwrap_or_default();
-        if items.is_empty() {
-            return Ok("No checks reported".into());
-        }
-        let failed = items
-            .iter()
-            .filter(|v| {
-                matches!(
-                    v["conclusion"].as_str(),
-                    Some("failure" | "timed_out" | "cancelled" | "action_required")
-                )
-            })
-            .count();
-        let pending = items.iter().filter(|v| v["status"] != "completed").count();
-        Ok(if failed > 0 {
-            format!("{failed} checks failed")
-        } else if pending > 0 {
-            format!("{pending} checks running")
-        } else {
-            format!("{} checks passed", items.len())
-        })
+        Ok(summarize_checks(&items, &statuses))
     }
     pub async fn review(&self, pull: &PullRequest, payload: &Value) -> Result<Value> {
         self.request(
@@ -380,6 +397,53 @@ impl GitHub {
         .await
     }
 }
+pub fn summarize_checks(items: &[Value], statuses: &Value) -> String {
+    let mut counts = [0_usize; 5]; // passed, failed, pending, skipped, unknown
+    for item in items {
+        let index = if item["status"] != "completed" {
+            2
+        } else {
+            match item["conclusion"].as_str() {
+                Some("success") => 0,
+                Some(
+                    "failure" | "timed_out" | "cancelled" | "action_required" | "stale"
+                    | "startup_failure",
+                ) => 1,
+                Some("neutral" | "skipped") => 3,
+                _ => 4,
+            }
+        };
+        counts[index] += 1;
+    }
+    let mut parts: Vec<String> = counts
+        .iter()
+        .zip([
+            "passed",
+            "failed",
+            "running",
+            "skipped or neutral",
+            "unknown",
+        ])
+        .filter(|(count, _)| **count > 0)
+        .map(|(count, label)| format!("{count} checks {label}"))
+        .collect();
+    let total = statuses["total_count"].as_u64().unwrap_or(0);
+    if total > 0 {
+        let state = match statuses["state"].as_str() {
+            Some("success") => "passed",
+            Some("failure") => "failed",
+            Some("pending") => "pending",
+            _ => "unknown",
+        };
+        parts.push(format!("{total} status contexts {state}"));
+    }
+    if parts.is_empty() {
+        "No checks reported".into()
+    } else {
+        parts.join(" · ")
+    }
+}
+
 pub fn parse_pull(repo: &str, v: &Value) -> PullRequest {
     let users = |key: &str| {
         v[key]

@@ -32,11 +32,11 @@ Use a fixture larger than one file-list page and an incomplete response to confi
 
 ## Checklist and exit criteria
 
-- [ ] Implement stable snapshot capture with race detection.
-- [ ] Parse canonical hunks and source coordinates.
-- [ ] Share canonical diff components between Guide and Files, with navigation and distinct progress states.
-- [ ] Add provisional attention signals and explicit unassessed groups.
-- [ ] Save and restore line/range notes and reading state.
+- [x] Implement stable snapshot capture with race detection.
+- [x] Parse canonical hunks and source coordinates.
+- [x] Share canonical diff components between Guide and Files, with navigation and distinct progress states.
+- [x] Add provisional attention signals and explicit unassessed groups.
+- [x] Save and restore line/range notes and reading state.
 - [ ] Surface large/unavailable/generated content accurately.
 - [ ] Add safe immutable-object fallback where necessary.
 - [ ] Benchmark normal and stress fixtures from the product spec.

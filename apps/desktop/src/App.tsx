@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import {
   ArrowRight,
@@ -67,6 +68,7 @@ export default function App() {
   const current = useRef(workspace);
   current.current = workspace;
   const booted = useRef(false);
+  const opening = useRef(0);
   const polling = useRef(false);
   const onError = useCallback((e: unknown) => setError(String(e)), []);
   const onNote = useCallback(
@@ -81,6 +83,39 @@ export default function App() {
   const flush = async () => {
     await panel.current?.flush();
   };
+  const finish = async () => {
+    try {
+      await flush();
+      setDialog("finish");
+    } catch (e) {
+      onError(e);
+    }
+  };
+  useEffect(() => {
+    const subscription = getCurrentWindow().onCloseRequested(async (event) => {
+      event.preventDefault();
+      try {
+        await panel.current?.flush();
+        await getCurrentWindow().destroy();
+      } catch (e) {
+        onError(e);
+      }
+    });
+    return () => {
+      void subscription.then((unlisten) => unlisten());
+    };
+  }, [onError]);
+  useEffect(() => {
+    const preference = matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const theme = data?.settings.theme || "system";
+      document.documentElement.dataset.theme =
+        theme === "system" ? (preference.matches ? "dark" : "light") : theme;
+    };
+    apply();
+    preference.addEventListener("change", apply);
+    return () => preference.removeEventListener("change", apply);
+  }, [data?.settings.theme]);
   const refresh = useCallback(async () => {
     const p = await api.inbox();
     setPulls(p);
@@ -93,20 +128,22 @@ export default function App() {
     setData(result);
     setPulls(result.pulls);
     setStatus("");
-    document.documentElement.dataset.theme = result.settings.theme;
-    if (result.github.connected) await refresh();
+    if (result.github.connected) await refresh().catch(onError);
     return result;
-  }, [refresh]);
+  }, [refresh, onError]);
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
     void boot()
-      .then(async (result) => {
+      .then(async () => {
         const last = localStorage.getItem("diffcity.lastPr");
-        if (last && result.github.connected) {
+        if (last && opening.current === 0) {
           try {
             const p = parsePullUrl(last);
-            if (p) setWorkspace(await api.open(p.repository, p.number, false));
+            if (p) {
+              const restored = await api.open(p.repository, p.number, false);
+              if (opening.current === 0) setWorkspace(restored);
+            }
           } catch {
             /* the inbox remains usable if the prior PR lost access */
           }
@@ -120,7 +157,11 @@ export default function App() {
   useEffect(() => {
     let removed = false;
     const subscription = listen<RunEvent>("codex-run", (event) => {
-      if (event.payload.runId !== run) return;
+      if (
+        event.payload.runId !== run ||
+        event.payload.snapshotId !== current.current?.snapshot.id
+      )
+        return;
       if (event.payload.phase === "stream")
         setStream((text) => text + event.payload.text);
       else setRunText(event.payload.text);
@@ -145,7 +186,10 @@ export default function App() {
         if (w && w.snapshot.pull.repository !== "diffcity/demo") {
           const p = w.snapshot.pull;
           const latest = await api.check(p.repository, p.number);
-          if (latest.head !== p.head || latest.base !== p.base)
+          if (
+            current.current?.snapshot.id === w.snapshot.id &&
+            (latest.head !== p.head || latest.base !== p.base)
+          )
             setNewRevision(true);
           const fresh = await api.open(p.repository, p.number, false);
           setWorkspace((current) =>
@@ -174,12 +218,15 @@ export default function App() {
     return () => clearInterval(timer);
   }, [data?.github.connected, refresh]);
   const open = async (repository: string, number: number, force = true) => {
+    const request = ++opening.current;
     setLoading(true);
     setError("");
     try {
       await flush();
       const w = await api.open(repository, number, force);
+      if (request !== opening.current) return;
       setWorkspace(w);
+      setStream("");
       setSelection(null);
       setDiscussion(false);
       setMode("guide");
@@ -189,14 +236,18 @@ export default function App() {
     } catch (e) {
       onError(e);
     } finally {
-      setLoading(false);
+      if (request === opening.current) setLoading(false);
     }
   };
   const sample = async () => {
+    const request = ++opening.current;
     setLoading(true);
     try {
       await flush();
-      setWorkspace(await api.sample());
+      const w = await api.sample();
+      if (request !== opening.current) return;
+      setWorkspace(w);
+      setStream("");
       setMode("guide");
       setSelection(null);
       setDiscussion(false);
@@ -205,7 +256,27 @@ export default function App() {
     } catch (e) {
       onError(e);
     } finally {
-      setLoading(false);
+      if (request === opening.current) setLoading(false);
+    }
+  };
+  const saved = async (snapshotId: string) => {
+    const request = ++opening.current;
+    setLoading(true);
+    try {
+      await flush();
+      const w = await api.saved(snapshotId);
+      if (request !== opening.current) return;
+      setWorkspace(w);
+      setSelection(null);
+      setDiscussion(false);
+      setPendingGuide(null);
+      setNewRevision(true);
+      setMode("guide");
+      setStream("");
+    } catch (e) {
+      onError(e);
+    } finally {
+      if (request === opening.current) setLoading(false);
     }
   };
   const select = async (anchor: Anchor) => {
@@ -232,7 +303,8 @@ export default function App() {
     try {
       await flush();
       const guide = await api.analyze(workspace.snapshot.id, id);
-      if (current.current?.snapshot.id === guide.snapshotId) setPendingGuide(guide);
+      if (current.current?.snapshot.id === guide.snapshotId)
+        setPendingGuide(guide);
     } catch (e) {
       onError(e);
     } finally {
@@ -655,6 +727,19 @@ export default function App() {
                 </button>
               </div>
             )}
+            {workspace.previousSnapshotId && (
+              <div className="update-banner">
+                <span>
+                  Earlier notes and progress remain saved with their original
+                  code.
+                </span>
+                <button
+                  onClick={() => void saved(workspace.previousSnapshotId!)}
+                >
+                  Open previous revision
+                </button>
+              </div>
+            )}
             {workspace.syncError && (
               <div className="sync-warning">
                 Showing saved content · {workspace.syncError}
@@ -668,11 +753,12 @@ export default function App() {
             )}
             <div className="review-body">
               <GuideView
+                key={workspace.snapshot.id}
                 workspace={workspace}
                 selection={selection}
                 onSelect={(a) => void select(a)}
                 onProgress={progress}
-                onFinish={() => setDialog("finish")}
+                onFinish={() => void finish()}
                 mode={mode}
               />
               {discussion && (
@@ -781,7 +867,7 @@ export default function App() {
               false,
             );
             setWorkspace((current) =>
-              current
+              current?.snapshot.id === w.snapshot.id
                 ? { ...current, notes: w.notes, comments: w.comments }
                 : current,
             );

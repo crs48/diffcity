@@ -117,6 +117,13 @@ try {
   await click("Explore a sample");
   await waitText("Make existing invitations compatible");
   await screenshot("01-guide");
+  await click("Review with Codex");
+  await until(() => script('return !!document.querySelector(".run-banner")'));
+  await click("Cancel");
+  await waitText("Codex run cancelled", 90_000);
+  await click("Dismiss error");
+  await waitText("Make existing invitations compatible");
+  console.log("PASS: cancellation preserves the existing guide");
   await click("Next step");
   await waitText("Keep invitations inside their team");
   await click("Next step");
@@ -135,7 +142,11 @@ try {
     "https://github.com/crs48/diffcity/pull/1",
   );
   await click("Open");
-  await until(() => script('return document.querySelector(".breadcrumb strong")?.textContent === "#1" && !document.querySelector(".loading-banner")'));
+  await until(() =>
+    script(
+      'return document.querySelector(".breadcrumb strong")?.textContent === "#1" && !document.querySelector(".loading-banner")',
+    ),
+  );
   await click("Review with Codex");
   await waitText("Your guided review is ready.", 600_000);
   await click("Open updated guide");
@@ -222,9 +233,24 @@ try {
   }
   await stop();
   await start();
-  await until(() => script('return document.querySelector(".breadcrumb strong")?.textContent === "#1"'));
-  await script('document.querySelector(".step-track button").click(); return true;');
-  for (let step = 0; step < 3 && !(await script('return !!document.querySelector(`[aria-label="${arguments[0]} line 1"]`)', [path])); step++) await click("Next step");
+  await until(() =>
+    script(
+      'return document.querySelector(".breadcrumb strong")?.textContent === "#1"',
+    ),
+  );
+  await script(
+    'document.querySelector(".step-track button").click(); return true;',
+  );
+  for (
+    let step = 0;
+    step < 3 &&
+    !(await script(
+      'return !!document.querySelector(`[aria-label="${arguments[0]} line 1"]`)',
+      [path],
+    ));
+    step++
+  )
+    await click("Next step");
   await click(`${path} line 1`);
   await waitText(marker);
   await waitText("What happens to existing rows");
@@ -232,6 +258,58 @@ try {
     "PASS: native app restart restores the PR, anchored notes, and discussion",
   );
   await screenshot("06-restored");
+  if (process.env.DIFFCITY_TEST_REVISION === "yes") {
+    await click("Close discussion");
+    await writeFile(
+      resolve(artifacts, "await-update.json"),
+      JSON.stringify({
+        dataDirectory,
+        pr: "https://github.com/crs48/diffcity/pull/1",
+      }),
+    );
+    console.log("READY: push the synthetic PR update now");
+    await waitText("New code is available.", 180_000);
+    await click("Load new revision");
+    await waitText("Open previous revision", 90_000);
+    await waitText("hunks changed since your previous revision");
+    assert.ok(!(await text()).includes("Your guided review is ready."));
+    await screenshot("07-new-revision");
+    await click("Open previous revision");
+    await waitText("Saved revision");
+    await script(
+      'document.querySelector(".step-track button").click(); return true;',
+    );
+    for (
+      let step = 0;
+      step < 3 &&
+      !(await script(
+        'return !!document.querySelector(`[aria-label="${arguments[0]} line 1"]`)',
+        [path],
+      ));
+      step++
+    )
+      await click("Next step");
+    await click(`${path} line 1`);
+    await waitText(marker);
+    await waitText("What happens to existing rows");
+    console.log(
+      "PASS: live push detected; new code invalidates progress; earlier notes remain accessible",
+    );
+    await screenshot("08-prior-revision");
+  }
+  await writeFile(
+    resolve(artifacts, "result.json"),
+    JSON.stringify(
+      {
+        dataDirectory,
+        completedAt: new Date().toISOString(),
+        published: process.env.DIFFCITY_TEST_PUBLISH === "yes",
+        revisionTest: process.env.DIFFCITY_TEST_REVISION === "yes",
+      },
+      null,
+      2,
+    ),
+  );
   console.log("PASS: native end-to-end journey complete");
 } catch (error) {
   try {

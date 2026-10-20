@@ -6,6 +6,7 @@ fn main() {
             "list_repositories",
             "save_settings",
             "open_pull",
+            "open_saved_review",
             "check_pull",
             "save_note",
             "delete_note",

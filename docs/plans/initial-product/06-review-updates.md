@@ -51,12 +51,12 @@ Pause publication and an analysis run while a push occurs. Confirm each retains 
 ## Checklist and exit criteria
 
 - [ ] Separate latest/opened/reviewed revision markers and unread activity.
-- [ ] Capture revisions and preserve referenced old context.
+- [x] Capture revisions and preserve referenced old context.
 - [ ] Implement changed-since-review and conservative anchor mapping.
 - [ ] Invalidate walkthroughs and progress accurately.
 - [ ] Reassess attention, fold eligibility, summary acknowledgements, and reviewer overrides.
 - [ ] Surface newly consequential changes while preserving the active guide position.
-- [ ] Handle metadata, discussions, and checks independently.
+- [x] Handle metadata, discussions, and checks independently.
 - [ ] Add wake/reconnect convergence and optional notifications.
 - [ ] Validate the revision-change scenario matrix.
 

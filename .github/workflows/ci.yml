@@ -21,6 +21,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
       - run: pnpm contracts && git diff --exit-code -- packages/contracts
+      - run: cargo fmt --all -- --check
       - run: pnpm check
       - run: pnpm lint
       - run: pnpm test

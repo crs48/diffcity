@@ -40,6 +40,13 @@ pub async fn open_pull(
         .map_err(error)
 }
 #[tauri::command]
+pub fn open_saved_review(
+    service: State<'_, Arc<Service>>,
+    snapshot_id: String,
+) -> Output<ReviewWorkspace> {
+    service.saved(&snapshot_id).map_err(error)
+}
+#[tauri::command]
 pub async fn check_pull(
     service: State<'_, Arc<Service>>,
     repository: String,

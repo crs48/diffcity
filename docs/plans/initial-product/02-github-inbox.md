@@ -43,10 +43,10 @@ Use a fake clock to demonstrate that two windows do not double polling, a select
 
 ## Checklist and exit criteria
 
-- [ ] Connect and display the GitHub identity and access state.
-- [ ] Add selectable/pinned repositories and direct PR links.
-- [ ] Open PRs directly into Guide and restore their reading position.
-- [ ] Normalize and paginate PR lists.
+- [x] Connect and display the GitHub identity and access state.
+- [x] Add selectable/pinned repositories and direct PR links.
+- [x] Open PRs directly into Guide and restore their reading position.
+- [x] Normalize and paginate PR lists.
 - [ ] Implement stable inbox grouping, filtering, and unread badges.
 - [ ] Implement one budgeted scheduler and recovery states.
 - [ ] Validate the GitHub App flow or record a concrete blocker for distribution.

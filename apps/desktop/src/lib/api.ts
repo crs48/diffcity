@@ -20,6 +20,8 @@ export const api = {
     invoke<Settings>("save_settings", { settings }),
   open: (repository: string, number: number, refresh = true) =>
     invoke<ReviewWorkspace>("open_pull", { repository, number, refresh }),
+  saved: (snapshotId: string) =>
+    invoke<ReviewWorkspace>("open_saved_review", { snapshotId }),
   check: (repository: string, number: number) =>
     invoke<PullRequest>("check_pull", { repository, number }),
   sample: () => invoke<ReviewWorkspace>("sample_review"),

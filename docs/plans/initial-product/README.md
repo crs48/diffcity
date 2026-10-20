@@ -1,6 +1,6 @@
 # diffcity: product and implementation plan
 
-**Prepared:** October 20, 2026 · **Status:** proposed implementation; ready for product review
+**Prepared:** October 20, 2026 · **Status:** local macOS alpha implemented; distribution and broader product gates remain
 
 diffcity makes GitHub pull requests easy to understand, discuss, and revisit. Its primary experience is a Codex-guided review that puts consequential changes first, explains why they deserve attention, and folds assessed routine work into inspectable summaries. The personal PR inbox and GitHub feedback loop support that review experience.
 
@@ -14,7 +14,7 @@ diffcity should answer three questions immediately: **What needs my attention? W
 
 ## Current state
 
-The workspace `/Users/crs/Code/diffcity` was empty and was not a Git repository when inspected. There were no existing plans, source files, dependencies, or build conventions to preserve. This planning package is the initial project content. Every application path below is proposed.
+The workspace started empty. It now contains the Tauri/React/Rust application, SQLite persistence, GitHub and Codex integrations, native tests, and CI. See [implementation and validation notes](../../implementation.md) for current evidence and boundaries. Proposed touchpoints in the original numbered steps describe the design intent; the maintained application structure is documented in the root README.
 
 The authenticated personal GitHub account is `crs48`, whose profile name is Christopher Smothers. The requested repository is `crs48/diffcity`, initially private. This is an independent personal project.
 
@@ -28,7 +28,7 @@ The reference project's README, license, dependency manifest, repository tree, a
 | GitHub PR review and Codex are the initial focus | Confirmed by the user |
 | Guide is the primary review surface, ordered by attention with routine changes folded | Confirmed by the user; guide quality takes priority over inbox polish |
 | Private personal repository, later public MIT project | Confirmed by the user; license can exist before public release |
-| macOS first, initially Apple Silicon | Recommended launch target; Intel and other OS support follow validation |
+| macOS first | The initial local build was validated on x86_64; Apple Silicon and other platforms still need explicit validation |
 | Tauri 2, React + TypeScript, Rust, SQLite | Confirmed by the user for the first implementation; validate Codex streaming and large diffs in a packaged Tauri app |
 | Original implementation, informed by Diffity | Recommended; selectively reuse only with explicit provenance and attribution |
 | Repositories are called projects in the sidebar | Product interpretation; GitHub Projects boards are outside the first release |
@@ -135,9 +135,9 @@ Check off implementation items only after their exit criteria are demonstrated. 
 
 - [ ] An author reviews their own PR, asks Codex a question, and publishes a selected comment.
 - [ ] A requested reviewer submits a multi-line review on someone else's PR.
-- [ ] Seeded consequential changes appear early and are never automatically folded into routine groups.
+- [x] Seeded consequential changes appear early and are never automatically folded into routine groups.
 - [ ] A reviewer can read, ask, annotate, and finish within Guide without a forced Files detour.
-- [ ] Summary acknowledgement, deferred work, and actual code review remain distinct in progress reporting.
+- [x] Summary acknowledgement, deferred work, and actual code review remain distinct in progress reporting.
 - [ ] A push, force-push, base change, or remote reply is surfaced with accurate review state.
 - [ ] Offline work, restart, expired credentials, rate limits, and interrupted publication preserve drafts.
 - [ ] No private notes or model transcript reach GitHub unless explicitly selected.
