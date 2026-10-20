@@ -1,14 +1,14 @@
 # diffcity
 
-A desktop workspace for understanding and reviewing GitHub pull requests, with Codex-guided walkthroughs.
+A desktop workspace for reviewing GitHub pull requests through Codex-guided walkthroughs that put the highest-attention changes first.
 
 **Status:** product specification and implementation planning. Application development has not started.
 
 **Owner:** Christopher Smothers · **Domain:** [diff.city](https://diff.city) · **License:** [MIT](LICENSE)
 
-Start with the [product and implementation plan](docs/plans/initial-product/README.md), then read the [product specification](docs/plans/initial-product/product-spec.md).
+Start with the [product and implementation plan](docs/plans/initial-product/README.md), then read the [guided review specification](docs/plans/initial-product/guided-review.md) and [product specification](docs/plans/initial-product/product-spec.md).
 
-The first release will be a macOS desktop app. GitHub repositories and open pull requests form the navigation; Codex explains changes as a guided walkthrough, answers questions attached to code, and helps prepare feedback that the user can publish to GitHub.
+The first release will be a macOS desktop app. GitHub repositories and open pull requests form the navigation. Opening a PR leads into the guided review: consequential changes first, clear attention callouts, and routine changes folded into inspectable summaries. Reviewers read the actual diff, ask Codex questions, and prepare GitHub feedback directly in the guide.
 
 The first implementation uses **Tauri 2**, **React + TypeScript** for the interface, **Rust** for the backend, and **SQLite** for local state.
 

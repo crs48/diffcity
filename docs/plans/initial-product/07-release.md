@@ -10,7 +10,9 @@ Tauri bundle/capability configuration under `apps/desktop/src-tauri`, Cargo/pnpm
 
 ## Private alpha
 
-Dogfood against a representative mix of the owner's PRs and other people's PRs. Measure time to open a PR, time to understand the change, number of GitHub context switches, model failures, incorrect anchors, duplicate-publication incidents, and drift in sync state. Keep metrics local by default. The useful outcome is a shorter, more confident review, not more generated text.
+Dogfood against a representative mix of the owner's PRs and other people's PRs. The primary release gate is the [guided-review evaluation](guided-review.md): consequential code appears early, routine folding does not conceal seeded important changes, explanations are grounded, and a review can be completed in Guide. Compare counterbalanced tasks against file order and a simple topic-order guide before claiming a better experience. Inbox polish cannot compensate for a poor guide.
+
+Measure time to the first important concern, planted-issue detection, comprehension, mistaken folding, manual priority corrections, Files detours, and time to understand the overall change. Also measure opening latency, GitHub context switches, model failures, incorrect anchors, duplicate-publication incidents, and sync drift. Keep metrics local by default. Record results and use failures to improve the corpus; do not trade missed consequential changes for a faster completion number.
 
 Before inviting external testers, complete the GitHub App onboarding flow, test approval restrictions in an organization, and confirm supported Codex setup on a clean machine. Present actionable errors for unsupported runtime versions, missing credentials, denied repository access, and account policies. Do not rely on the developer's shell PATH or preexisting local tools accidentally making the app work.
 
@@ -35,6 +37,8 @@ Add contribution instructions, development setup, architecture overview, issue t
 ## Release checklist
 
 - [ ] Pass a clean-machine install and complete author/reviewer journeys.
+- [ ] Pass guided-review ordering, folding, coverage, and stability fixture gates.
+- [ ] Record guide comprehension/detection results against the two baselines and resolve material failures.
 - [ ] Validate account setup, token rotation, revocation, and organization restrictions.
 - [ ] Validate PR revision changes, missing context, and offline recovery.
 - [ ] Validate interrupted writes and absence of private text in GitHub payloads.
@@ -52,6 +56,6 @@ Add contribution instructions, development setup, architecture overview, issue t
 
 ## Validation and exit criteria
 
-A tester with no developer checkout can connect GitHub, choose a repository, open a PR, obtain a walkthrough, ask about a line, publish selected feedback, and revisit a new revision. Restart/offline/expired-auth paths preserve their work. A contributor can clone the public repository and run meaningful fixture-based checks.
+A tester with no developer checkout can connect GitHub, choose a repository, open a PR in Guide, review consequential code first, inspect a folded routine group, ask about a line, publish selected feedback, and revisit a new revision without a required Files detour. The guided-review corpus passes and observed comprehension/detection results support release. Restart/offline/expired-auth paths preserve their work. A contributor can clone the public repository and run meaningful fixture-based checks.
 
 The optional webhook relay, additional providers, automatic code fixes, cross-device sync, and Windows/Linux releases receive separate plans after this loop is proven.

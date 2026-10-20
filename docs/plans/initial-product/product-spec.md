@@ -1,6 +1,6 @@
 # diffcity product specification
 
-**Product promise:** understand the change, make a confident review, and stay oriented when the PR evolves.
+**Product promise:** work through the changes that deserve the most attention first, make a confident review, and stay oriented when the PR evolves. The guided flow is the primary product experience.
 
 This document defines the proposed MVP. Desktop-first and Tauri 2 are confirmed; macOS-first is the recommended release sequence. The interface uses React and TypeScript, with Rust services and local SQLite storage. [The plan](README.md) identifies implementation phases.
 
@@ -20,10 +20,10 @@ Use three primary regions, with an optional discussion drawer. Avoid a permanent
 ┌ Projects ─────────┬ Pull requests ────────┬ Review workspace ───────────────────┐
 │ All projects     │ My PRs                │ repo / #142  Add invitations         │
 │ ★ owner/api  3   │  #142 Invitations  •  │ Checks • Reviews • Last synced      │
-│ ★ owner/web  2   │  #137 Retry logic     │ Overview | Walkthrough | Files      │
-│   team/sdk   1   │ Review requested      │                                     │
-│                 │  #89  Auth cleanup •  │ 2 of 5: Authorization               │
-│ Add project     │ Assigned to me        │ Explanation + linked diff ranges    │
+│ ★ owner/web  2   │  #137 Retry logic     │ Guide (default) | Files | Overview  │
+│   team/sdk   1   │ Review requested      │ 2 attention areas · 3 routine groups│
+│                 │  #89  Auth cleanup •  │ 1 of 5: Database migration          │
+│ Add project     │ Assigned to me        │ Why it matters + actual diff        │
 │                 │ Other open PRs        │                                     │
 │                 │                       │ [Ask Codex] [Add review comment]    │
 │ GitHub / Codex   │ Filters and search    │ Progress          [Finish review]   │
@@ -59,26 +59,32 @@ For the owner's private alpha, connecting the existing GitHub CLI session is acc
 
 The overview combines the author's description with a separately labeled Codex summary, base/head branch, revision status, changed-file statistics, checks, review requests, and unresolved GitHub discussions. The model's claims link to evidence or state their uncertainty.
 
-Provide **Generate walkthrough**, **Continue review**, **Refresh**, **Open in GitHub**, and **Finish review**. A user can start in Files without waiting for AI.
+Opening a PR defaults to Guide, restoring the current walkthrough and reading position when available. Provide **Review with Codex**, **Continue review**, **Refresh**, **Open in GitHub**, and **Finish review**. The review action requests findings and a guided walkthrough together. Before generation, offer a provisional guide and a clear analysis action. Files remains available without waiting for AI and can be selected as a personal default.
 
 An update banner says what changed: “New commits available,” “Base branch changed,” or “New review feedback.” Background refresh never replaces the diff underneath a text selection or an open composer.
 
 ## Guided walkthrough
 
-A walkthrough is an ordered explanation of a specific PR revision. Sections group changes by responsibility, such as “Data model,” “Authorization,” “API behavior,” “UI,” and “Tests.” These are examples, not mandatory categories; a small PR may need one section.
+A walkthrough is the main place to read and discuss a specific PR revision. Sections group related behavior across files and lead with the highest-attention changes, then standard changes, then routine groups. Necessary context and related tests appear beside the behavior they explain. A small PR may need one section. The detailed ordering, folding, and evaluation contract is in [guided-review.md](guided-review.md).
 
 Every section contains:
 
 - A short title and explanation of purpose and behavior.
-- Exact file/hunk references, with the relevant code visible inline or one click away.
+- Review priority, change type, and an evidence-backed explanation of why the section appears here.
+- The actual diff, with exact file/hunk references and expandable supporting context.
 - Relationships to earlier/later sections when order matters.
 - Potential concerns and review questions, clearly distinguished from confirmed facts.
 - Test changes and unverified assumptions; reading a test is not evidence that it passed.
 - A reviewer-controlled progress state and next/previous navigation.
+- Inline Ask Codex, notes, GitHub draft comments, and a direct route to finish review.
 
-Show an opening summary and a closing coverage view. Every changed hunk belongs to one primary section or an explicit ungrouped/unavailable bucket; secondary references are permitted. The model cannot silently omit files or treat generated files as reviewed. Users can always inspect the full file tree.
+Show an opening summary of attention areas and a closing coverage view. Every changed hunk belongs to one primary section or an explicit unassessed/unavailable entry; secondary references are permitted. The model cannot silently omit files or treat generated files as reviewed. Users can always inspect the full file tree.
 
-Walkthrough generation streams progress such as “Reading changes” and “Organizing sections.” Persist only validated sections. A stopped or failed run leaves usable output labeled partial and offers retry. A failed model response falls back to deterministic file groups, not an empty review screen.
+Database migrations and authorization changes start with high-attention callouts even when no specific bug is found. Review priority and finding severity are separate. Prose documentation and localization copy are candidates for later, folded groups; contract changes, placeholder/key changes, unresolved discussions, and uncertain assessment surface as exceptions. Never infer safety from a filename or category alone.
+
+Folded cards retain the summary, reason, counts, and Expand all control. They remain searchable and count toward total coverage. Acknowledge summary and Defer are distinct from Mark code reviewed. Within a documentation-only or similarly routine PR, expand the primary section initially so the guide still has a useful starting point.
+
+Walkthrough generation streams progress such as “Assessing changes” and “Prioritizing review.” Persist only validated sections. A stopped or failed run leaves usable output labeled partial and offers retry; unassessed content remains expanded and visible early. A failed model response falls back to a rule-based guide with explicit limitations. Newly generated results never reorder the active step or collapse selected code.
 
 The walkthrough is an aid to comprehension. It does not decide approval, silently mark sections reviewed, or promise to find every defect.
 
@@ -103,7 +109,7 @@ GitHub-origin comments appear inline with author, timestamp, status, and a GitHu
 
 ## Finish review
 
-The finish screen shows reviewed/unreviewed sections and files, selected draft comments, unresolved concerns, incomplete analysis, and revision freshness. It supports GitHub **Comment**, **Approve**, and **Request changes** when allowed. The author of a PR gets Comment; self-approval and self-request-changes are disabled with a clear explanation.
+The finish screen shows code reviewed, summaries acknowledged, deferred and unavailable content, high-attention items remaining, selected draft comments, unresolved concerns, incomplete analysis, and revision freshness. Folding and AI coverage never count as human review. It supports GitHub **Comment**, **Approve**, and **Request changes** when allowed. The author of a PR gets Comment; self-approval and self-request-changes are disabled with a clear explanation.
 
 A user may submit a review without accepting every AI suggestion or viewing every file. Incomplete coverage stays visible; it is not represented as complete. Existing pending GitHub reviews are surfaced before adding a new one, with a path to continue or inspect them.
 
@@ -130,6 +136,8 @@ Keep distinct records for latest fetched revision, last opened revision, and las
 
 “Changed since your review” compares saved content with the new revision. Unchanged hunk progress can carry forward. Changed ranges become unreviewed; ambiguous renames, force-pushes, and missing old content remain explicitly unresolved. Reused explanations retain their provenance; the overall walkthrough is not declared current without revalidation.
 
+Reassess affected priority, section dependencies, and fold eligibility on a new revision. New high-attention changes surface even if their old group was folded or deferred. User priority overrides remain attributable to their original revision until reconsidered.
+
 New commits invalidate code analysis; new comments invalidate discussion summaries; new check results update check status. Metadata-only changes should not trigger a full code analysis. Regenerating a walkthrough is initially explicit; per-repository automatic analysis can be considered after usage limits are understood.
 
 Freshness is visible as “Updated 20 seconds ago,” “Offline,” “GitHub rate limit; retrying at…,” or “Access needs attention.” While the app is closed there is no local poller; opening or waking the app reconciles first. Background OS notifications are optional and focus on review requests, replies, and new code in an in-progress review.
@@ -145,6 +153,8 @@ These are proposed acceptance targets, not measured results:
 - Keyboard navigation, visible focus, screen-reader labels, adjustable font size, light/dark mode, and non-color-only diff cues.
 - No sudden scroll jumps during sync; resizable panes and preserved reading position per PR.
 - Progress for long analysis; cancellation acknowledged within two seconds, with subprocess termination fallback.
+- Highest-attention work visible early, with findings and review-priority labels distinguished; routine folding never hides seeded consequential changes in the evaluation corpus.
+- Core reading, questioning, commenting, and completion work inside Guide, with no required switch to Files.
 
 Measure model completion latency empirically; do not promise a fixed walkthrough time. Show partial coverage and progress rather than a fabricated time estimate.
 

@@ -2,7 +2,7 @@
 
 ## Objective and dependencies
 
-Establish a small desktop foundation and prove the two external integrations before committing to the full UI. Read the [product spec](product-spec.md) and [architecture](architecture.md). No application code exists yet.
+Establish a small desktop foundation, prove the two external integrations, and make the primary guided flow tangible with fixtures. Read the [product spec](product-spec.md), [guided review design](guided-review.md), and [architecture](architecture.md). No application code exists yet.
 
 ## Proposed touchpoints
 
@@ -12,7 +12,7 @@ Establish a small desktop foundation and prove the two external integrations bef
 
 Start with Tauri 2, a React/TypeScript/Vite UI in a pnpm workspace, and a Rust core in a Cargo workspace. This stack is selected by the user. Pin compatible stable versions and the Rust toolchain at implementation time; commit both lockfiles. Use functional components, pure Rust domain transformations, and small adapters for IO. Do not scaffold future website or cloud packages until needed.
 
-Build a shell with project rail, inbox pane, review workspace, and optional discussion drawer using synthetic fixtures. Add keyboard navigation, pane resizing, and light/dark tokens. Keep visual polish modest until the diff renderer is proven.
+Build a shell with project rail, inbox pane, Guide as the default review workspace, and optional discussion drawer using synthetic fixtures. The first fixture places a migration and its attention callout first, shows related implementation/tests together, and folds routine documentation/localization into expandable summaries. Include next/previous steps, section index, inline note selection, and separate code-reviewed/summary-acknowledged controls. Fixture assessments are explicitly illustrative; live AI classification arrives in step 04. Add keyboard navigation, pane resizing, and light/dark tokens. Defer inbox polish while validating the guide interaction.
 
 Add Rust-owned SQLite migrations and repositories for accounts, projects, PRs, snapshots, notes, and operations. Demonstrate a draft surviving both a normal restart and a forced process exit. Store runtime data outside the checkout. Define serializable Rust contracts and generate TypeScript types/JSON schemas; validate requests/responses and expose named Tauri commands with scoped capabilities and explicit custom-command permissions. Database, filesystem, credentials, and subprocess handles remain in Rust.
 
@@ -20,7 +20,7 @@ Run a packaged macOS spike with three checks:
 
 1. Authenticate to GitHub through the existing CLI session and fetch metadata plus a diff for a chosen PR.
 2. Locate a verified OpenAI Codex runtime, manage its stdio protocol from Rust, complete initialization, start a harmless supplied-context turn, stream an answer to the webview, cancel a second turn, and reconnect.
-3. Render a large synthetic diff in macOS WKWebView using a candidate existing component and map clicks back to Rust-owned canonical old/new lines.
+3. Render the fixture guide and a large synthetic diff in macOS WKWebView using a candidate existing component. Map inline selections back to Rust-owned canonical old/new lines, including after expanding a folded group or moving between steps.
 
 Evaluate `@pierre/diffs` as a renderer candidate against its [upstream source and releases](https://github.com/pierrecomputer/pierre). Verify the exact package license, annotation support, deletion/range selection, virtualization, keyboard access, and custom styling before adoption. Do not select it solely from a demo. A thin custom renderer over the same canonical diff model is the fallback; avoid turning this into an editor project.
 
@@ -39,6 +39,7 @@ Evaluate WebdriverIO's Tauri service with its embedded driver for macOS app auto
 - [ ] Scaffold strict workspace, formatting, linting, typechecking, and test commands.
 - [x] Select Tauri 2 with a React/TypeScript UI and Rust core.
 - [ ] Implement minimal Tauri command/event boundaries, capabilities, and sample navigation.
+- [ ] Demonstrate a migration-first fixture guide with routine folds, inline notes, and explicit progress actions.
 - [ ] Generate wire types and validate Rust/TypeScript contract compatibility.
 - [ ] Add migrations and durable note recovery.
 - [ ] Prove GitHub access and Codex handshake in a packaged app.
@@ -46,4 +47,4 @@ Evaluate WebdriverIO's Tauri service with its embedded driver for macOS app auto
 - [ ] Record WebKit benchmarks and supported Codex/runtime compatibility assumptions.
 - [ ] Add CI for TypeScript checks, Rust formatting/linting/tests, contract generation, and an unsigned Tauri build.
 
-**Exit:** launch the packaged app, restore a saved sample note, fetch one real PR, and display a streamed Codex answer. No GitHub writes or application launch to the public are required here.
+**Exit:** launch the packaged app, navigate the fixture guide from migration to folded routine changes, restore a saved inline note, fetch one real PR, and display a streamed Codex answer. No GitHub writes or application launch to the public are required here.

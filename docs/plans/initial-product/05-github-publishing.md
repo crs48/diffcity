@@ -24,7 +24,7 @@ Support these commands:
 
 Use modern line/side/range parameters where supported rather than display offsets. Keep endpoint-specific payload builders separate; REST batch-review and individual-comment payloads are not automatically interchangeable. See [review comments](https://docs.github.com/en/rest/pulls/comments), [reviews](https://docs.github.com/en/rest/pulls/reviews), and [GraphQL PR operations](https://docs.github.com/en/graphql/reference/pulls).
 
-The finish screen previews exact text, selected comments, review action, account, destination repository, reviewed revision, and incomplete coverage. Unselected notes and Codex messages stay local. Self-review permits Comment and disables Approve/Request changes. Enforce viewer capabilities and handle server-side restrictions even after a successful preflight.
+Open the finish screen directly from Guide. Preview exact text, selected comments, review action, account, destination repository, and reviewed revision. Report code-reviewed, summary-acknowledged, deferred, unassessed, and unavailable coverage separately, with high-attention work remaining linked back to its step. Do not imply that collapsed routine groups were reviewed. The reviewer can intentionally submit a partial review; truthful coverage is context, not an arbitrary requirement to expand every file. Unselected notes and Codex messages stay local. Self-review permits Comment and disables Approve/Request changes. Enforce viewer capabilities and handle server-side restrictions even after a successful preflight.
 
 Refresh the PR before dispatch. If base/head/diff changed, retain the draft and require inspection/remapping of affected anchors. An out-of-diff line remains local until the user chooses an explicit alternative. Pin the reviewed commit on the remote review. Re-fetch after publication to detect code changes racing with the write.
 
@@ -47,7 +47,7 @@ stateDiagram-v2
 
 Do not promise exactly-once remote delivery. A local operation UUID only prevents local duplicate dispatch. Reconcile uncertain writes against remote identity, commit, anchors, body, and time. If the result remains ambiguous, present matching remote records and require an explicit retry decision in the product. Offline publication waits as a local draft; it does not auto-send on reconnection without a fresh user action.
 
-Refresh canonical remote discussions after writes. Track remote edits, deletions, resolved state, and outdated anchors. Explicit user edits can update an existing remote comment; compare with the latest remote body before overwriting external changes.
+Refresh canonical remote discussions after writes and display them at their anchored code within Guide. Track remote edits, deletions, resolved state, and outdated anchors. An unresolved thread prevents automatic folding of its group; following a thread reveals the code while preserving the reader's return position. Explicit user edits can update an existing remote comment; compare with the latest remote body before overwriting external changes.
 
 ## Validation and edge cases
 
@@ -58,6 +58,7 @@ Verify one real test PR round trip manually: local draft → GitHub review → f
 ## Checklist and exit criteria
 
 - [ ] Add explicit draft conversion and selected-message previews.
+- [ ] Complete review submission from Guide with honest coverage and return links.
 - [ ] Add overall/inline comments, replies, and review events.
 - [ ] Add resolve/unresolve with capability checks.
 - [ ] Validate revision and anchors before every publication.
@@ -65,4 +66,4 @@ Verify one real test PR round trip manually: local draft → GitHub review → f
 - [ ] Import canonical remote feedback and external edits.
 - [ ] Demonstrate failure recovery without duplicate feedback.
 
-**Exit:** publish only the chosen feedback to a test PR as the user, view the same comments in GitHub and diffcity, and recover an interrupted submission without losing drafts or blindly posting twice.
+**Exit:** finish a review from Guide, publish only the chosen feedback to a test PR as the user, view the same comments in GitHub and their guide steps, and recover an interrupted submission without losing drafts or blindly posting twice.

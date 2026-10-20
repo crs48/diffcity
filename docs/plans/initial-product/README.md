@@ -2,9 +2,9 @@
 
 **Prepared:** October 20, 2026 · **Status:** proposed implementation; ready for product review
 
-diffcity makes GitHub pull requests easy to understand, discuss, and revisit. Its central experience is a personal PR inbox connected to an evidence-based Codex walkthrough and a reliable GitHub feedback loop.
+diffcity makes GitHub pull requests easy to understand, discuss, and revisit. Its primary experience is a Codex-guided review that puts consequential changes first, explains why they deserve attention, and folds assessed routine work into inspectable summaries. The personal PR inbox and GitHub feedback loop support that review experience.
 
-The plan folder name `initial-product` is inferred from this being the project's first specification. Product details live in [product-spec.md](product-spec.md); engineering contracts live in [architecture.md](architecture.md). Read those before executing the numbered steps.
+The plan folder name `initial-product` is inferred from this being the project's first specification. The core experience is defined in [guided-review.md](guided-review.md); surrounding product details live in [product-spec.md](product-spec.md), and engineering contracts live in [architecture.md](architecture.md). Read those before executing the numbered steps.
 
 ## Motivation
 
@@ -26,6 +26,7 @@ The reference project's README, license, dependency manifest, repository tree, a
 | --- | --- |
 | Desktop app first; diff.city for downloads and docs | Confirmed by the user |
 | GitHub PR review and Codex are the initial focus | Confirmed by the user |
+| Guide is the primary review surface, ordered by attention with routine changes folded | Confirmed by the user; guide quality takes priority over inbox polish |
 | Private personal repository, later public MIT project | Confirmed by the user; license can exist before public release |
 | macOS first, initially Apple Silicon | Recommended launch target; Intel and other OS support follow validation |
 | Tauri 2, React + TypeScript, Rust, SQLite | Confirmed by the user for the first implementation; validate Codex streaming and large diffs in a packaged Tauri app |
@@ -39,9 +40,11 @@ The reference project's README, license, dependency manifest, repository tree, a
 
 - Show pinned GitHub repositories and a cross-repository inbox, with My PRs first, requested reviews next, assigned PRs after that, then other open PRs.
 - Review without disturbing the user's current checkout or requiring a clone for basic diff browsing.
-- Explain a PR in ordered, meaningful sections grounded in actual code ranges.
+- Make Guide the default PR destination and support the complete review loop there.
+- Order meaningful sections by review priority, with evidence-backed callouts for consequential changes and concise prerequisite context.
+- Fold assessed routine changes, such as localization copy and API prose, while exposing exceptions and keeping every change accessible.
 - Support private notes, line-scoped Codex discussions, and GitHub feedback from the same review surface.
-- Preserve drafts, viewed state, and discussions across restarts and PR revisions.
+- Preserve drafts, explicit review progress, and discussions across restarts and PR revisions.
 - Keep updates timely and visible without unnecessary API traffic or automatic model spending.
 - Ship a project that others can eventually build and contribute to under MIT.
 
@@ -54,8 +57,8 @@ GitHub Projects boards, a full editor, local uncommitted-change review, autonomo
 ```mermaid
 flowchart LR
   Repos[Projects and PR inbox] --> Snapshot[Exact PR revision]
-  Snapshot --> Files[Files and raw diff]
-  Snapshot --> Guide[Codex walkthrough]
+  Snapshot --> Guide[Guide: high attention to routine]
+  Guide --> Files[Optional full file view]
   Guide --> Discuss[Private line discussion]
   Files --> Discuss
   Discuss --> Draft[Selected GitHub drafts]
@@ -75,15 +78,17 @@ GitHub is authoritative for public review state. The local database is authorita
 
 | Step | Deliverable | Exit demonstration |
 | --- | --- | --- |
-| [01 — Foundation](01-foundation.md) | Desktop shell, storage, integration feasibility | A packaged app restores a sample review and completes a Codex protocol handshake |
+| [01 — Foundation](01-foundation.md) | Tauri shell, fixture-driven Guide, integration feasibility | A packaged app shows a migration first, folds routine translations, and completes a Codex handshake |
 | [02 — GitHub inbox](02-github-inbox.md) | Authentication, repository selection, live PR lists | Real PRs appear in the requested priority order and refresh correctly |
-| [03 — Diff review](03-diff-review.md) | Revision snapshots, file navigation, durable notes | Read a PR, annotate additions/deletions, restart without losing work |
-| [04 — Codex walkthrough](04-codex-walkthrough.md) | Topic sections, evidence links, line discussions | Generate a grounded walkthrough and ask a question about a selected range |
+| [03 — Diff review](03-diff-review.md) | Canonical diffs in Guide and Files, durable notes | Annotate additions/deletions within Guide and restart without losing work |
+| [04 — Codex walkthrough](04-codex-walkthrough.md) | Review findings, attention ordering, explanations, folding, discussion | Complete a grounded review through Guide with high-attention changes surfaced and routine exceptions visible |
 | [05 — GitHub publishing](05-github-publishing.md) | Draft review, comments, replies, submission | Publish chosen feedback under the user's identity and reconcile it back |
 | [06 — Review updates](06-review-updates.md) | Changed-since-review, stale-state recovery | A new push invalidates affected progress without losing prior work |
 | [07 — Release](07-release.md) | Hardened private alpha, distribution, public-readiness | A clean machine completes the full workflow; public release has a concrete checklist |
 
 **First useful slice:** steps 01–04, using one real PR and local notes. **Complete review MVP:** steps 01–06. **Public launch:** step 07 after private dogfooding.
+
+The Guide prototype starts in step 01. Keep inbox work in step 02 focused on reaching real PRs; step 03 supplies the same diff/comment components to Guide and Files. Step 04 is the core product quality gate. Defer extra inbox polish and optional features until attention ordering, folding, and in-guide review are useful on real PRs.
 
 Plan by exit criteria rather than promising calendar dates before the integration spikes. Authentication, diff anchors, publishing recovery, and the Rust/TypeScript boundary are the main early reliability work.
 
@@ -96,6 +101,8 @@ Plan by exit criteria rather than promising calendar dates before the integratio
 | GitHub App installation blocked by an organization | Readable onboarding error and personal-alpha `gh` connection; never imply all accessible repositories are available through every credential |
 | Codex executable/version mismatch | Verify app-server capabilities, not just a binary named `codex`; local shell inspection found an incompatible-looking `0.2.3` executable |
 | Model invents groups, anchors, or evidence | Validate every reference and show explicit coverage gaps; deterministic file view always available |
+| Priority ordering or folding hides consequential changes | Classify hunks, retain rule-derived attention floors, surface uncertain content early, and evaluate mixed-risk fixtures |
+| Attention labels imply a defect was found | Keep change type, review priority, and finding severity distinct |
 | Head/base changes during analysis or publication | Immutable snapshots, freshness checks, conservative remapping, and visible stale outcomes |
 | Publish succeeds but response is lost | Durable operation journal and reconciliation; ambiguous operations require inspection before retry |
 | Desktop polling has latency and rate cost | Budgeted adaptive polling initially; optional authenticated webhook relay later |
@@ -110,6 +117,7 @@ Tauri is the selected shell for the first implementation. The initial OS targets
 - [x] Research Diffity and primary GitHub/Codex documentation.
 - [x] Confirm desktop-first product direction.
 - [x] Confirm Tauri 2 for the first implementation and update architecture and milestones.
+- [x] Prioritize the guided flow and specify attention ordering, folding, inline review, and quality gates.
 - [x] Specify product behavior, architecture, phases, and release gates.
 - [x] Check local document links, fenced blocks, sequential steps, and exit criteria.
 - [ ] Complete step 01.
@@ -127,6 +135,9 @@ Check off implementation items only after their exit criteria are demonstrated. 
 
 - [ ] An author reviews their own PR, asks Codex a question, and publishes a selected comment.
 - [ ] A requested reviewer submits a multi-line review on someone else's PR.
+- [ ] Seeded consequential changes appear early and are never automatically folded into routine groups.
+- [ ] A reviewer can read, ask, annotate, and finish within Guide without a forced Files detour.
+- [ ] Summary acknowledgement, deferred work, and actual code review remain distinct in progress reporting.
 - [ ] A push, force-push, base change, or remote reply is surfaced with accurate review state.
 - [ ] Offline work, restart, expired credentials, rate limits, and interrupted publication preserve drafts.
 - [ ] No private notes or model transcript reach GitHub unless explicitly selected.
@@ -135,7 +146,7 @@ Check off implementation items only after their exit criteria are demonstrated. 
 
 ## References
 
-- [Product specification](product-spec.md) and [architecture](architecture.md)
+- [Guided review specification](guided-review.md), [product specification](product-spec.md), and [architecture](architecture.md)
 - [Research findings and alternatives](../../explorations/0000_[_]_DIFFCITY_ARCHITECTURE_AND_INTEGRATION.md)
 - [Diffity](https://github.com/nilbuild/diffity)
 - [Codex app-server](https://learn.chatgpt.com/docs/app-server)

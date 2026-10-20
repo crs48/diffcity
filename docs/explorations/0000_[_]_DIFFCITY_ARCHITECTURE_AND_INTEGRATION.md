@@ -4,7 +4,7 @@
 
 ## Problem and summary
 
-Build a desktop GitHub PR review workspace with a useful inbox, Codex-guided explanations, contextual discussion, and dependable publication. The owner selected Tauri 2 for the first implementation: React/TypeScript UI, Rust backend, local SQLite persistence, and revision-based review state. Desktop-first is also confirmed; initial OS targets remain recommendations.
+Build a desktop GitHub PR review workspace centered on a guided review: consequential changes first, inline explanation and discussion, routine content folded into inspectable summaries, and dependable GitHub publication. The inbox brings the user into that experience. The owner selected Tauri 2 for the first implementation: React/TypeScript UI, Rust backend, local SQLite persistence, and revision-based review state. Desktop-first is also confirmed; initial OS targets remain recommendations.
 
 ## Current workspace
 
@@ -19,6 +19,14 @@ The [README](https://github.com/nilbuild/diffity/blob/main/README.md) describes 
 The inspected [package manifest](https://github.com/nilbuild/diffity/blob/115974e205ecb04f6cb00b37c8d10202201338ff/package.json) uses React, TypeScript, Vite, and Tauri. The [source tree](https://github.com/nilbuild/diffity/tree/115974e205ecb04f6cb00b37c8d10202201338ff/src-tauri/src) separates agents, GitHub, and core diff logic. Selected [authentication](https://github.com/nilbuild/diffity/blob/115974e205ecb04f6cb00b37c8d10202201338ff/src-tauri/src/github/auth.rs) and [service](https://github.com/nilbuild/diffity/blob/115974e205ecb04f6cb00b37c8d10202201338ff/src-tauri/src/github/service.rs) code show OS credential storage and a GitHub CLI credential path. This was targeted inspection, not a full code audit.
 
 Its [MIT license](https://github.com/nilbuild/diffity/blob/main/LICENSE) names Kamran Ahmed. Any later reuse of substantial code must retain the applicable notice. This planning pass imports no source, assets, or branding.
+
+### Guided review references
+
+Linear's [review design article](https://linear.app/now/code-review-should-be-fast) describes chapters organized around core changes and their consequences, with auxiliary work separated. Its [Diffs documentation](https://linear.app/docs/diffs) describes guides and file categories, including documentation, generated content, and localization. These support semantic grouping as an interaction pattern; they do not establish that categories reliably predict risk.
+
+Diffity remains a reference for inline agent discussion. Its maintainer [reported older tours absent after a rewrite](https://github.com/nilbuild/diffity/issues/17), so this plan does not assume the historical tour is currently shipped. The owner's explicit priority is a better guided experience regardless of the reference tools' current feature set.
+
+The proposed design makes review attention explicit and evidence-backed, separates it from defect severity, and keeps high or unassessed code out of automatic folds. This is a product hypothesis, not a measured superiority claim. The [guided review specification](../plans/initial-product/guided-review.md) defines ordering, exceptions, progress, and a comparative evaluation corpus.
 
 ### GitHub and Codex
 
@@ -48,14 +56,14 @@ Codex speaks a stdio protocol that Rust can manage directly; a Node bridge is un
 ```mermaid
 flowchart LR
   Inbox[PR inbox] --> Revision[Stable revision]
-  Revision --> Narrative[Walkthrough with evidence]
+  Revision --> Narrative[Guide with highest attention first]
   Narrative --> Discussion[Private discussion]
   Discussion --> Feedback[Selected public feedback]
   Feedback --> Changed[Changed since review]
   Changed --> Revision
 ```
 
-Make revision identity the common contract between the diff, model output, viewed state, and publishing. Prove a single real PR end to end before investing in a large navigation system or a hosted sync service.
+Make revision identity the common contract between the diff, model output, review progress, and publishing. Show the guide interaction with fixtures immediately, then prove a single real PR end to end before investing in a large navigation system or a hosted sync service. A file category is a useful hint, while content assessment and conservative coverage rules determine whether it can be folded.
 
 ```mermaid
 stateDiagram-v2
@@ -83,8 +91,9 @@ This illustrative pure function makes precedence explicit. Production behavior a
 ## Implementation checklist
 
 - [ ] Prove packaged desktop → GitHub → snapshot → Codex handshake.
+- [ ] Prototype the primary Guide with migration callouts and folded routine content.
 - [ ] Add canonical diff anchors and durable private drafts.
-- [ ] Validate walkthrough coverage before exposing publication.
+- [ ] Validate guide attention ordering, folding, grounded evidence, and coverage before exposing publication.
 - [ ] Implement mutation reconciliation and revision update handling.
 - [ ] Measure the complete loop during private dogfooding.
 
@@ -94,6 +103,7 @@ This illustrative pure function makes precedence explicit. Production behavior a
 - [x] Read current primary integration sources.
 - [x] Compare product and architecture alternatives.
 - [x] Incorporate the owner's Tauri 2 selection across the plan and architecture.
+- [x] Incorporate guided review as the primary flow with content-based priority and folding rules.
 - [x] Transfer recommendations into sequential implementation steps.
 - [ ] Validate proposed behavior with working integration prototypes.
 

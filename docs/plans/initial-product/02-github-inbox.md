@@ -2,7 +2,7 @@
 
 ## Objective and dependencies
 
-Turn selected GitHub repositories into a dependable personal PR inbox. Depends on step 01's desktop, persistence, and adapter boundaries.
+Turn selected GitHub repositories into a dependable personal PR inbox that opens directly into Guide. Depends on step 01's desktop, persistence, and adapter boundaries. Keep this milestone focused on reliable access, essential grouping, and synchronization so it does not delay the guided-review quality gate in step 04.
 
 ## Proposed touchpoints
 
@@ -15,6 +15,8 @@ For private dogfooding, connect the existing `gh` account with explicit in-app s
 Prototype the distributable GitHub App device flow now, including refresh, installation/repository discovery, and an organization-owned repository. Finish that flow before inviting external users in step 07. Never embed an app secret or private key in the desktop bundle. Use the [device-flow](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-cli-with-a-github-app) and [token-refresh](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens) contracts.
 
 Create repository search, pin/unpin/reorder, explicit repository selection, and PR URL opening. Store stable repository IDs so renames do not lose state. Do not assume the currently accessible repositories equal every repository on the user's GitHub account.
+
+Route a selected PR or direct PR link to its saved guide and reading position. Until an analyzed guide exists, show the provisional guide with explicit assessment status and Review with Codex. Opening a PR must not require a detour through an overview or file tree. Honor an explicitly saved Files preference. Defer advanced inbox customization and cosmetic refinements until the primary review flow works.
 
 Fetch open PRs from selected repositories with pagination. Hydrate author, assignee, requested-reviewer, draft, and check summaries without loading every file or comment. When additional team membership access is missing, show that limitation. Use a pure selector for mutually exclusive bucket assignment: mine → review requested → assigned → other. Show secondary relationship badges and preserve stable focus during refresh.
 
@@ -43,9 +45,10 @@ Use a fake clock to demonstrate that two windows do not double polling, a select
 
 - [ ] Connect and display the GitHub identity and access state.
 - [ ] Add selectable/pinned repositories and direct PR links.
+- [ ] Open PRs directly into Guide and restore their reading position.
 - [ ] Normalize and paginate PR lists.
 - [ ] Implement stable inbox grouping, filtering, and unread badges.
 - [ ] Implement one budgeted scheduler and recovery states.
 - [ ] Validate the GitHub App flow or record a concrete blocker for distribution.
 
-**Exit:** the owner can find their own PRs first, requested reviews next, and other open PRs after that across selected projects. A remote change becomes visible and a rate-limit response produces a truthful backoff state.
+**Exit:** the owner can find their own PRs first, requested reviews next, and other open PRs after that across selected projects, then enter Guide in one selection. A remote change becomes visible and a rate-limit response produces a truthful backoff state.

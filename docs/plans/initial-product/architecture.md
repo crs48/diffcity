@@ -78,9 +78,12 @@ Define wire contracts once in Rust, generate TypeScript types and JSON schemas, 
 | RevisionSnapshot | PR, base tip SHA, merge-base SHA when resolved, head SHA, diff fingerprint, completeness, capture time |
 | ChangedFile / Hunk | Snapshot, old/new path, old/new blob IDs when known, exact patch, old/new line maps, availability reason |
 | ReviewSession | User + PR, active snapshot, last opened revision, last reviewed revision, reading position |
-| Progress | Session + snapshot + hunk/content fingerprint, user-set viewed state; no model-controlled completion |
-| AnalysisRun | Snapshot, provider/runtime/model IDs, prompt/schema versions, context hash, coverage, status, usage if available |
-| WalkthroughSection | Analysis run, order, title, summary, primary hunk IDs, secondary references, concerns, test notes |
+| Progress | Session + snapshot + hunk/content fingerprint; explicit code-reviewed, summary-acknowledged, and deferred actions recorded separately; no model-controlled completion |
+| AnalysisRun | Snapshot, provider/runtime/model IDs, prompt/schema/policy versions, context hash, coverage, status, usage if available |
+| HunkAssessment | Snapshot + hunk ID, assessment status, change categories, attention level, evidence-backed signals, rationale, rule/model provenance |
+| Finding | Snapshot + canonical evidence, claimed defect, severity, confidence/uncertainty, analysis run; independent of review attention |
+| WalkthroughSection | Analysis run, title, summary, primary hunk IDs, secondary references, dependencies, derived attention/order, rationale, findings, test notes, fold eligibility |
+| GuidePreference | Session + snapshot + section/content identity, manual attention/order override and reason, presentation preference, policy version; never changes source assessment |
 | LocalThread / Message | Session, optional anchor, actor, body, timestamp, destination intent; private by default |
 | GitHubThread / Comment | Remote IDs, canonical body, remote state, original/current anchors, timestamp, URL |
 | ReviewDraft | PR + account, selected message copies, snapshot, action, summary, optional remote pending review ID |
@@ -94,9 +97,13 @@ erDiagram
   PROJECT ||--o{ PULL_REQUEST : contains
   PULL_REQUEST ||--o{ REVISION_SNAPSHOT : captures
   REVISION_SNAPSHOT ||--o{ HUNK : includes
+  HUNK ||--o{ HUNK_ASSESSMENT : assesses
   REVISION_SNAPSHOT ||--o{ ANALYSIS_RUN : grounds
   ANALYSIS_RUN ||--o{ WALKTHROUGH_SECTION : produces
+  ANALYSIS_RUN ||--o{ FINDING : identifies
   PULL_REQUEST ||--o{ REVIEW_SESSION : tracks
+  REVIEW_SESSION ||--o{ PROGRESS : records
+  REVIEW_SESSION ||--o{ GUIDE_PREFERENCE : customizes
   REVIEW_SESSION ||--o{ LOCAL_THREAD : owns
   PULL_REQUEST ||--o{ REVIEW_DRAFT : prepares
   REVIEW_DRAFT ||--o{ PUBLISH_OPERATION : publishes
@@ -104,7 +111,7 @@ erDiagram
 
 ## Functional domain design
 
-Prefer pure transformations and explicit effects. In Rust, the scheduler returns work descriptions from input state and time; the runner executes them and feeds typed results back. Unit tests can exercise rate limits and races with a fake clock. Canonical diff, anchor, publication, and progress rules live in Rust; TypeScript selectors handle presentation without duplicating those invariants. The following TypeScript shapes illustrate the generated wire contract:
+Prefer pure transformations and explicit effects. In Rust, the scheduler returns work descriptions from input state and time; the runner executes them and feeds typed results back. Unit tests can exercise rate limits and races with a fake clock. Canonical diff, anchor, guide ordering/folding, publication, and progress rules live in Rust; TypeScript selectors handle presentation without duplicating those invariants. The following TypeScript shapes illustrate the generated wire contract:
 
 ```ts
 type SnapshotKey = Readonly<{
@@ -137,6 +144,32 @@ declare function groupPullRequests(input: InboxInput): readonly InboxGroup[];
 ```
 
 These are design examples, not an already-implemented API. Use discriminated unions for incomplete, stale, unauthorized, and unavailable states instead of contradictory boolean flags.
+
+## Guide assessment and presentation
+
+The [guided review specification](guided-review.md) defines the product rules. The model proposes evidence, assessments, findings, and coherent cross-file groups. Pure Rust functions validate those proposals, enforce minimum attention signals, derive an ordered guide, and calculate automatic fold eligibility. A file category is a hint; a model label alone cannot establish that unseen or unsupported content is routine.
+
+```mermaid
+flowchart LR
+  Snapshot[Immutable hunk inventory] --> Rules[Deterministic attention signals]
+  Snapshot --> Model[Bounded Codex review]
+  Model --> Validate[Validate evidence and coverage]
+  Rules --> Assess[Combine assessments with priority floors]
+  Validate --> Assess
+  Assess --> Group[Coherent sections and dependencies]
+  Group --> Order[Highest attention first]
+  Order --> Present[Derive fold eligibility]
+  Preferences[Explicit reviewer overrides] --> Present
+  Present --> Guide[Stable guide view]
+```
+
+Each available changed hunk has exactly one primary location in the guide, plus optional related references. Unsupported content has a visible unavailable entry. A section takes its highest constituent attention level, never an average; separate consequential exceptions from repetitive routine content when canonical hunk boundaries permit. Missing assessments remain Needs assessment and cannot qualify for automatic folding. High and unassessed work precedes standard and routine work, subject only to a short, explained prerequisite needed to understand the consequential change.
+
+Persist content assessments separately from derived presentation so a policy change can recalculate ordering without another model call. The assessment cache includes the snapshot, supplied context, prompt/schema version, and runtime/model identity; the derived guide cache additionally includes the policy version and reviewer preferences. Record these identities on the rendered guide. Raising attention expands automatic folds. Lowering it by an explicit override preserves the original signal and records the reason. Unresolved discussion, drafts, active selection, or actionable findings also prevent automatic folding.
+
+Keep reviewed code, acknowledged summaries, deferred work, and AI coverage as separate measures. Presentation expansion/collapse and scrolling do not change those measures. Store hunk-level progress independently of section grouping so regeneration cannot manufacture completion. A summary acknowledgement is tied to the exact summarized content and becomes stale when that content changes.
+
+Stream only validated sections. Preserve the active step, scroll, selection, and composer; stage reorderings at a navigation boundary with a visible new-attention notice. On a new snapshot, preserve only justified progress, re-evaluate priority/folding and affected dependency context, and mark overrides requiring reconsideration. Re-run deterministic rules immediately; additional Codex analysis remains an explicit action.
 
 ## GitHub authentication and API use
 
@@ -187,7 +220,7 @@ The Rust Codex module owns process spawning, framing, request IDs, stderr handli
 
 This is a connection to a Codex runtime managed for diffcity, not an assumption that the running Codex desktop app exposes a stable automation socket. Detect exact executable and capabilities. A shell inspection during planning returned `codex 0.2.3` without useful app-server help; it is not a verified integration target. Do not silently replace the user's installation. Prototype with a verified OpenAI runtime and record its version.
 
-Start one analysis at a time, configurable later. Keep an analysis thread per revision and independent discussion threads scoped to PR/revision/topic. Store model identity, runtime, prompt version, schema version, and context hash with output. A PR edit never changes the context under an in-flight run. Cache by all analysis inputs, not PR number alone.
+Start one analysis at a time, configurable later. Keep an analysis thread per revision and independent discussion threads scoped to PR/revision/topic. Store model identity, runtime, prompt version, schema version, policy version, and context hash with output. A PR edit never changes the context under an in-flight run. Cache by all analysis inputs, not PR number alone. Review with Codex requests both findings and the guided route; neither opening a PR nor receiving a poll response starts an unrequested model run.
 
 Prepare a bounded immutable context bundle: PR description, canonical diff, section context, and selected supporting source. Initially use read-only, restricted execution with no GitHub token, no network tools, no inherited user MCP servers or hooks, and no repository-controlled instructions treated as authority. Avoid exposing the user's whole home directory. Validate effective restrictions on the actual runtime; if safe read scope cannot be enforced, use a no-tool, supplied-context mode or block the feature. Read-only filesystem access alone is not sufficient isolation.
 
