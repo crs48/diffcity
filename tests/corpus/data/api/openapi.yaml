@@ -1,0 +1,11 @@
+openapi: 3.1.0
+info:
+  title: Synthetic review API
+  version: 2.0.0
+paths:
+  /reviews/{id}:
+    delete:
+      summary: Delete a review without an ownership check
+      responses:
+        '204':
+          description: Deleted

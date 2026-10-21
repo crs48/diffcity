@@ -157,7 +157,7 @@ export function GuideView({
             value={fileQuery}
             onChange={(e) => setFileQuery(e.target.value)}
           />
-          <Button className="secondary" onPress={() => setSplit(!split)}>
+          <Button className="secondary" onPress={() => setSplit((previous) => !previous)}>
             {split ? t("Unified view") : t("Split view")}
           </Button>
         </div>
@@ -379,7 +379,7 @@ export function GuideView({
                 <FileCode2 size={14} />
                 {t("CODE CHANGES")}{" "}
               </span>
-              <Button onPress={() => setSplit(!split)}>
+              <Button onPress={() => setSplit((previous) => !previous)}>
                 {split ? t("Unified view") : t("Split view")}
               </Button>
               <span className="muted">
