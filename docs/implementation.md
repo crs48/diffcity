@@ -143,3 +143,14 @@ flowchart TD
 ```
 
 The separate **Sample inbox** contains 23 labeled, fictional scenarios and a session-only review-request simulator. Its cards open real local walkthroughs, but sample identities are blocked from GitHub publication in both the UI and Rust service. The [corpus guide](../tests/corpus/README.md#inbox-ux-samples) documents nine additional live GitHub PRs and reproduction commands.
+
+### Inbox verification (October 21, 2026)
+
+- [x] 42 Rust tests and 24 TypeScript/component tests pass. Type checking, ESLint, Clippy, formatting, contract generation, and the production bundle pass. [GitHub Actions](https://github.com/crs48/diffcity/actions/runs/39622030393) passes on `ef57f00`.
+- [x] Live inbox capture returns 12 open PRs, including seven drafts, plus three recent completions. All open PRs have fetched review metadata, including the original authorized review on PR #1.
+- [x] WebKit verifies all seven priority groups, review demotion and re-request promotion, completion filtering, preference persistence across reload, complete sample history, and a narrow 900-pixel layout. Sampled light/dark states pass axe WCAG A/AA after theme transitions settle.
+- [x] The installed production app connects to GitHub and Codex, shows owned draft/ready PRs together, and opens actual ready PR #7, draft PR #11, and recently closed PR #14 with their code.
+- [x] Native Sample inbox moves PR #106 into Reviewed after a simulated submission and back into Needs your review after a simulated re-request. No GitHub communication occurs.
+- [x] A one-week completion window adds the four-day-old merged sample. After quitting and relaunching, the saved preference, prior real PR, and both connections return. The default two-day window is restored afterward. All eight original private messages remain intact at schema 3.
+
+The installed bundle matches the build from `ef57f00`; its executable SHA-256 is `1e7829616ecbac8a8de7e5401a1b1f414d0115ac8039885649cbc637ddb7f97e`. The synthetic GitHub PRs remain unmerged. Sample metadata resets when reloaded, while sample notes and code-reading progress are stored separately for each sample.
