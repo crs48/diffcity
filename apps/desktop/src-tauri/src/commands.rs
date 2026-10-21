@@ -231,21 +231,55 @@ pub fn sample_review(service: State<'_, Arc<Service>>) -> Output<ReviewWorkspace
 }
 #[tauri::command]
 pub async fn open_external(url: String) -> Output<()> {
-    let parsed = reqwest::Url::parse(&url).map_err(|_| "Invalid URL")?;
-    if parsed.scheme() != "https"
-        || !matches!(
-            parsed.host_str(),
-            Some("github.com" | "diff.city" | "learn.chatgpt.com")
-        )
-    {
-        return Err(
-            "Only HTTPS GitHub, diff.city, and Codex documentation links can be opened".into(),
-        );
-    }
+    let parsed = external_web_url(&url)?;
     #[cfg(target_os = "macos")]
     let mut command = tokio::process::Command::new("/usr/bin/open");
     #[cfg(not(target_os = "macos"))]
     let mut command = tokio::process::Command::new("xdg-open");
-    command.arg(url).spawn().map_err(|e| e.to_string())?;
+    command
+        .arg(parsed.as_str())
+        .spawn()
+        .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+fn external_web_url(url: &str) -> Output<reqwest::Url> {
+    let parsed = reqwest::Url::parse(url).map_err(|_| "Invalid URL")?;
+    if !matches!(parsed.scheme(), "https" | "http")
+        || parsed.host_str().is_none()
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+    {
+        return Err(
+            "Only HTTP and HTTPS web links without embedded credentials can be opened".into(),
+        );
+    }
+    Ok(parsed)
+}
+
+#[cfg(test)]
+mod external_link_tests {
+    use super::external_web_url;
+
+    #[test]
+    fn allows_web_links_but_rejects_local_or_executable_schemes() {
+        for url in [
+            "https://docs.example.com/guide?q=one#two",
+            "http://example.com/",
+        ] {
+            assert!(external_web_url(url).is_ok(), "{url}");
+        }
+        for url in [
+            "javascript:alert(1)",
+            "data:text/html,test",
+            "file:///tmp/test",
+            "mailto:a@example.com",
+            "vscode://file/tmp/test",
+            "--args",
+            "/relative",
+            "https://user:password@example.com/",
+        ] {
+            assert!(external_web_url(url).is_err(), "{url}");
+        }
+    }
 }

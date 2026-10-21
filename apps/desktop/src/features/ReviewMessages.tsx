@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import "../i18n";
 import { Button } from "react-aria-components";
 import { Github, MessageSquare, Sparkles } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { CommentMarkdown } from "../ui/CommentMarkdown";
 import type { Note, RemoteComment } from "../lib/api";
 import { lineRange } from "../lib/selection";
 import type { Conversation } from "./conversation";
@@ -64,14 +64,7 @@ export function ReviewMessages({
               {!inline && !n.anchor && (
                 <span className="message-scope">{t("PR discussion")} </span>
               )}
-              <ReactMarkdown
-                components={{
-                  img: () => null,
-                  a: ({ children }) => <span>{children}</span>,
-                }}
-              >
-                {n.body}
-              </ReactMarkdown>
+              <CommentMarkdown body={n.body} />
               <div className="message-actions">
                 {n.role === "user" && !n.githubDraft && (
                   <Button
@@ -124,7 +117,7 @@ export function ReviewMessages({
             {r.commit && r.commit !== c.workspace.snapshot.pull.head && (
               <span className="draft-tag">{t("Earlier revision")} </span>
             )}
-            <p>{r.body}</p>
+            <CommentMarkdown body={r.body} />
           </article>
         );
       })}
@@ -138,7 +131,7 @@ export function ReviewMessages({
             <span className="muted">{t("Responding…")} </span>
           </div>
           {c.stream ? (
-            <p>{c.stream}</p>
+            <CommentMarkdown body={c.stream} />
           ) : (
             <p className="muted">{t("Thinking about your comment…")} </p>
           )}

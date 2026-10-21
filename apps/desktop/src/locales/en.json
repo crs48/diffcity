@@ -346,5 +346,8 @@
   "Hide full context": "Hide full context",
   "Full section context": "Full section context",
   "{{count}} hunks_one": "{{count}} hunk",
-  "{{count}} hunks_other": "{{count}} hunks"
+  "{{count}} hunks_other": "{{count}} hunks",
+  "Footnotes": "Footnotes",
+  "Task": "Task",
+  "Include draft {{number}}": "Include draft {{number}}"
 }

@@ -1945,7 +1945,7 @@
     font-weight: 400;
     white-space: pre-wrap;
   }
-  .draft-preview code {
+  .draft-preview > div > code {
     font-size: 12px;
     color: var(--muted);
     display: block;
@@ -2641,5 +2641,140 @@
       clip-path: inset(50%);
       white-space: nowrap;
     }
+  }
+}
+
+@layer components {
+  .comment-markdown {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+  }
+  .comment-markdown p {
+    white-space: normal;
+    margin: 8px 0;
+  }
+  .comment-markdown :is(h1, h2, h3, h4, h5, h6) {
+    margin: 18px 0 8px;
+    font-weight: 650;
+    line-height: 1.4;
+    color: var(--text);
+  }
+  .comment-markdown h1 {
+    font-size: 20px;
+  }
+  .comment-markdown h2 {
+    font-size: 17px;
+  }
+  .comment-markdown h3 {
+    font-size: 15px;
+  }
+  .comment-markdown :is(h4, h5, h6) {
+    font-size: 13px;
+  }
+  .comment-markdown > :first-child {
+    margin-top: 0;
+  }
+  .comment-markdown > :last-child {
+    margin-bottom: 0;
+  }
+  .comment-markdown ul {
+    list-style: disc;
+  }
+  .comment-markdown ol {
+    list-style: decimal;
+  }
+  .comment-markdown :is(ul, ol) {
+    padding-left: 24px;
+    margin: 8px 0;
+  }
+  .comment-markdown li + li {
+    margin-top: 4px;
+  }
+  .comment-markdown .contains-task-list {
+    list-style: none;
+    padding-left: 4px;
+  }
+  .comment-markdown input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0 6px 0 0;
+    padding: 0;
+    vertical-align: -2px;
+    accent-color: var(--green);
+  }
+  .comment-markdown blockquote {
+    margin: 12px 0;
+    padding-left: 12px;
+    border-left: 3px solid var(--border);
+    color: var(--muted);
+  }
+  .comment-markdown code {
+    background: var(--subtle);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 0.95em;
+    white-space: break-spaces;
+  }
+  .comment-markdown pre {
+    margin: 12px 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--subtle);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    tab-size: 4;
+  }
+  .comment-markdown pre code {
+    padding: 0;
+    background: transparent;
+    white-space: inherit;
+  }
+  .comment-markdown table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 12px 0;
+  }
+  .comment-markdown :is(th, td) {
+    border: 1px solid var(--border);
+    padding: 7px 9px;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+  .comment-markdown th {
+    font-weight: 650;
+    background: var(--subtle);
+  }
+  .comment-markdown tr:nth-child(even) {
+    background: var(--subtle);
+  }
+  .comment-markdown a[href] {
+    color: var(--green);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .comment-markdown a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .comment-markdown hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+  .comment-markdown .footnotes {
+    margin-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .draft-preview > div {
+    min-width: 0;
+    flex: 1;
   }
 }

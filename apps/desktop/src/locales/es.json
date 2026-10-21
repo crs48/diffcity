@@ -346,5 +346,8 @@
   "Hide full context": "Ocultar el contexto completo",
   "Full section context": "Contexto completo de la sección",
   "{{count}} hunks_one": "{{count}} bloque",
-  "{{count}} hunks_other": "{{count}} bloques"
+  "{{count}} hunks_other": "{{count}} bloques",
+  "Footnotes": "Notas al pie",
+  "Task": "Tarea",
+  "Include draft {{number}}": "Incluir borrador {{number}}"
 }

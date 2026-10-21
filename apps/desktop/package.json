@@ -19,7 +19,9 @@
     "react-aria-components": "^1.22.1",
     "react-dom": "19.3.1",
     "react-i18next": "^17.1.0",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "latest",
@@ -27,6 +29,7 @@
     "@tauri-apps/cli": "2.12.3",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
+    "@types/hast": "^3.0.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "latest",

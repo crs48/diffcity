@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { FileCode2, GitBranch } from "lucide-react";
 import { Diff } from "./Diff";
 import { GuideFlow } from "./GuideFlow";
+import { CommentMarkdown } from "../ui/CommentMarkdown";
 import type { Anchor, ReviewProgress, ReviewWorkspace } from "../lib/api";
 
 export function GuideView({
@@ -65,9 +66,9 @@ export function GuideView({
       <div className="reading-area overview">
         <div className="eyebrow">{t("PULL REQUEST")} </div>
         <h2>{w.snapshot.pull.title}</h2>
-        <p className="intro">
-          {w.snapshot.pull.body || "No description provided."}
-        </p>
+        <CommentMarkdown
+          body={w.snapshot.pull.body || "No description provided."}
+        />
         <div className="overview-grid">
           <div>
             <GitBranch size={18} />
@@ -90,7 +91,7 @@ export function GuideView({
           w.comments.map((c) => (
             <article className="remote-comment" key={c.id}>
               <strong>{c.author}</strong>
-              <p>{c.body}</p>
+              <CommentMarkdown body={c.body} />
               {c.path && (
                 <code>
                   {c.path}:{c.line}

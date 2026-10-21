@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import "../i18n";
 import { languages } from "../i18n";
 import { AppDialog } from "../ui/AppDialog";
+import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { useState } from "react";
 import {
   Check,
@@ -197,9 +198,12 @@ export function Finish({
   const [error, setError] = useState("");
   const counts = countProgress(w);
   const renderDraft = (n: Note) => (
-    <label className="draft-preview" key={n.id}>
+    <div className="draft-preview" key={n.id}>
       <input
         type="checkbox"
+        aria-label={t("Include draft {{number}}", {
+          number: drafts.indexOf(n) + 1,
+        })}
         checked={selected.includes(n.id)}
         onChange={() =>
           setSelected((ids) =>
@@ -216,9 +220,9 @@ export function Finish({
             {n.anchor.startLine !== n.anchor.line && `–${n.anchor.line}`}
           </code>
         )}
-        <p>{n.body}</p>
+        <CommentMarkdown body={n.body} />
       </div>
-    </label>
+    </div>
   );
   return (
     <AppDialog label={t("Finish review")} onClose={onClose} busy={busy} wide>
