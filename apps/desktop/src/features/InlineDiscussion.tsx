@@ -9,7 +9,10 @@ import { useConversationScroll } from "./useConversationScroll";
 
 export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const c = useConversation();
-  const messages = useConversationScroll(thread.notes.length, c?.stream ?? "");
+  const messages = useConversationScroll(
+    thread.notes.length + thread.remote.length,
+    c?.stream ?? "",
+  );
   if (!c) return null;
   const active =
     c.inline.draft?.snapshotId === c.workspace.snapshot.id &&

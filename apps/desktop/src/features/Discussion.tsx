@@ -9,7 +9,7 @@ import { useConversationScroll } from "./useConversationScroll";
 export function Discussion({ onClose }: { onClose: () => void }) {
   const c = useConversation();
   const messages = useConversationScroll(
-    c?.workspace.notes.length ?? 0,
+    (c?.workspace.notes.length ?? 0) + (c?.workspace.comments.length ?? 0),
     c?.stream ?? "",
   );
   if (!c) return null;

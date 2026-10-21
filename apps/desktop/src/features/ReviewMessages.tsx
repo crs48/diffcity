@@ -18,80 +18,92 @@ export function ReviewMessages({
   inline?: boolean;
   streaming?: boolean;
 }) {
-  const ordered = [...notes].sort((a, b) =>
-    a.createdAt.localeCompare(b.createdAt),
-  );
+  const ordered = [
+    ...notes.map((note) => ({ kind: "local" as const, message: note })),
+    ...remote
+      .filter((r) => !notes.some((n) => n.publishedUrl === r.url))
+      .map((message) => ({ kind: "remote" as const, message })),
+  ].sort((a, b) => a.message.createdAt.localeCompare(b.message.createdAt));
   return (
     <>
-      {ordered.map((n) => (
-        <article className={`message ${n.role}`} key={n.id} data-note-id={n.id}>
-          <div className="message-label">
-            {n.role === "assistant" ? (
-              <Sparkles size={12} />
-            ) : (
-              <MessageSquare size={12} />
-            )}
-            {n.role === "assistant" ? "Codex" : "You"}
-            {n.githubDraft && <span className="draft-tag">GitHub draft</span>}
-            {n.publishedUrl && <span className="draft-tag">Published</span>}
-          </div>
-          {!inline && n.anchor && (
-            <Button
-              className="message-location text-button"
-              onPress={() => c.openInline(n.anchor!)}
+      {ordered.map((entry) => {
+        if (entry.kind === "local") {
+          const n = entry.message;
+          return (
+            <article
+              className={`message ${n.role}`}
+              key={n.id}
+              data-note-id={n.id}
             >
-              {n.anchor.path} · {n.anchor.side === "LEFT" ? "Old" : "New"}{" "}
-              {lineRange(n.anchor)}
-            </Button>
-          )}
-          {!inline && !n.anchor && (
-            <span className="message-scope">PR discussion</span>
-          )}
-          <ReactMarkdown
-            components={{
-              img: () => null,
-              a: ({ children }) => <span>{children}</span>,
-            }}
-          >
-            {n.body}
-          </ReactMarkdown>
-          <div className="message-actions">
-            {n.role === "user" && !n.githubDraft && (
-              <Button
-                className="text-button"
-                isDisabled={c.busy}
-                onPress={() => void c.ask(n).catch(c.onError)}
-              >
-                <Sparkles size={12} /> Ask Codex about this comment
-              </Button>
-            )}
-            {n.githubDraft && !n.publishedUrl && (
-              <Button
-                className="text-button"
-                onPress={() => void c.edit(n, inline).catch(c.onError)}
-              >
-                Edit draft
-              </Button>
-            )}
-            {!n.githubDraft && !n.publishedUrl && (
-              <Button
-                className="text-button"
-                isDisabled={c.workspace.notes.some(
-                  (other) =>
-                    other.parentId === n.id &&
-                    (other.githubDraft || !!other.publishedUrl),
+              <div className="message-label">
+                {n.role === "assistant" ? (
+                  <Sparkles size={12} />
+                ) : (
+                  <MessageSquare size={12} />
                 )}
-                onPress={() => void c.prepare(n).catch(c.onError)}
+                {n.role === "assistant" ? "Codex" : "You"}
+                {n.githubDraft && (
+                  <span className="draft-tag">GitHub draft</span>
+                )}
+                {n.publishedUrl && <span className="draft-tag">Published</span>}
+              </div>
+              {!inline && n.anchor && (
+                <Button
+                  className="message-location text-button"
+                  onPress={() => c.openInline(n.anchor!)}
+                >
+                  {n.anchor.path} · {n.anchor.side === "LEFT" ? "Old" : "New"}{" "}
+                  {lineRange(n.anchor)}
+                </Button>
+              )}
+              {!inline && !n.anchor && (
+                <span className="message-scope">PR discussion</span>
+              )}
+              <ReactMarkdown
+                components={{
+                  img: () => null,
+                  a: ({ children }) => <span>{children}</span>,
+                }}
               >
-                <Github size={12} /> Prepare GitHub draft
-              </Button>
-            )}
-          </div>
-        </article>
-      ))}
-      {remote
-        .filter((r) => !notes.some((n) => n.publishedUrl === r.url))
-        .map((r) => (
+                {n.body}
+              </ReactMarkdown>
+              <div className="message-actions">
+                {n.role === "user" && !n.githubDraft && (
+                  <Button
+                    className="text-button"
+                    isDisabled={c.busy}
+                    onPress={() => void c.ask(n).catch(c.onError)}
+                  >
+                    <Sparkles size={12} /> Ask Codex about this comment
+                  </Button>
+                )}
+                {n.githubDraft && !n.publishedUrl && (
+                  <Button
+                    className="text-button"
+                    onPress={() => void c.edit(n, inline).catch(c.onError)}
+                  >
+                    Edit draft
+                  </Button>
+                )}
+                {!n.githubDraft && !n.publishedUrl && (
+                  <Button
+                    className="text-button"
+                    isDisabled={c.workspace.notes.some(
+                      (other) =>
+                        other.parentId === n.id &&
+                        (other.githubDraft || !!other.publishedUrl),
+                    )}
+                    onPress={() => void c.prepare(n).catch(c.onError)}
+                  >
+                    <Github size={12} /> Prepare GitHub draft
+                  </Button>
+                )}
+              </div>
+            </article>
+          );
+        }
+        const r = entry.message;
+        return (
           <article className="message remote" key={r.id}>
             <div className="message-label">
               <Github size={12} />
@@ -107,7 +119,8 @@ export function ReviewMessages({
             )}
             <p>{r.body}</p>
           </article>
-        ))}
+        );
+      })}
       {streaming && (
         <article
           className="message assistant streaming"

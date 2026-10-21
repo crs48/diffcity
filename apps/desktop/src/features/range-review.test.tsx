@@ -186,7 +186,23 @@ describe("multi-line review", () => {
             pulls: [],
             dataDirectory: "test-data",
           };
-        if (command === "sample_review") return structuredClone(workspace);
+        if (command === "sample_review")
+          return {
+            ...structuredClone(workspace),
+            comments: [
+              {
+                id: "remote-old",
+                author: "reviewer",
+                body: "Earlier GitHub feedback",
+                path: null,
+                line: null,
+                side: null,
+                commit: null,
+                url: "https://github.com/example/repo/pull/1#issuecomment-1",
+                createdAt: "2020-01-01T00:00:00Z",
+              },
+            ],
+          };
         if (command === "refresh_inbox") return [];
         if (command === "save_progress") return payload.progress;
         if (command === "save_note") {
@@ -281,6 +297,10 @@ describe("multi-line review", () => {
       mirror.closest("article")?.dataset.noteId,
     );
     expect(saved.size).toBe(1); // Mirroring never persists a second copy.
+    expect(within(chat).getByText("Earlier GitHub feedback")).toBeTruthy();
+    expect(
+      chat.querySelector(".message:last-of-type")?.getAttribute("data-note-id"),
+    ).toBe("answer-one");
     await user.click(
       within(chat).getAllByRole("button", {
         name: `${path} · New lines 1–2`,
