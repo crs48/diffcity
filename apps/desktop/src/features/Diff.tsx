@@ -186,11 +186,6 @@ export function Diff({
           )}
           <ContextLines lines={context.context?.before ?? []} split={split} />
           <div className="range-toolbar">
-            <span role="status" aria-live="polite">
-              {activeRange
-                ? `${activeRange.side === "LEFT" ? "Old" : "New"} ${lineRange(activeRange)} selected`
-                : "Drag line numbers or Shift-click to select a range"}
-            </span>
             {activeRange && !interaction.dragging && (
               <Button
                 className="secondary"
@@ -200,6 +195,11 @@ export function Diff({
                 {t("Comment on")} {lineRange(activeRange)}
               </Button>
             )}
+            <span role="status" aria-live="polite">
+              {activeRange
+                ? `${activeRange.side === "LEFT" ? "Old" : "New"} ${lineRange(activeRange)} selected`
+                : "Drag line numbers or Shift-click to select a range"}
+            </span>
           </div>
           <div
             ref={scroll}
