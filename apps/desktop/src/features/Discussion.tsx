@@ -88,7 +88,7 @@ export const Discussion = forwardRef<
     }
   };
   return (
-    <aside className="discussion">
+    <aside className="discussion" aria-label="Review notes">
       <header>
         <MessageSquare size={16} />
         <strong>Review notes</strong>

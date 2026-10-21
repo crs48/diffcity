@@ -175,13 +175,13 @@ try {
       let step = 0;
       step < 2 &&
       !(await script(
-        'return !!document.querySelector(`[aria-label="${arguments[0]} line 1"]`)',
+        'return !!document.querySelector(`[aria-label="Select ${arguments[0]} line 1"]`)',
         [path],
       ));
       step++
     )
       await click("Next step");
-    await click(`${path} line 1`);
+    await click(`Select ${path} line 1`);
     await input(
       '[aria-label="Review note or Codex question"]',
       "What happens to existing rows when this migration runs?",
@@ -232,7 +232,7 @@ try {
       await waitText("Review published to GitHub", 90_000);
       console.log("PASS: selected review published through the native app");
       await click("Back to guide");
-      await click(`${path} line 1`);
+      await click(`Select ${path} line 1`);
       await waitText("· GitHub");
       await screenshot("05-github-roundtrip");
     } else {
@@ -254,13 +254,13 @@ try {
     let step = 0;
     step < 3 &&
     !(await script(
-      'return !!document.querySelector(`[aria-label="${arguments[0]} line 1"]`)',
+      'return !!document.querySelector(`[aria-label="Select ${arguments[0]} line 1"]`)',
       [path],
     ));
     step++
   )
     await click("Next step");
-  await click(`${path} line 1`);
+  await click(`Select ${path} line 1`);
   await waitText(marker);
   await waitText("What happens to existing rows");
   if (
@@ -306,13 +306,13 @@ try {
       let step = 0;
       step < 3 &&
       !(await script(
-        'return !!document.querySelector(`[aria-label="${arguments[0]} line 1"]`)',
+        'return !!document.querySelector(`[aria-label="Select ${arguments[0]} line 1"]`)',
         [path],
       ));
       step++
     )
       await click("Next step");
-    await click(`${path} line 1`);
+    await click(`Select ${path} line 1`);
     await waitText(marker);
     await waitText("What happens to existing rows");
     console.log(

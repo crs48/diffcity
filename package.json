@@ -14,5 +14,7 @@
     "format": "prettier --write apps/desktop/src apps/desktop/*.json && cargo fmt --all",
     "lint": "pnpm --filter @diffcity/desktop lint && cargo clippy --workspace --all-targets -- -D warnings"
   },
-  "devDependencies": { "prettier": "^3.8.0" }
+  "devDependencies": {
+    "prettier": "^3.8.0"
+  }
 }

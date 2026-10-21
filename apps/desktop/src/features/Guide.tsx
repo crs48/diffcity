@@ -1,3 +1,10 @@
+import {
+  Button,
+  Menu,
+  MenuItem,
+  MenuTrigger,
+  Popover,
+} from "react-aria-components";
 import { useState } from "react";
 import {
   ArrowDown,
@@ -37,7 +44,7 @@ export function GuideView({
   onFinish: () => void;
   mode: "guide" | "files" | "overview";
 }) {
-  const [outline, setOutline] = useState(false);
+  const [readingMode, setReadingMode] = useState(false);
   const [split, setSplit] = useState(false);
   const [fileQuery, setFileQuery] = useState("");
   const sections = w.guide.sections;
@@ -50,7 +57,6 @@ export function GuideView({
   const counts = countProgress(w);
   const navigate = (s: GuideSection) => {
     onProgress({ ...w.progress, activeSection: s.id });
-    setOutline(false);
   };
   const mark = (
     kind: "reviewed" | "acknowledged" | "deferred",
@@ -76,6 +82,7 @@ export function GuideView({
           notes={w.notes}
           comments={w.comments.filter((c) => c.commit === w.snapshot.pull.head)}
           split={split}
+          readingMode={readingMode}
         />
       )
     );
@@ -84,7 +91,7 @@ export function GuideView({
     return (
       <div className="reading-area overview">
         <div className="eyebrow">PULL REQUEST</div>
-        <h1>{w.snapshot.pull.title}</h1>
+        <h2>{w.snapshot.pull.title}</h2>
         <p className="intro">
           {w.snapshot.pull.body || "No description provided."}
         </p>
@@ -126,6 +133,16 @@ export function GuideView({
   if (mode === "files")
     return (
       <div className="reading-area">
+        <div className="reading-controls">
+          <label>
+            <input
+              type="checkbox"
+              checked={readingMode}
+              onChange={(e) => setReadingMode(e.target.checked)}
+            />{" "}
+            All lines for assistive reading
+          </label>
+        </div>
         <div className="file-tools">
           <input
             aria-label="Find a file"
@@ -133,9 +150,9 @@ export function GuideView({
             value={fileQuery}
             onChange={(e) => setFileQuery(e.target.value)}
           />
-          <button className="secondary" onClick={() => setSplit(!split)}>
+          <Button className="secondary" onPress={() => setSplit(!split)}>
             {split ? "Unified" : "Split"} view
-          </button>
+          </Button>
         </div>
         {w.snapshot.files
           .filter((f) => f.path.toLowerCase().includes(fileQuery.toLowerCase()))
@@ -174,64 +191,83 @@ export function GuideView({
   return (
     <div className="guide-root">
       <div className="guide-navigation">
-        <button className="outline-toggle" onClick={() => setOutline(!outline)}>
-          <span className="step-number">{index + 1}</span>
-          <span>of {sections.length} steps</span>
-          <ChevronDown size={14} />
-        </button>
+        <MenuTrigger>
+          <Button
+            className="outline-toggle"
+            aria-label={`Review outline, step ${index + 1} of ${sections.length}`}
+          >
+            <span className="step-number">{index + 1}</span>
+            <span>of {sections.length} steps</span>
+            <ChevronDown size={14} aria-hidden="true" />
+          </Button>
+          <Popover placement="bottom start" className="guide-outline">
+            <Menu
+              aria-label="Review steps"
+              onAction={(id) => {
+                const next = sections.find((s) => s.id === id);
+                if (next) navigate(next);
+              }}
+            >
+              {sections.map((s, i) => (
+                <MenuItem
+                  id={s.id}
+                  key={s.id}
+                  textValue={`${i + 1}. ${s.title}`}
+                  className={i === index ? "selected" : ""}
+                >
+                  <span
+                    className={`attention-dot ${s.attention}`}
+                    aria-hidden="true"
+                  />
+                  <span className="outline-title">
+                    <strong>
+                      {i + 1}. {s.title}
+                    </strong>
+                    <small>
+                      {labels[s.attention]} · {s.hunkIds.length} hunks
+                      {s.hunkIds.length > 0 &&
+                      s.hunkIds.every((id) => w.progress.reviewed.includes(id))
+                        ? " · reviewed"
+                        : ""}
+                    </small>
+                  </span>
+                </MenuItem>
+              ))}
+            </Menu>
+          </Popover>
+        </MenuTrigger>
         <div className="step-track">
           {sections.map((s, i) => (
-            <button
+            <Button
               key={s.id}
-              aria-label={`Go to step ${i + 1}: ${s.title}`}
-              title={s.title}
+              aria-label={`Go to step ${i + 1}: ${s.title}, ${labels[s.attention]}`}
+              aria-current={i === index ? "step" : undefined}
               className={`${s.attention} ${i === index ? "current" : ""} ${s.hunkIds.length && s.hunkIds.every((id) => w.progress.reviewed.includes(id)) ? "done" : ""}`}
-              onClick={() => navigate(s)}
+              onPress={() => navigate(s)}
             />
           ))}
         </div>
-        <button
+        <Button
           className="icon-button"
           aria-label="Previous step"
-          disabled={index === 0}
-          onClick={() => navigate(sections[index - 1])}
+          isDisabled={index === 0}
+          onPress={() => navigate(sections[index - 1])}
         >
           <ArrowLeft size={17} />
-        </button>
-        <button
+        </Button>
+        <Button
           className="icon-button"
           aria-label="Next step"
-          disabled={index === sections.length - 1}
-          onClick={() => navigate(sections[index + 1])}
+          isDisabled={index === sections.length - 1}
+          onPress={() => navigate(sections[index + 1])}
         >
           <ArrowRight size={17} />
-        </button>
+        </Button>
       </div>
-      {outline && (
-        <div className="guide-outline">
-          {sections.map((s, i) => (
-            <button
-              key={s.id}
-              className={i === index ? "selected" : ""}
-              onClick={() => navigate(s)}
-            >
-              <span className={`attention-dot ${s.attention}`} />
-              <span className="outline-title">
-                <strong>
-                  {i + 1}. {s.title}
-                </strong>
-                <small>
-                  {labels[s.attention]} · {s.hunkIds.length} hunks
-                </small>
-              </span>
-              {s.hunkIds.length > 0 &&
-                s.hunkIds.every((id) => w.progress.reviewed.includes(id)) && (
-                  <Check size={15} />
-                )}
-            </button>
-          ))}
-        </div>
-      )}
+      <p className="sr-only" role="status">
+        Step {index + 1} of {sections.length}: {section.title}.{" "}
+        {labels[section.attention]}.
+      </p>
       <div className="reading-area" key={section.id}>
         <div className="section-meta">
           <span className={`badge ${section.attention}`}>
@@ -247,7 +283,8 @@ export function GuideView({
               : "Provisional"}
           </span>
         </div>
-        <h1 className="section-title">{section.title}</h1>
+        <h2 className="section-title">{section.title}</h2>
+
         <p className="intro">{section.summary}</p>
         <div
           className={`callout ${section.attention === "high" ? "attention-callout" : ""}`}
@@ -292,9 +329,9 @@ export function GuideView({
             <p className="muted">
               Read the summary, or expand to inspect every line.
             </p>
-            <button
+            <Button
               className="secondary"
-              onClick={() =>
+              onPress={() =>
                 onProgress({
                   ...w.progress,
                   expanded: [...w.progress.expanded, section.id],
@@ -302,23 +339,33 @@ export function GuideView({
               }
             >
               <Eye size={15} /> Expand all changes
-            </button>
-            <button
+            </Button>
+            <Button
               className="text-button"
-              onClick={() => mark("acknowledged", section)}
+              onPress={() => mark("acknowledged", section)}
             >
               Acknowledge summary
-            </button>
+            </Button>
           </div>
         ) : (
           <>
+            <div className="reading-controls">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={readingMode}
+                  onChange={(e) => setReadingMode(e.target.checked)}
+                />{" "}
+                All lines for assistive reading
+              </label>
+            </div>
             <div className="code-toolbar">
               <span>
                 <FileCode2 size={14} /> CODE CHANGES
               </span>
-              <button onClick={() => setSplit(!split)}>
+              <Button onPress={() => setSplit(!split)}>
                 {split ? "Unified view" : "Split view"}
-              </button>
+              </Button>
               <span className="muted">
                 Select a line to discuss · Shift-click for a range
               </span>
@@ -327,10 +374,10 @@ export function GuideView({
           </>
         )}
         {section.findings.map((f, i) => (
-          <button
+          <Button
             className="finding"
             key={i}
-            onClick={() => onSelect(f.anchor)}
+            onPress={() => onSelect(f.anchor)}
           >
             <span className="badge high">{f.severity} finding</span>
             <strong>{f.title}</strong>
@@ -338,7 +385,7 @@ export function GuideView({
             <code>
               {f.anchor.path}:{f.anchor.line}
             </code>
-          </button>
+          </Button>
         ))}
         {section.unavailablePaths.map((path) => (
           <div className="callout" key={path}>
@@ -352,32 +399,32 @@ export function GuideView({
           </div>
         ))}
         <div className="section-actions">
-          <button
+          <Button
             className={reviewed ? "reviewed-button" : "primary"}
-            disabled={!section.hunkIds.length}
-            onClick={() => mark("reviewed", section)}
+            isDisabled={!section.hunkIds.length}
+            onPress={() => mark("reviewed", section)}
           >
             <Check size={16} />
             {reviewed ? "Code reviewed" : "Mark code reviewed"}
-          </button>
-          <button
+          </Button>
+          <Button
             className="secondary"
-            onClick={() => mark("deferred", section)}
+            onPress={() => mark("deferred", section)}
           >
             <ArrowDown size={15} /> Defer
-          </button>
+          </Button>
           <div className="spacer" />
           {index < sections.length - 1 ? (
-            <button
+            <Button
               className="next-button"
-              onClick={() => navigate(sections[index + 1])}
+              onPress={() => navigate(sections[index + 1])}
             >
               Next step <ArrowRight size={16} />
-            </button>
+            </Button>
           ) : (
-            <button className="next-button" onClick={onFinish}>
+            <Button className="next-button" onPress={onFinish}>
               Finish review <ArrowRight size={16} />
-            </button>
+            </Button>
           )}
         </div>
         <div className="guide-footer">

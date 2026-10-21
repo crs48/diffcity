@@ -1,0 +1,417 @@
+{
+  "snapshot": {
+    "id": "demo-invitations-v1",
+    "pull": {
+      "repository": "diffcity/demo",
+      "number": 42,
+      "title": "Add team invitations with seven-day expiry",
+      "body": "Allow administrators to invite teammates. Includes persistence, expiry behavior, docs, and translated copy. Synthetic review fixture with deliberately incomplete migration and tenant scoping.",
+      "author": "demo-author",
+      "url": "https://github.com/crs48/diffcity",
+      "draft": false,
+      "state": "open",
+      "head": "demo-head-1",
+      "base": "demo-base-1",
+      "headRef": "feat/invitations",
+      "baseRef": "main",
+      "updatedAt": "2026-10-20T12:00:00Z",
+      "requested": [],
+      "assigned": [],
+      "additions": 26,
+      "deletions": 0,
+      "changedFiles": 7
+    },
+    "capturedAt": "2026-10-20T12:00:00Z",
+    "files": [
+      {
+        "path": "db/migrations/042_invitation_expiry.sql",
+        "previousPath": null,
+        "status": "added",
+        "additions": 2,
+        "deletions": 0,
+        "hunks": [
+          {
+            "id": "8e1714e7bf328bdbffa8972b",
+            "fingerprint": "f15a6487817eb7c26fc8b273",
+            "path": "db/migrations/042_invitation_expiry.sql",
+            "header": "@@ -0,0 +1,2 @@",
+            "lines": [
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 1,
+                "text": "ALTER TABLE invitations ADD COLUMN expires_at TIMESTAMPTZ NOT NULL;"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 2,
+                "text": "CREATE INDEX invitation_expiry ON invitations (expires_at);"
+              }
+            ]
+          }
+        ],
+        "unavailable": null
+      },
+      {
+        "path": "src/auth/invitations.ts",
+        "previousPath": null,
+        "status": "added",
+        "additions": 6,
+        "deletions": 0,
+        "hunks": [
+          {
+            "id": "d27777591d2d5fe1bb58ebcd",
+            "fingerprint": "dc60fd02d6c3d011db201b51",
+            "path": "src/auth/invitations.ts",
+            "header": "@@ -0,0 +1,6 @@",
+            "lines": [
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 1,
+                "text": "export async function inviteMember(db, actor, email) {"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 2,
+                "text": "  if (!actor.roles.includes('admin')) throw new Error('Forbidden');"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 3,
+                "text": "  const existing = await db.invitations.findFirst({ email });"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 4,
+                "text": "  if (existing) return existing;"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 5,
+                "text": "  return db.invitations.create({ email, tenant_id: actor.tenant_id });"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 6,
+                "text": "}"
+              }
+            ]
+          }
+        ],
+        "unavailable": null
+      },
+      {
+        "path": "src/invitations.ts",
+        "previousPath": null,
+        "status": "added",
+        "additions": 2,
+        "deletions": 0,
+        "hunks": [
+          {
+            "id": "027290e5bbcb1ef3f6f62a37",
+            "fingerprint": "98601388b6a5344430409698",
+            "path": "src/invitations.ts",
+            "header": "@@ -0,0 +1,2 @@",
+            "lines": [
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 1,
+                "text": "export const invitationExpiry = (now: Date) =>"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 2,
+                "text": "  new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);"
+              }
+            ]
+          }
+        ],
+        "unavailable": null
+      },
+      {
+        "path": "tests/invitations.test.ts",
+        "previousPath": null,
+        "status": "added",
+        "additions": 4,
+        "deletions": 0,
+        "hunks": [
+          {
+            "id": "85af06994c8900d1871e38cc",
+            "fingerprint": "23c97b897ccaea81ec27844a",
+            "path": "tests/invitations.test.ts",
+            "header": "@@ -0,0 +1,4 @@",
+            "lines": [
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 1,
+                "text": "it('expires invitations after seven days', () => {"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 2,
+                "text": "  const now = new Date('2026-01-01T00:00:00Z');"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 3,
+                "text": "  expect(invitationExpiry(now).toISOString()).toBe('2026-01-08T00:00:00.000Z');"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 4,
+                "text": "});"
+              }
+            ]
+          }
+        ],
+        "unavailable": null
+      },
+      {
+        "path": "docs/invitations.md",
+        "previousPath": null,
+        "status": "added",
+        "additions": 4,
+        "deletions": 0,
+        "hunks": [
+          {
+            "id": "04b0cee67fd2432eb6dcc8fc",
+            "fingerprint": "993bf5458ea09fded292ddd6",
+            "path": "docs/invitations.md",
+            "header": "@@ -0,0 +1,4 @@",
+            "lines": [
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 1,
+                "text": "# Team invitations"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 2,
+                "text": ""
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 3,
+                "text": "Admins can invite team members from the Members page."
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 4,
+                "text": "Invitations expire after seven days."
+              }
+            ]
+          }
+        ],
+        "unavailable": null
+      },
+      {
+        "path": "locales/en.json",
+        "previousPath": null,
+        "status": "added",
+        "additions": 4,
+        "deletions": 0,
+        "hunks": [
+          {
+            "id": "686489737153a8eec643c89d",
+            "fingerprint": "3c4a2db5e4c281eede536c5b",
+            "path": "locales/en.json",
+            "header": "@@ -0,0 +1,4 @@",
+            "lines": [
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 1,
+                "text": "{"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 2,
+                "text": "  \"invite.title\": \"Invite a teammate\","
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 3,
+                "text": "  \"invite.help\": \"They will receive a link to join your team.\""
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 4,
+                "text": "}"
+              }
+            ]
+          }
+        ],
+        "unavailable": null
+      },
+      {
+        "path": "locales/fr.json",
+        "previousPath": null,
+        "status": "added",
+        "additions": 4,
+        "deletions": 0,
+        "hunks": [
+          {
+            "id": "1417763e30bce78457bc0396",
+            "fingerprint": "ff4f2039b1a7e083b36ea10e",
+            "path": "locales/fr.json",
+            "header": "@@ -0,0 +1,4 @@",
+            "lines": [
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 1,
+                "text": "{"
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 2,
+                "text": "  \"invite.title\": \"Inviter un coll\u00e8gue\","
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 3,
+                "text": "  \"invite.help\": \"Un lien lui permettra de rejoindre votre \u00e9quipe.\""
+              },
+              {
+                "kind": "addition",
+                "old": null,
+                "new": 4,
+                "text": "}"
+              }
+            ]
+          }
+        ],
+        "unavailable": null
+      }
+    ],
+    "limitations": []
+  },
+  "guide": {
+    "snapshotId": "demo-invitations-v1",
+    "summary": "Review team invitations and their expiry policy.",
+    "sections": [
+      {
+        "id": "section-0",
+        "title": "Make existing invitations compatible",
+        "summary": "Existing rows need an expiry value before adding NOT NULL.",
+        "attention": "high",
+        "category": "Database migration",
+        "reason": "Existing rows need an expiry value before adding NOT NULL.",
+        "hunkIds": [
+          "8e1714e7bf328bdbffa8972b"
+        ],
+        "unavailablePaths": [],
+        "questions": [],
+        "findings": [],
+        "assessed": true,
+        "foldable": false
+      },
+      {
+        "id": "section-1",
+        "title": "Keep invitations inside their team",
+        "summary": "Verify tenant scope in lookup and creation.",
+        "attention": "high",
+        "category": "Authorization",
+        "reason": "Verify tenant scope in lookup and creation.",
+        "hunkIds": [
+          "d27777591d2d5fe1bb58ebcd"
+        ],
+        "unavailablePaths": [],
+        "questions": [],
+        "findings": [],
+        "assessed": true,
+        "foldable": false
+      },
+      {
+        "id": "section-2",
+        "title": "Give invitations a seven-day lifetime",
+        "summary": "Read the helper and its test together.",
+        "attention": "standard",
+        "category": "Implementation and tests",
+        "reason": "Read the helper and its test together.",
+        "hunkIds": [
+          "027290e5bbcb1ef3f6f62a37",
+          "85af06994c8900d1871e38cc"
+        ],
+        "unavailablePaths": [],
+        "questions": [],
+        "findings": [],
+        "assessed": true,
+        "foldable": false
+      },
+      {
+        "id": "section-3",
+        "title": "Explain the invitation workflow",
+        "summary": "Documentation only; expand to inspect the copy.",
+        "attention": "routine",
+        "category": "Documentation",
+        "reason": "Documentation only; expand to inspect the copy.",
+        "hunkIds": [
+          "04b0cee67fd2432eb6dcc8fc"
+        ],
+        "unavailablePaths": [],
+        "questions": [],
+        "findings": [],
+        "assessed": true,
+        "foldable": true
+      },
+      {
+        "id": "section-4",
+        "title": "Add invitation copy in two languages",
+        "summary": "Matching translation keys without placeholders.",
+        "attention": "routine",
+        "category": "Localization",
+        "reason": "Matching translation keys without placeholders.",
+        "hunkIds": [
+          "686489737153a8eec643c89d",
+          "1417763e30bce78457bc0396"
+        ],
+        "unavailablePaths": [],
+        "questions": [],
+        "findings": [],
+        "assessed": true,
+        "foldable": true
+      }
+    ],
+    "source": "sample",
+    "model": "fixture",
+    "generatedAt": "2026-10-20T12:00:00Z",
+    "limitations": [],
+    "policyVersion": 1
+  },
+  "notes": [],
+  "progress": {
+    "reviewed": [],
+    "acknowledged": [],
+    "deferred": [],
+    "expanded": [],
+    "activeSection": null
+  },
+  "comments": [],
+  "checks": "Synthetic fixture",
+  "previousSnapshotId": null,
+  "changedHunks": [],
+  "syncError": null
+}

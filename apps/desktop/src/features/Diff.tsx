@@ -10,6 +10,7 @@ export function Diff({
   notes,
   comments,
   split,
+  readingMode = false,
 }: {
   hunk: Hunk;
   selection: Anchor | null;
@@ -17,6 +18,7 @@ export function Diff({
   notes: Note[];
   comments: RemoteComment[];
   split: boolean;
+  readingMode?: boolean;
 }) {
   const scroll = useRef<HTMLDivElement>(null);
   const rows = useVirtualizer({
@@ -25,6 +27,9 @@ export function Diff({
     estimateSize: () => 25,
     overscan: 12,
   });
+  const renderedRows = readingMode
+    ? hunk.lines.map((_, index) => ({ index, key: index, start: index * 25 }))
+    : rows.getVirtualItems();
   const select = (line: number | null, side: Side, shift: boolean) => {
     if (!line) return;
     const same =
@@ -51,16 +56,19 @@ export function Diff({
       <div
         ref={scroll}
         className={`diff-scroll ${split ? "split" : ""}`}
+        role="region"
+        aria-label={`Code changes in ${hunk.path}. Plus marks additions; minus marks deletions. Shift-click line numbers to select a range.`}
+        tabIndex={0}
         style={{ height: Math.min(hunk.lines.length * 25, 450) }}
       >
         <div
           style={{
-            height: rows.getTotalSize(),
+            height: readingMode ? hunk.lines.length * 25 : rows.getTotalSize(),
             position: "relative",
             minWidth: "100%",
           }}
         >
-          {rows.getVirtualItems().map((row) => {
+          {renderedRows.map((row) => {
             const l = hunk.lines[row.index];
             const side: Side = l.kind === "deletion" ? "LEFT" : "RIGHT";
             const line = side === "LEFT" ? l.old : l.new;
@@ -95,8 +103,10 @@ export function Diff({
                 <button
                   tabIndex={l.old ? 0 : -1}
                   disabled={!l.old}
+                  aria-hidden={!l.old}
                   className="line-number"
-                  aria-label={`${hunk.path} old line ${l.old}`}
+                  aria-label={`Select ${hunk.path} old line ${l.old}`}
+                  aria-pressed={chosen && selection?.side === "LEFT"}
                   onClick={(e) => select(l.old, "LEFT", e.shiftKey)}
                 >
                   {l.old}
@@ -104,13 +114,22 @@ export function Diff({
                 <button
                   tabIndex={l.new ? 0 : -1}
                   disabled={!l.new}
+                  aria-hidden={!l.new}
                   className="line-number"
-                  aria-label={`${hunk.path} line ${l.new}`}
+                  aria-label={`Select ${hunk.path} line ${l.new}`}
+                  aria-pressed={chosen && selection?.side === "RIGHT"}
                   onClick={(e) => select(l.new, "RIGHT", e.shiftKey)}
                 >
                   {l.new}
                 </button>
-                <span className="diff-sign">
+                <span className="sr-only">
+                  {l.kind === "addition"
+                    ? "Added: "
+                    : l.kind === "deletion"
+                      ? "Removed: "
+                      : "Unchanged: "}
+                </span>
+                <span className="diff-sign" aria-hidden="true">
                   {l.kind === "addition"
                     ? "+"
                     : l.kind === "deletion"

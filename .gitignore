@@ -18,3 +18,5 @@ test-results/
 .wdio/
 apps/desktop/src-tauri/gen/
 *.tsbuildinfo
+output/playwright/
+.playwright-cli/
