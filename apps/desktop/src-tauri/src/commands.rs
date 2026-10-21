@@ -133,6 +133,15 @@ pub async fn publish_review(
     service.publish(request).await.map_err(error)
 }
 #[tauri::command]
+pub fn sample_inbox(service: State<'_, Arc<Service>>) -> Output<Vec<PullRequest>> {
+    let login = service
+        .store
+        .get::<String>("identity", "github")
+        .map_err(error)?
+        .unwrap_or_else(|| "you".into());
+    fixtures::inbox(&login).map_err(error)
+}
+#[tauri::command]
 pub fn sample_review(service: State<'_, Arc<Service>>) -> Output<ReviewWorkspace> {
     let (snapshot, sample) = fixtures::sample().map_err(error)?;
     service

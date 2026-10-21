@@ -27,6 +27,7 @@ beforeEach(() => {
     model: null,
     theme: "system",
     locale: "en",
+    completedDays: 2,
   };
   vi.stubGlobal(
     "ResizeObserver",

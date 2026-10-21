@@ -11,6 +11,12 @@ pub struct Settings {
     pub theme: String,
     #[serde(default = "default_locale")]
     pub locale: String,
+    #[serde(default = "default_completed_days")]
+    pub completed_days: u32,
+}
+
+pub fn default_completed_days() -> u32 {
+    2
 }
 
 pub fn default_locale() -> String {
@@ -71,11 +77,28 @@ pub struct PullRequest {
     pub head_ref: String,
     pub base_ref: String,
     pub updated_at: String,
+    #[serde(default)]
+    pub closed_at: Option<String>,
+    #[serde(default)]
+    pub merged_at: Option<String>,
+    #[serde(default)]
+    pub viewer_review: Option<SubmittedReview>,
+    #[serde(default)]
+    pub review_decision: Option<String>,
+    #[serde(default)]
+    pub review_metadata_available: bool,
     pub requested: Vec<String>,
     pub assigned: Vec<String>,
     pub additions: u32,
     pub deletions: u32,
     pub changed_files: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmittedReview {
+    pub state: String,
+    pub submitted_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]

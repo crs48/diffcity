@@ -100,8 +100,10 @@ async fn main() -> Result<()> {
         );
         if snapshot.pull.state != "open" {
             ensure!(
-                !inbox.iter().any(|p| p.number == number),
-                "Closed PR leaked into open inbox"
+                !inbox
+                    .iter()
+                    .any(|p| p.number == number && p.state == "open"),
+                "Closed PR incorrectly has open state in inbox"
             );
             ensure!(
                 history.pulls.iter().any(|p| p.number == number),

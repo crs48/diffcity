@@ -27,6 +27,7 @@ export const api = {
     invoke<ReviewWorkspace>("open_saved_review", { snapshotId }),
   check: (repository: string, number: number) =>
     invoke<PullRequest>("check_pull", { repository, number }),
+  sampleInbox: () => invoke<PullRequest[]>("sample_inbox"),
   sample: () => invoke<ReviewWorkspace>("sample_review"),
   note: (note: Note) => invoke<Note>("save_note", { note }),
   deleteNote: (id: string) => invoke<void>("delete_note", { id }),

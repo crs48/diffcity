@@ -159,8 +159,12 @@ impl GitHub {
             .context("Could not reach GitHub. Your local drafts are safe.")?;
         let status = response.status();
         let headers = response.headers().clone();
-        session.next_request =
-            Instant::now() + Duration::from_millis(if method == Method::GET { 100 } else { 1000 });
+        session.next_request = Instant::now()
+            + Duration::from_millis(if method == Method::GET || path == "/graphql" {
+                100
+            } else {
+                1000
+            });
         if status == StatusCode::NOT_MODIFIED {
             return session
                 .etags
@@ -194,7 +198,7 @@ impl GitHub {
                     .etags
                     .insert(path.into(), (tag.into(), value.clone()));
             }
-        } else {
+        } else if path != "/graphql" {
             session.etags.clear();
         }
         Ok(value)
@@ -236,14 +240,73 @@ impl GitHub {
         if !domain::valid_repo(repo) {
             bail!("Use owner/repository, or a GitHub PR URL");
         }
-        Ok(self
+        let mut pulls: Vec<_> = self
             .pages(&format!(
                 "/repos/{repo}/pulls?state=open&sort=updated&direction=desc"
             ))
             .await?
             .iter()
             .map(|v| parse_pull(repo, v))
-            .collect())
+            .collect();
+        let login = self.login().await?;
+        let (owner, name) = repo.split_once('/').context("Invalid repo")?;
+        // Batch review metadata: one request per 25 PRs, not one request per PR.
+        for batch in pulls.chunks_mut(25) {
+            let fields = batch.iter().map(|p| format!(
+                "p{}: pullRequest(number:{}) {{ reviewDecision reviews(last:1, author:$viewer, states:[APPROVED,CHANGES_REQUESTED,COMMENTED,DISMISSED]) {{ nodes {{ state submittedAt }} }} }}", p.number, p.number
+            )).collect::<Vec<_>>().join(" ");
+            let query = format!(
+                "query($owner:String!,$name:String!,$viewer:String!) {{ repository(owner:$owner,name:$name) {{ {fields} }} }}"
+            );
+            let value = self.request(Method::POST, "/graphql", Some(&json!({"query":query,"variables":{"owner":owner,"name":name,"viewer":login}})), false).await?;
+            if value["errors"].as_array().is_some_and(|e| !e.is_empty()) {
+                bail!("GitHub review status unavailable: {}", value["errors"]);
+            }
+            for pull in batch {
+                let node = &value["data"]["repository"][format!("p{}", pull.number)];
+                apply_review_metadata(pull, node)?;
+            }
+        }
+        Ok(pulls)
+    }
+    pub async fn recently_completed(
+        &self,
+        repos: &[String],
+        days: u32,
+    ) -> Result<Vec<PullRequest>> {
+        if days == 0 || repos.is_empty() {
+            return Ok(vec![]);
+        }
+        if repos.iter().any(|r| !domain::valid_repo(r)) {
+            bail!("Invalid repo");
+        }
+        let login = self.login().await?;
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(i64::from(days));
+        let mut pulls = vec![];
+        for repo in repos {
+            // Closed PRs can be updated long after completion. Page by updated_at,
+            // then filter by actual completion time; never use updated_at as completion.
+            for page in 1..=100 {
+                let value = self.request(Method::GET, &format!("/repos/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page={page}"), None, true).await?;
+                let items = value.as_array().context("Expected closed PRs")?;
+                pulls.extend(items.iter().map(|v| parse_pull(repo, v)).filter(|p| {
+                    p.author.eq_ignore_ascii_case(&login)
+                        && p.closed_at
+                            .as_deref()
+                            .and_then(|date| chrono::DateTime::parse_from_rfc3339(date).ok())
+                            .is_some_and(|date| date >= cutoff)
+                }));
+                if recent_page_complete(items, &cutoff) {
+                    break;
+                }
+                if page == 100 {
+                    bail!(
+                        "Recent completions exceed the pagination budget; narrow the completion window or repo selection."
+                    );
+                }
+            }
+        }
+        Ok(pulls)
     }
     pub async fn history(&self, repo: &str, page: u32) -> Result<PullPage> {
         if !domain::valid_repo(repo) || page == 0 || page > 1000 {
@@ -624,6 +687,11 @@ pub fn parse_pull(repo: &str, v: &Value) -> PullRequest {
         head_ref: string(&v["head"], "ref"),
         base_ref: string(&v["base"], "ref"),
         updated_at: string(v, "updated_at"),
+        closed_at: v["closed_at"].as_str().map(str::to_owned),
+        merged_at: v["merged_at"].as_str().map(str::to_owned),
+        viewer_review: None,
+        review_decision: None,
+        review_metadata_available: false,
         requested: users("requested_reviewers"),
         assigned: users("assignees"),
         additions: integer(v, "additions"),
@@ -631,6 +699,41 @@ pub fn parse_pull(repo: &str, v: &Value) -> PullRequest {
         changed_files: integer(v, "changed_files"),
     }
 }
+fn recent_page_complete(items: &[Value], cutoff: &chrono::DateTime<chrono::Utc>) -> bool {
+    items.len() < 100
+        || items
+            .last()
+            .and_then(|v| v["updated_at"].as_str())
+            .and_then(|date| chrono::DateTime::parse_from_rfc3339(date).ok())
+            .is_some_and(|date| date < *cutoff)
+}
+
+fn apply_review_metadata(pull: &mut PullRequest, node: &Value) -> Result<()> {
+    if !node.is_object() || !node["reviews"]["nodes"].is_array() {
+        bail!(
+            "GitHub review status unavailable for {}#{}",
+            pull.repository,
+            pull.number
+        );
+    }
+    pull.review_metadata_available = true;
+    pull.review_decision = node["reviewDecision"].as_str().map(str::to_owned);
+    pull.viewer_review = node["reviews"]["nodes"]
+        .as_array()
+        .and_then(|reviews| reviews.last())
+        .and_then(|review| {
+            let state = review["state"].as_str()?;
+            if !["APPROVED", "CHANGES_REQUESTED", "COMMENTED"].contains(&state) {
+                return None;
+            }
+            Some(SubmittedReview {
+                state: state.into(),
+                submitted_at: review["submittedAt"].as_str()?.into(),
+            })
+        });
+    Ok(())
+}
+
 pub fn payload(
     snapshot: &Snapshot,
     request: &PublishRequest,
@@ -684,4 +787,64 @@ pub fn payload(
     Ok(
         json!({"commit_id":snapshot.pull.head,"event":request.event,"body":body,"comments":comments}),
     )
+}
+
+#[cfg(test)]
+mod inbox_tests {
+    use super::*;
+    #[test]
+    fn review_metadata_excludes_pending_and_dismissed_submissions() {
+        let mut pull = parse_pull("a/b", &json!({"number": 1}));
+        for state in [
+            "APPROVED",
+            "CHANGES_REQUESTED",
+            "COMMENTED",
+            "DISMISSED",
+            "PENDING",
+        ] {
+            apply_review_metadata(&mut pull, &json!({"reviewDecision":"REVIEW_REQUIRED","reviews":{"nodes":[{"state":state,"submittedAt":"2026-10-21T00:00:00Z"}]}})).unwrap();
+            assert_eq!(
+                pull.viewer_review.is_some(),
+                !["DISMISSED", "PENDING"].contains(&state)
+            );
+            assert!(pull.review_metadata_available);
+        }
+        apply_review_metadata(&mut pull, &json!({"reviews":{"nodes":[]}})).unwrap();
+        assert!(pull.viewer_review.is_none());
+        assert!(apply_review_metadata(&mut pull, &Value::Null).is_err());
+    }
+    #[test]
+    fn recent_pagination_continues_past_old_prs_with_new_comments() {
+        let cutoff = chrono::DateTime::parse_from_rfc3339("2026-10-19T00:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let recent =
+            json!({"closed_at":"2020-01-01T00:00:00Z", "updated_at":"2026-10-21T00:00:00Z"});
+        assert!(!recent_page_complete(&vec![recent; 100], &cutoff));
+        let old = json!({"updated_at":"2026-10-18T00:00:00Z"});
+        assert!(recent_page_complete(&vec![old; 100], &cutoff));
+        assert!(recent_page_complete(&[], &cutoff));
+    }
+    #[test]
+    fn completion_dates_and_legacy_cache_fields_are_preserved() {
+        let pull = parse_pull(
+            "a/b",
+            &json!({"number":1,"state":"closed","closed_at":"2026-10-20T12:00:00Z","merged_at":"2026-10-20T12:00:00Z"}),
+        );
+        assert_eq!(pull.state, "merged");
+        assert_eq!(pull.closed_at, pull.merged_at);
+        let mut old = serde_json::to_value(&pull).unwrap();
+        for field in [
+            "closedAt",
+            "mergedAt",
+            "viewerReview",
+            "reviewDecision",
+            "reviewMetadataAvailable",
+        ] {
+            old.as_object_mut().unwrap().remove(field);
+        }
+        let decoded: PullRequest = serde_json::from_value(old).unwrap();
+        assert!(decoded.viewer_review.is_none());
+        assert!(!decoded.review_metadata_available);
+    }
 }

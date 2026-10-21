@@ -1,7 +1,7 @@
 use crate::{
     codex,
     contracts::*,
-    domain,
+    domain, fixtures,
     github::{self, GitHub},
     storage::Store,
 };
@@ -50,7 +50,13 @@ impl Service {
                 self.store.put("identity", "github", &c.identity)?;
                 c
             }
-            Err(e) => fail(e),
+            Err(e) => Connection {
+                identity: self
+                    .store
+                    .get::<String>("identity", "github")?
+                    .unwrap_or_default(),
+                ..fail(e)
+            },
         };
         let (codex, models) = match codex::connection(
             &settings,
@@ -78,10 +84,33 @@ impl Service {
         for repo in &settings.repositories {
             pulls.extend(self.github.pulls(repo).await?);
         }
+        pulls.extend(
+            self.github
+                .recently_completed(&settings.repositories, settings.completed_days)
+                .await?,
+        );
         self.store.put("cache", "inbox", &pulls)?;
         Ok(pulls)
     }
     pub async fn history(&self, repository: Option<&str>, page: u32) -> Result<PullPage> {
+        if repository == Some(fixtures::INBOX_REPO) {
+            let login = self
+                .store
+                .get::<String>("identity", "github")?
+                .unwrap_or_else(|| "you".into());
+            return Ok(PullPage {
+                pulls: if page == 1 {
+                    fixtures::inbox(&login)?
+                        .into_iter()
+                        .filter(|p| p.state != "open")
+                        .collect()
+                } else {
+                    vec![]
+                },
+                next_page: None,
+                sync_error: None,
+            });
+        }
         if page == 0 || page > 1000 {
             bail!("Invalid history page");
         }
@@ -130,6 +159,9 @@ impl Service {
         if !["en", "es"].contains(&settings.locale.as_str()) {
             bail!("Unsupported display language");
         }
+        if ![0, 1, 2, 7, 30].contains(&settings.completed_days) {
+            bail!("Choose a supported completion window");
+        }
         self.store.put("settings", "main", &settings)?;
         Ok(settings)
     }
@@ -169,6 +201,9 @@ impl Service {
         })
     }
     pub async fn open(&self, repo: &str, number: u32, refresh: bool) -> Result<ReviewWorkspace> {
+        if repo == fixtures::INBOX_REPO {
+            return self.sample_pull(number);
+        }
         let key = format!("{repo}#{number}");
         let old_id: Option<String> = self.store.get("latest", &key)?;
         let old = old_id.as_deref().map(|id| self.snapshot(id)).transpose()?;
@@ -236,6 +271,18 @@ impl Service {
             changed_hunks,
             sync_error: sync_error.or(comment_error),
         })
+    }
+    pub fn sample_pull(&self, number: u32) -> Result<ReviewWorkspace> {
+        let login = self
+            .store
+            .get::<String>("identity", "github")?
+            .unwrap_or_else(|| "you".into());
+        let (snapshot, sample) = fixtures::inbox_review(&login, number)?;
+        self.store.put("snapshot", &snapshot.id, &snapshot)?;
+        let mut workspace = self.saved(&snapshot.id)?;
+        workspace.guide = self.store.get("guide", &snapshot.id)?.unwrap_or(sample);
+        workspace.checks = "Local sample · fictional author and review states".into();
+        Ok(workspace)
     }
     pub fn save_note(&self, mut note: Note) -> Result<Note> {
         let snapshot = self.snapshot(&note.snapshot_id)?;
@@ -431,7 +478,7 @@ impl Service {
     pub async fn publish(&self, request: PublishRequest) -> Result<PublishResult> {
         let _guard = self.publication.lock().await;
         let snapshot = self.snapshot(&request.snapshot_id)?;
-        if snapshot.pull.repository == "diffcity/demo" {
+        if fixtures::is_sample_repo(&snapshot.pull.repository) {
             bail!("The sample PR is local. Open a real GitHub PR to publish feedback.");
         }
         let login = self.github.login().await?;

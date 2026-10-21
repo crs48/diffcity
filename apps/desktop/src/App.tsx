@@ -39,12 +39,21 @@ import {
   type ReviewWorkspace,
   type RunEvent,
 } from "./lib/api";
-import { bucket, key, newNote, parsePullUrl } from "./lib/review";
+import { newNote, parsePullUrl } from "./lib/review";
 import { GuideView } from "./features/Guide";
 import { Discussion } from "./features/Discussion";
 import { ConversationContext } from "./features/conversation";
 import { useNoteComposer } from "./features/useNoteComposer";
-import { Connections, Finish, Projects } from "./features/Dialogs";
+import { Connections, Finish, Repos } from "./features/Dialogs";
+import { DisplaySettings } from "./features/DisplaySettings";
+import { PullList } from "./features/PullList";
+import {
+  SAMPLE_REPO,
+  isSampleRepo,
+  sameLogin,
+  requestedFrom,
+  visiblePulls,
+} from "./lib/inbox";
 import "./styles.css";
 
 export default function App() {
@@ -52,8 +61,12 @@ export default function App() {
   const [inboxView, setInboxView] = useState<"open" | "history">("open");
   const [data, setData] = useState<Bootstrap | null>(null);
   const [pulls, setPulls] = useState<PullRequest[]>([]);
-  const [project, setProject] = useState<string | null>(null);
-  const history = usePullHistory(project, inboxView === "history");
+  const [repo, setRepo] = useState<string | null>(null);
+  const history = usePullHistory(
+    repo,
+    inboxView === "history" && repo !== SAMPLE_REPO,
+  );
+  const [samplePulls, setSamplePulls] = useState<PullRequest[]>([]);
   const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
   const [selection, setSelection] = useState<Anchor | null>(null);
   const [discussion, setDiscussion] = useState(false);
@@ -61,7 +74,7 @@ export default function App() {
   const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
   const [dialog, setDialog] = useState<
-    "connections" | "projects" | "finish" | null
+    "connections" | "repos" | "finish" | "display" | null
   >(null);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting your workspace…");
@@ -215,7 +228,7 @@ export default function App() {
         if (
           w &&
           w.snapshot.pull.state === "open" &&
-          w.snapshot.pull.repository !== "diffcity/demo"
+          !isSampleRepo(w.snapshot.pull.repository)
         ) {
           const p = w.snapshot.pull;
           const latest = await api.check(p.repository, p.number);
@@ -258,6 +271,9 @@ export default function App() {
     try {
       await flush();
       const w = await api.open(repository, number, force);
+      const samplePull = samplePulls.find((p) => p.number === number);
+      if (repository === SAMPLE_REPO && samplePull)
+        w.snapshot.pull = samplePull;
       if (request !== opening.current) return;
       setWorkspace(w);
       if (matchMedia("(max-width: 1000px)").matches) setInboxOpen(false);
@@ -267,7 +283,8 @@ export default function App() {
       setMode("guide");
       setPendingGuide(null);
       setNewRevision(false);
-      localStorage.setItem("diffcity.lastPr", w.snapshot.pull.url);
+      if (!isSampleRepo(repository))
+        localStorage.setItem("diffcity.lastPr", w.snapshot.pull.url);
     } catch (e) {
       onError(e);
     } finally {
@@ -410,19 +427,50 @@ export default function App() {
       setActiveQuestion(null);
     }
   };
-  const visible = (inboxView === "open" ? pulls : history.pulls).filter(
-    (p) =>
-      (!project || p.repository === project) &&
-      `${p.title} ${p.number} ${p.author} ${p.repository} ${p.state}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
+  const login = data?.github.identity || "you";
+  const samples = repo === SAMPLE_REPO;
+  const visible = visiblePulls(
+    samples ? samplePulls : inboxView === "open" ? pulls : history.pulls,
+    {
+      login,
+      repository: repo,
+      query,
+      history: inboxView === "history",
+      completedDays: data?.settings.completedDays ?? 2,
+    },
   );
-  const groups = [
-    "My pull requests",
-    "Review requested",
-    "Assigned to me",
-    "Other pull requests",
-  ];
+  const exploreInbox = async () => {
+    try {
+      setSamplePulls(await api.sampleInbox());
+      setRepo(SAMPLE_REPO);
+      setInboxView("open");
+      setQuery("");
+      setInboxOpen(true);
+    } catch (e) {
+      onError(e);
+    }
+  };
+  const simulateReview = (p: PullRequest) => {
+    const next = requestedFrom(p, login)
+      ? {
+          ...p,
+          requested: [],
+          viewerReview: {
+            state: "COMMENTED",
+            submittedAt: new Date().toISOString(),
+          },
+        }
+      : { ...p, requested: [login] };
+    setSamplePulls((current) =>
+      current.map((item) => (item.number === p.number ? next : item)),
+    );
+    setWorkspace((current) =>
+      current?.snapshot.pull.repository === SAMPLE_REPO &&
+      current.snapshot.pull.number === p.number
+        ? { ...current, snapshot: { ...current.snapshot, pull: next } }
+        : current,
+    );
+  };
   const pull = workspace?.snapshot.pull;
   return (
     <div className={`app ${inboxVisible ? "" : "inbox-hidden"}`}>
@@ -433,10 +481,7 @@ export default function App() {
       >
         {t("Skip to review")}{" "}
       </a>
-      <aside
-        className="project-rail"
-        aria-label={t("Projects and connections")}
-      >
+      <aside className="project-rail" aria-label={t("Repos and connections")}>
         <div className="traffic-spacer" data-tauri-drag-region />
         <div className="brand">
           <div className="brand-mark">
@@ -449,53 +494,67 @@ export default function App() {
         </div>
         <div className="workspace-label">{t("YOUR WORKSPACE")} </div>
         <Button
-          className={`rail-item ${!project ? "active" : ""}`}
-          aria-pressed={!project}
+          className={`rail-item ${!repo ? "active" : ""}`}
+          aria-pressed={!repo}
           onPress={() => {
-            setProject(null);
+            setRepo(null);
             setInboxOpen(true);
           }}
         >
           <Inbox size={17} />
           <span>{t("All pull requests")} </span>
-          <small>{pulls.length}</small>
+          <small>{pulls.filter((p) => p.state === "open").length}</small>
         </Button>
         <div className="rail-heading">
-          {t("PROJECTS")}{" "}
+          {t("REPOS")}{" "}
           <Button
             className="icon-button"
-            aria-label={t("Add projects")}
-            onPress={() => setDialog("projects")}
+            aria-label={t("Add repos")}
+            onPress={() => setDialog("repos")}
           >
             <Plus size={15} />
           </Button>
         </div>
-        <nav aria-label={t("Projects")}>
-          {data?.settings.repositories.map((repo) => (
+        <nav aria-label={t("Repos")}>
+          {data?.settings.repositories.map((name) => (
             <Button
-              className={`rail-item ${project === repo ? "active" : ""}`}
-              aria-pressed={project === repo}
-              aria-label={repo}
-              key={repo}
+              className={`rail-item ${repo === name ? "active" : ""}`}
+              aria-pressed={repo === name}
+              aria-label={name}
+              key={name}
               onPress={() => {
-                setProject(repo);
+                setRepo(name);
                 setInboxOpen(true);
               }}
             >
               <FolderGit2 size={16} />
-              <span>{repo.split("/")[1]}</span>
-              <small>{pulls.filter((p) => p.repository === repo).length}</small>
+              <span>{name.split("/")[1]}</span>
+              <small>
+                {
+                  pulls.filter(
+                    (p) => p.repository === name && p.state === "open",
+                  ).length
+                }
+              </small>
             </Button>
           ))}
         </nav>
         <Button
           className="rail-item add-project"
-          onPress={() => setDialog("projects")}
+          onPress={() => setDialog("repos")}
         >
           <Plus size={15} />
-          <span>{t("Add project")} </span>
+          <span>{t("Add repo")} </span>
         </Button>
         <div className="rail-bottom">
+          <Button
+            className={`rail-item ${samples ? "active" : ""}`}
+            aria-pressed={samples}
+            onPress={() => void exploreInbox()}
+          >
+            <Inbox size={16} />
+            <span>{t("Sample inbox")}</span>
+          </Button>
           <Button className="rail-item" onPress={() => void sample()}>
             <BookOpen size={16} />
             <span>{t("Explore a sample")} </span>
@@ -530,7 +589,11 @@ export default function App() {
       {inboxVisible && (
         <aside className="inbox-pane" aria-label={t("Pull request inbox")}>
           <header data-tauri-drag-region>
-            <span>{project?.split("/")[1] || "Pull requests"}</span>
+            <span>
+              {samples
+                ? t("Sample inbox")
+                : repo?.split("/")[1] || t("Pull requests")}
+            </span>
             <Button
               className="icon-button close-inbox"
               aria-label={t("Close pull request list")}
@@ -540,12 +603,22 @@ export default function App() {
             </Button>
             <Button
               className="icon-button"
+              aria-label={t("Display settings")}
+              isDisabled={!data}
+              onPress={() => setDialog("display")}
+            >
+              <Settings2 size={15} />
+            </Button>
+            <Button
+              className="icon-button"
               aria-label={t("Refresh inbox")}
-              isDisabled={loading || !data?.github.connected}
+              isDisabled={loading || (!samples && !data?.github.connected)}
               onPress={() =>
-                inboxView === "history"
-                  ? void history.load()
-                  : void refresh().catch(onError)
+                samples
+                  ? void exploreInbox()
+                  : inboxView === "history"
+                    ? void history.load()
+                    : void refresh().catch(onError)
               }
             >
               <RefreshCw size={15} />
@@ -570,7 +643,7 @@ export default function App() {
               aria-pressed={inboxView === "open"}
               onPress={() => setInboxView("open")}
             >
-              {t("Open")}
+              {t("Inbox")}
             </Button>
             <Button
               className="scope-button"
@@ -580,13 +653,18 @@ export default function App() {
               {t("History")}
             </Button>
           </div>
+          {samples && (
+            <div className="sample-inbox-banner" role="status">
+              {t("Local samples · fictional authors and review states")}
+            </div>
+          )}
           {inboxView === "history" && (
             <div className="history-status" role="status">
               {t("Closed and merged pull requests")}
               {history.loading && ` · ${t("Loading…")}`}
             </div>
           )}
-          {inboxView === "history" && history.error && (
+          {!samples && inboxView === "history" && history.error && (
             <div className="history-status" role="alert">
               {history.error}
               <Button
@@ -599,44 +677,13 @@ export default function App() {
             </div>
           )}
           <div className="pull-list">
-            {groups.map((group) => {
-              const items = visible.filter(
-                (p) => bucket(p, data?.github.identity || "") === group,
-              );
-              return items.length ? (
-                <section key={group}>
-                  <h2>
-                    {t(group)}
-                    <span>{items.length}</span>
-                  </h2>
-                  {items.map((p) => (
-                    <Button
-                      className={`pull-card ${pull && key(p) === key(pull) ? "active" : ""}`}
-                      key={key(p)}
-                      onPress={() => void open(p.repository, p.number, false)}
-                    >
-                      <div>
-                        <GitPullRequest size={15} />
-                        <span>#{p.number}</span>
-                        {p.state !== "open" ? (
-                          <small>
-                            {p.state === "merged" ? t("Merged") : t("Closed")}
-                          </small>
-                        ) : (
-                          p.draft && <small>{t("Draft")}</small>
-                        )}
-                      </div>
-                      <strong>{p.title}</strong>
-                      <footer>
-                        {p.repository.split("/")[1]}
-                        <span>·</span>
-                        {p.author}
-                      </footer>
-                    </Button>
-                  ))}
-                </section>
-              ) : null;
-            })}
+            <PullList
+              pulls={visible}
+              selected={pull}
+              login={login}
+              history={inboxView === "history"}
+              onOpen={(p) => void open(p.repository, p.number, false)}
+            />
             {!visible.length && (
               <div className="inbox-empty">
                 <GitPullRequest size={25} />
@@ -646,18 +693,18 @@ export default function App() {
                       ? t("No matching pull requests")
                       : inboxView === "history"
                         ? t("No closed or merged pull requests loaded.")
-                        : t("No open pull requests in these projects."))}
+                        : t("No pull requests in this inbox."))}
                 </p>
                 <Button
                   className="text-button"
-                  onPress={() => setDialog("projects")}
+                  onPress={() => setDialog("repos")}
                 >
-                  {t("Choose projects")} <ArrowRight size={13} />
+                  {t("Choose repos")} <ArrowRight size={13} />
                 </Button>
               </div>
             )}
           </div>
-          {inboxView === "history" && history.nextPage && (
+          {!samples && inboxView === "history" && history.nextPage && (
             <Button
               className="secondary history-more"
               isDisabled={history.loading}
@@ -706,6 +753,29 @@ export default function App() {
         </aside>
       )}
       <main className="workspace" id="review-workspace" tabIndex={-1}>
+        {pull?.repository === SAMPLE_REPO && (
+          <div className="sample-workspace-banner">
+            <span>
+              {t(
+                "Local sample · shared invitation code, fictional PR metadata",
+              )}
+            </span>
+            {pull.state === "open" &&
+              !sameLogin(pull.author, login) &&
+              !pull.draft && (
+                <Button
+                  className="secondary"
+                  onPress={() => simulateReview(pull)}
+                >
+                  {t(
+                    requestedFrom(pull, login)
+                      ? "Simulate submitted review"
+                      : "Simulate review request",
+                  )}
+                </Button>
+              )}
+          </div>
+        )}
         <header className="workspace-topbar" data-tauri-drag-region>
           <Button
             className="icon-button"
@@ -751,13 +821,15 @@ export default function App() {
           />
           {pull && (
             <>
-              <Button
-                className="icon-button"
-                aria-label={t("Open in GitHub")}
-                onPress={() => void api.external(pull.url)}
-              >
-                <ExternalLink size={16} />
-              </Button>
+              {!isSampleRepo(pull.repository) && (
+                <Button
+                  className="icon-button"
+                  aria-label={t("Open in GitHub")}
+                  onPress={() => void api.external(pull.url)}
+                >
+                  <ExternalLink size={16} />
+                </Button>
+              )}
               <Button
                 className="secondary finish-button"
                 onPress={async () => {
@@ -1025,9 +1097,9 @@ export default function App() {
               {t("A guided path from pull request to confident feedback.")}{" "}
             </p>
             <div className="welcome-actions">
-              <Button className="primary" onPress={() => setDialog("projects")}>
+              <Button className="primary" onPress={() => setDialog("repos")}>
                 <FolderGit2 size={16} />
-                {t("Choose your projects")}{" "}
+                {t("Choose your repos")}{" "}
               </Button>
               <Button className="secondary" onPress={() => void sample()}>
                 {t("Try a guided review")} <ArrowRight size={16} />
@@ -1056,6 +1128,22 @@ export default function App() {
           </div>
         )}
       </main>
+      {dialog === "display" && data && (
+        <DisplaySettings
+          days={data.settings.completedDays ?? 2}
+          onClose={() => setDialog(null)}
+          onSave={async (completedDays) => {
+            const settings = await api.settings({
+              ...data.settings,
+              completedDays,
+            });
+            setData((current) =>
+              current ? { ...current, settings } : current,
+            );
+            if (data.github.connected) await refresh();
+          }}
+        />
+      )}
       {dialog === "connections" && data && (
         <Connections
           data={data}
@@ -1066,8 +1154,8 @@ export default function App() {
           }}
         />
       )}
-      {dialog === "projects" && data && (
-        <Projects
+      {dialog === "repos" && data && (
+        <Repos
           selected={data.settings.repositories}
           onClose={() => setDialog(null)}
           onChange={async (repositories) => {
@@ -1086,6 +1174,7 @@ export default function App() {
           login={data?.github.identity || ""}
           onClose={() => setDialog(null)}
           onPublished={async () => {
+            await refresh();
             const w = await api.open(
               workspace.snapshot.pull.repository,
               workspace.snapshot.pull.number,

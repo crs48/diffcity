@@ -2144,3 +2144,43 @@
     margin: 8px 14px;
   }
 }
+
+@layer components {
+  .pull-card.pull-muted > strong {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .pull-card.pull-muted.active > strong,
+  .pull-card.pull-muted:hover > strong {
+    color: var(--text);
+  }
+  .pull-card > div {
+    flex-wrap: wrap;
+  }
+  .pull-card > div small {
+    max-width: 100%;
+  }
+  .pull-card time {
+    display: block;
+    font-size: 11px;
+    margin-top: 6px;
+    color: var(--muted);
+  }
+  .sample-inbox-banner {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .sample-workspace-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 8px 20px;
+    background: var(--subtle);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+}

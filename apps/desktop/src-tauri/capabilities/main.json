@@ -21,6 +21,7 @@
     "allow-cancel-codex",
     "allow-publish-review",
     "allow-sample-review",
+    "allow-sample-inbox",
     "allow-open-external"
   ]
 }

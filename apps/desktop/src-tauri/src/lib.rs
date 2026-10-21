@@ -38,6 +38,7 @@ pub fn run() {
             commands::cancel_codex,
             commands::publish_review,
             commands::sample_review,
+            commands::sample_inbox,
             commands::open_external
         ]);
     #[cfg(feature = "e2e")]

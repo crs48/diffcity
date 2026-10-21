@@ -20,3 +20,5 @@ apps/desktop/src-tauri/gen/
 *.tsbuildinfo
 output/playwright/
 .playwright-cli/
+
+__pycache__/

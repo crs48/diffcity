@@ -22,6 +22,7 @@ import {
   type Settings,
   type PublishResult,
 } from "../lib/api";
+import { isSampleRepo } from "../lib/inbox";
 import { countProgress } from "../lib/review";
 
 export function Connections({
@@ -191,7 +192,7 @@ export function Connections({
   );
 }
 
-export function Projects({
+export function Repos({
   selected,
   onChange,
   onClose,
@@ -223,13 +224,13 @@ export function Projects({
         : [...current, name],
     );
   return (
-    <AppDialog label={t("Choose projects")} onClose={onClose} busy={busy}>
+    <AppDialog label={t("Choose repos")} onClose={onClose} busy={busy}>
       <header>
         <Github size={18} />
-        <h2>{t("Your projects")} </h2>
+        <h2>{t("Your repos")} </h2>
         <button
           className="icon-button"
-          aria-label={t("Close projects")}
+          aria-label={t("Close repos")}
           disabled={busy}
           onClick={onClose}
         >
@@ -312,7 +313,7 @@ export function Projects({
           }}
         >
           {t("Save")} {chosen.length}
-          {t("projects")}{" "}
+          {t("repos")}{" "}
         </button>
       </footer>
     </AppDialog>
@@ -494,7 +495,7 @@ export function Finish({
             w.snapshot.pull.state !== "open" ||
             result?.state === "published" ||
             (!body.trim() && !selected.length && event === "COMMENT") ||
-            w.snapshot.pull.repository === "diffcity/demo"
+            isSampleRepo(w.snapshot.pull.repository)
           }
           onClick={async () => {
             setBusy(true);

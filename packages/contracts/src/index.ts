@@ -1,10 +1,11 @@
 // Generated from Rust contracts. Run pnpm contracts; do not edit.
-export type Settings = { repositories: Array<string>, codexPath: string | null, ghPath: string | null, model: string | null, theme: string, locale: string, };
+export type Settings = { repositories: Array<string>, codexPath: string | null, ghPath: string | null, model: string | null, theme: string, locale: string, completedDays: number, };
 export type Connection = { connected: boolean, identity: string, executable: string, detail: string, };
 export type Model = { id: string, name: string, isDefault: boolean, };
 export type Bootstrap = { settings: Settings, github: Connection, codex: Connection, models: Array<Model>, pulls: Array<PullRequest>, dataDirectory: string, schemaVersion: number, };
 export type Repository = { id: string, fullName: string, private: boolean, description: string, };
-export type PullRequest = { repository: string, number: number, title: string, body: string, author: string, url: string, draft: boolean, state: string, head: string, base: string, headRef: string, baseRef: string, updatedAt: string, requested: Array<string>, assigned: Array<string>, additions: number, deletions: number, changedFiles: number, };
+export type PullRequest = { repository: string, number: number, title: string, body: string, author: string, url: string, draft: boolean, state: string, head: string, base: string, headRef: string, baseRef: string, updatedAt: string, closedAt: string | null, mergedAt: string | null, viewerReview: SubmittedReview | null, reviewDecision: string | null, reviewMetadataAvailable: boolean, requested: Array<string>, assigned: Array<string>, additions: number, deletions: number, changedFiles: number, };
+export type SubmittedReview = { state: string, submittedAt: string, };
 export type PullPage = { pulls: Array<PullRequest>, nextPage: number | null, syncError: string | null, };
 export type LineKind = "context" | "addition" | "deletion" | "meta";
 export type DiffLine = { kind: LineKind, old: number | null, new: number | null, text: string, };

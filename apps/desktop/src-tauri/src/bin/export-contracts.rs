@@ -11,6 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Bootstrap,
         Repository,
         PullRequest,
+        SubmittedReview,
         PullPage,
         LineKind,
         DiffLine,

@@ -19,7 +19,12 @@
       "assigned": [],
       "additions": 26,
       "deletions": 0,
-      "changedFiles": 7
+      "changedFiles": 7,
+      "closedAt": null,
+      "mergedAt": null,
+      "viewerReview": null,
+      "reviewDecision": null,
+      "reviewMetadataAvailable": false
     },
     "capturedAt": "2026-10-20T12:00:00Z",
     "files": [

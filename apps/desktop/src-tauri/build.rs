@@ -17,6 +17,7 @@ fn main() {
             "cancel_codex",
             "publish_review",
             "sample_review",
+            "sample_inbox",
             "open_external",
         ]),
     ))

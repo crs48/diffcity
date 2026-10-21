@@ -103,6 +103,7 @@ impl Store {
             repositories: vec!["crs48/diffcity".into()],
             theme: "system".into(),
             locale: "en".into(),
+            completed_days: default_completed_days(),
             ..Settings::default()
         }))
     }
