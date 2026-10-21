@@ -101,3 +101,16 @@ flowchart LR
 ```
 
 The large-text fallback uses the PR merge base rather than the target branch tip, so unrelated changes on the target branch cannot enter the reconstructed diff. It reads through GitHub's authenticated contents endpoint without following redirects. Snapshot capture format version 2 keeps newly reconstructed code separate from earlier incomplete captures. [GitHub content media types](https://docs.github.com/en/rest/repos/contents) and the [similar diff library](https://docs.rs/similar/latest/similar/) document the underlying APIs.
+
+## Expanded corpus verification (October 20, 2026)
+
+- [x] 36 Rust tests and 18 TypeScript/component tests pass, with types, ESLint, Clippy, formatting, and the production app build.
+- [x] [Implementation CI](https://github.com/crs48/diffcity/actions/runs/39540803966) passes on commit `f383c36`, including the unsigned native bundle.
+- [x] Five new PRs are available in the [review corpus](../tests/corpus/README.md): one actual implementation, three open synthetic drafts, and one closed, unmerged historical fixture.
+- [x] The live Rust service captures all 8,580 additions and 8,288 deletions of PR #3 across 18 textual hunks, including a reconstructed 7,500-line hunk. Binary, rename-only, and mode-only files remain visible with explicit text limitations. Every captured addition/deletion anchor validates.
+- [x] Live Codex analysis of PR #4 produces two guided sections and three findings covering the required-column rollout, destructive note deletion, and skipped backup. A private reply preserves its RIGHT-side lines 2–3 anchor.
+- [x] WebKit replays the actual captured PRs: saves a LEFT-side lines 1–2 discussion, reaches RIGHT line 4,000 while keeping fewer than 100 rows mounted in the 7,500-line hunk, displays renamed paths and binary limitations, and renders the closed PR with publication disabled.
+- [x] Sampled light/Spanish history and dark guided-review states pass axe WCAG A/AA checks. This does not replace a complete assistive-technology audit.
+- [x] The installed production app upgrades the real schema 1 database to schema 3, preserving all eight private messages. Its consistent pre-upgrade backup also contains all eight messages and remains at schema 1.
+
+The current installed executable SHA-256 is `bef045cee7c82e013f9b8945ca8091c1c1fa7af8990f7a42c180b2107407f363`, matching the build from `f383c36`. Native UI and restart verification for this expansion is awaiting a manual macOS unlock; the computer-use tool reported the host locked. Two optional large-PR Codex follow-up attempts encountered GitHub connection timeouts before analysis, while the completed corpus capture and migration analysis above succeeded. No network or security settings were changed.
