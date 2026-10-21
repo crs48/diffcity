@@ -91,6 +91,10 @@ pub struct Repository {
     pub full_name: String,
     pub private: bool,
     pub description: String,
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    #[serde(default)]
+    pub pushed_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

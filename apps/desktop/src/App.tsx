@@ -77,9 +77,10 @@ export default function App() {
   const repositories =
     data?.directory.repositories.map((repo) => repo.fullName) ?? [];
   const owners = accountOwners(
-    repositories,
+    data?.directory.repositories ?? [],
     data?.directory.organizations ?? [],
     data?.github.identity ?? "",
+    pulls,
   );
   const { owner, repository: repo } = resolveScope(scope, repositories, owners);
   const scopedRepositories = repositoriesForOwner(repositories, owner);

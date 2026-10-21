@@ -173,7 +173,11 @@ it("deduplicates account names and falls back when a tracked repo or account is 
 
 it("keeps discovered organizations selectable even without repos and puts your account first", () => {
   const owners = accountOwners(
-    ["Acme/api", "outside/repo"],
+    ["Acme/api", "outside/repo"].map((fullName) => ({
+      fullName,
+      updatedAt: null,
+      pushedAt: null,
+    })),
     ["acme", "empty-org"],
     "me",
   );
@@ -185,6 +189,51 @@ it("keeps discovered organizations selectable even without repos and puts your a
       owners,
     ),
   ).toEqual({ owner: "empty-org", repository: null });
+});
+
+it("sorts accounts by their newest PR, repo update or push across all repos", () => {
+  const repositories = [
+    { fullName: "Acme/old", updatedAt: ago(7), pushedAt: ago(8) },
+    { fullName: "acme/api", updatedAt: ago(6), pushedAt: ago(4) },
+    { fullName: "Beta/api", updatedAt: ago(2), pushedAt: ago(3) },
+    { fullName: "Gamma/api", updatedAt: ago(8), pushedAt: ago(1) },
+    { fullName: "me/app", updatedAt: ago(10), pushedAt: null },
+    { fullName: "unknown/app", updatedAt: "invalid", pushedAt: null },
+  ];
+  const organizations = ["unknown", "Gamma", "Beta", "acme", "empty"];
+  expect(accountOwners(repositories, organizations, "me")).toEqual([
+    "me",
+    "Gamma",
+    "Beta",
+    "acme",
+    "empty",
+    "unknown",
+  ]);
+  // Comments/reviews can make a PR newer than the last repo push.
+  const pulls = [
+    pr({ repository: "ACME/api", updatedAt: ago(0) }),
+    pr({ repository: "acme/old", updatedAt: ago(9) }),
+    pr({ repository: "Beta/api", updatedAt: "invalid" }),
+    pr({ repository: "removed/repo", updatedAt: ago(0) }),
+  ];
+  expect(accountOwners(repositories, organizations, "me", pulls)).toEqual([
+    "me",
+    "acme",
+    "Gamma",
+    "Beta",
+    "empty",
+    "unknown",
+  ]);
+  expect(organizations).toEqual(["unknown", "Gamma", "Beta", "acme", "empty"]);
+});
+
+it("uses alphabetical ties for equal activity, including before login is known", () => {
+  const repos = ["zeta/app", "alpha/app"].map((fullName) => ({
+    fullName,
+    updatedAt: ago(1),
+    pushedAt: null,
+  }));
+  expect(accountOwners(repos, [], "")).toEqual(["alpha", "zeta"]);
 });
 
 it("keeps pinned completions beyond the completion window without bypassing scope or search", () => {

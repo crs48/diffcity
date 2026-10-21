@@ -170,6 +170,8 @@ flowchart LR
   Pages --> Review
 ```
 
+The personal account stays first. Other accounts sort by their most recent known activity across accessible repos: PR updates, repo pushes, or repository updates. Ties and accounts without activity data sort alphabetically. Cached directory timestamps keep this order available offline; older caches without timestamps remain readable. Incoming inbox batches update the order without changing the current account/repo selection or keyboard focus.
+
 Account changes reset the repo filter and preserve search and the Inbox/History choice. Losing repo access falls back to its account; organizations remain selectable even with no accessible repos. Both local filtering and history requests honor the account. Rust validates the selected account/repo against the discovered directory before making requests, and cached history pages retain the exact repo set as their key. In-flight responses from an old account are discarded; changes to the accessible repo set reload history.
 
 The rail has 44-pixel circular buttons, named controls, React Aria hover/focus tooltips, and a selected outline/edge marker. The native repo selector supports keyboard navigation and type-ahead. The account list scrolls independently when many accounts are available. Connections and the two sample entry points remain available at the bottom. Avatar image loading is limited by CSP to GitHub and its avatar host; no GitHub tokens enter the webview. The narrow-window search focus target now works independently of the selected language.

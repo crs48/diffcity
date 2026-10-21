@@ -99,6 +99,8 @@ impl Service {
                                 full_name,
                                 private: true,
                                 description: String::new(),
+                                updated_at: None,
+                                pushed_at: None,
                             })
                             .collect()
                     })
@@ -1100,12 +1102,24 @@ mod navigation_tests {
 #[cfg(test)]
 mod discovery_tests {
     use super::*;
+    #[test]
+    fn cached_repositories_without_activity_timestamps_still_load() {
+        let repo: Repository = serde_json::from_value(json!({
+            "id": "1", "fullName": "team/app", "private": true, "description": ""
+        }))
+        .unwrap();
+        assert_eq!(repo.full_name, "team/app");
+        assert!(repo.updated_at.is_none());
+        assert!(repo.pushed_at.is_none());
+    }
     fn repo(name: &str) -> Repository {
         Repository {
             id: name.into(),
             full_name: name.into(),
             private: true,
             description: String::new(),
+            updated_at: None,
+            pushed_at: None,
         }
     }
     #[tokio::test]

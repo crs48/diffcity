@@ -76,6 +76,8 @@ beforeEach(() => {
               fullName,
               private: true,
               description: "",
+              updatedAt: null,
+              pushedAt: null,
             })),
             organizations: [],
             syncError: null,

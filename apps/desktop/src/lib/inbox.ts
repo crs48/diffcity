@@ -1,4 +1,4 @@
-import type { PullRequest } from "./api";
+import type { PullRequest, Repository } from "./api";
 
 export const SAMPLE_REPO = "diffcity/inbox-samples";
 export const isSampleRepo = (repo: string) =>
@@ -145,19 +145,45 @@ export function resolveScope(
 }
 
 export const accountOwners = (
-  repositories: string[],
+  repositories: Pick<Repository, "fullName" | "updatedAt" | "pushedAt">[],
   organizations: string[],
   login: string,
+  pulls: PullRequest[] = [],
 ) => {
+  const timestamp = (date: string | null) => Date.parse(date ?? "") || 0;
+  const activity = [
+    ...repositories.map(
+      (repo) =>
+        [
+          repo.fullName.split("/")[0].toLowerCase(),
+          Math.max(timestamp(repo.updatedAt), timestamp(repo.pushedAt)),
+        ] as const,
+    ),
+    ...pulls.map(
+      (pull) =>
+        [
+          pull.repository.split("/")[0].toLowerCase(),
+          timestamp(pull.updatedAt),
+        ] as const,
+    ),
+  ].reduce(
+    (latest, [owner, time]) =>
+      latest.set(owner, Math.max(latest.get(owner) ?? 0, time)),
+    new Map<string, number>(),
+  );
   const names = [
     ...new Map(
-      [...organizations, ...repositoryOwners(repositories)].map((name) => [
-        name.toLowerCase(),
-        name,
-      ]),
+      [
+        ...organizations,
+        ...repositoryOwners(repositories.map((repo) => repo.fullName)),
+      ].map((name) => [name.toLowerCase(), name]),
     ).values(),
   ]
     .filter((name) => !sameLogin(name, login))
-    .sort((a, b) => a.localeCompare(b));
+    .sort(
+      (a, b) =>
+        (activity.get(b.toLowerCase()) ?? 0) -
+          (activity.get(a.toLowerCase()) ?? 0) || a.localeCompare(b),
+    );
   return login ? [login, ...names] : names;
 };

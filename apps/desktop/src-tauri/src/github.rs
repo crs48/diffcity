@@ -235,6 +235,8 @@ impl GitHub {
                 full_name: string(v, "full_name"),
                 private: v["private"].as_bool().unwrap_or(true),
                 description: string(v, "description"),
+                updated_at: v["updated_at"].as_str().map(str::to_owned),
+                pushed_at: v["pushed_at"].as_str().map(str::to_owned),
             })
             .collect())
     }

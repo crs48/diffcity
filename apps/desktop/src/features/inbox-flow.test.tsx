@@ -140,6 +140,8 @@ beforeEach(() => {
               fullName,
               private: true,
               description: "",
+              updatedAt: null,
+              pushedAt: null,
             })),
             organizations: [],
             syncError: null,
@@ -366,6 +368,8 @@ it("discovers orgs, repos and PRs automatically without adding or saving reposit
         fullName,
         private: true,
         description: "",
+        updatedAt: null,
+        pushedAt: null,
       }),
     ),
   };
@@ -399,6 +403,62 @@ it("discovers orgs, repos and PRs automatically without adding or saving reposit
   expect(screen.getAllByRole("option")).toHaveLength(4);
 });
 
+it("reorders accounts after PR activity without changing the selected repo or keyboard focus", async () => {
+  connected = true;
+  discovered = {
+    repositories: ["alpha/api", "zeta/api"].map((fullName, index) => ({
+      id: fullName,
+      fullName,
+      private: true,
+      description: "",
+      updatedAt: ago(index + 2),
+      pushedAt: null,
+    })),
+    organizations: ["alpha", "zeta", "empty"],
+    syncError: null,
+  };
+  const user = userEvent.setup();
+  render(<App />);
+  const rail = await screen.findByRole("navigation", {
+    name: "Choose an organization or account",
+  });
+  const order = () =>
+    within(rail)
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label"));
+  await waitFor(() =>
+    expect(order()).toEqual(["me", "alpha", "zeta", "empty"]),
+  );
+  const selectedAccount = within(rail).getByRole("button", { name: "alpha" });
+  await user.click(selectedAccount);
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Repo" }),
+    "alpha/api",
+  );
+  selectedAccount.focus();
+  await act(async () => {
+    await emit("inbox-sync", {
+      completed: 2,
+      total: 2,
+      pulls: [
+        {
+          ...workspace.snapshot.pull,
+          repository: "zeta/api",
+          updatedAt: ago(0),
+        },
+      ],
+    });
+  });
+  await waitFor(() =>
+    expect(order()).toEqual(["me", "zeta", "alpha", "empty"]),
+  );
+  expect(selectedAccount.getAttribute("aria-pressed")).toBe("true");
+  expect(document.activeElement).toBe(selectedAccount);
+  expect(
+    (screen.getByRole("combobox", { name: "Repo" }) as HTMLSelectElement).value,
+  ).toBe("alpha/api");
+});
+
 it("shows incremental PR batches and preserves them when a sync is partial", async () => {
   connected = true;
   discovered = {
@@ -407,6 +467,8 @@ it("shows incremental PR batches and preserves them when a sync is partial", asy
       fullName,
       private: true,
       description: "",
+      updatedAt: null,
+      pushedAt: null,
     })),
     organizations: ["owner"],
     syncError: null,
@@ -562,9 +624,7 @@ it("keeps an old pinned completion in the inbox, honors filters, and preserves p
   ];
   const user = userEvent.setup();
   render(<App />);
-  await user.click(
-    await screen.findByRole("button", { name: "History" }),
-  );
+  await user.click(await screen.findByRole("button", { name: "History" }));
   await user.click(
     await screen.findByRole("button", {
       name: "Pin pull request owner/repo#3",
@@ -575,9 +635,7 @@ it("keeps an old pinned completion in the inbox, honors filters, and preserves p
   expect(screen.getByRole("button", { name: /Old merged work/ })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "other" }));
   expect(screen.queryByRole("button", { name: /Old merged work/ })).toBeNull();
-  await user.click(
-    screen.getByRole("button", { name: "All accounts" }),
-  );
+  await user.click(screen.getByRole("button", { name: "All accounts" }));
   await user.type(
     screen.getByRole("textbox", { name: "Search pull requests" }),
     "unrelated",
