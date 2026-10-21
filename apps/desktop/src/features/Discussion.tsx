@@ -10,7 +10,12 @@ import { Check, Github, MessageSquare, Send, Sparkles, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { api, type Anchor, type Note, type ReviewWorkspace } from "../lib/api";
 import { newNote } from "../lib/review";
-export type DiscussionHandle = { flush: () => Promise<Note | null> };
+import { containsLine, lineRange, sameAnchor } from "../lib/selection";
+import { Button } from "react-aria-components";
+export type DiscussionHandle = {
+  flush: () => Promise<Note | null>;
+  focus: () => void;
+};
 
 export const Discussion = forwardRef<
   DiscussionHandle,
@@ -19,18 +24,30 @@ export const Discussion = forwardRef<
     selection: Anchor | null;
     onNote: (n: Note) => void;
     onAsk: (n: Note) => Promise<void>;
+    onSelect: (anchor: Anchor) => void;
     onClose: () => void;
     onError: (e: unknown) => void;
     busy: boolean;
     stream: string;
   }
 >(function Discussion(
-  { workspace: w, selection, onNote, onAsk, onClose, onError, busy, stream },
+  {
+    workspace: w,
+    selection,
+    onNote,
+    onAsk,
+    onSelect,
+    onClose,
+    onError,
+    busy,
+    stream,
+  },
   ref,
 ) {
   const [body, setBody] = useState("");
   const [saved, setSaved] = useState(false);
   const [editingDraft, setEditingDraft] = useState(false);
+  const composer = useRef<HTMLTextAreaElement>(null);
   const latest = useRef(newNote(w.snapshot.id, selection, ""));
   const queue = useRef<Promise<Note | null>>(Promise.resolve(null));
   const flush = useCallback(() => {
@@ -48,7 +65,11 @@ export const Discussion = forwardRef<
       });
     return queue.current;
   }, [onNote]);
-  useImperativeHandle(ref, () => ({ flush }), [flush]);
+  useImperativeHandle(
+    ref,
+    () => ({ flush, focus: () => composer.current?.focus() }),
+    [flush],
+  );
   useEffect(() => {
     if (!body.trim()) return;
     const timer = setTimeout(() => {
@@ -69,9 +90,32 @@ export const Discussion = forwardRef<
       onError(e);
     }
   };
-  const notes = w.notes.filter((n) =>
-    selection ? n.anchor?.hunkId === selection.hunkId : !n.anchor,
-  );
+  const notes = w.notes.filter((n) => sameAnchor(n.anchor, selection));
+  const otherRanges = w.notes
+    .flatMap((n) =>
+      n.anchor &&
+      n.anchor.hunkId === selection?.hunkId &&
+      !sameAnchor(n.anchor, selection)
+        ? [n.anchor]
+        : [],
+    )
+    .filter(
+      (a, index, all) => all.findIndex((b) => sameAnchor(a, b)) === index,
+    );
+  const hunk = w.snapshot.files
+    .flatMap((f) => f.hunks)
+    .find((h) => h.id === selection?.hunkId);
+  const selectedLines =
+    hunk && selection
+      ? hunk.lines.filter((l) =>
+          containsLine(
+            selection,
+            hunk,
+            selection.side,
+            selection.side === "LEFT" ? l.old : l.new,
+          ),
+        )
+      : [];
   const remote = w.comments.filter((c) =>
     selection ? c.path === selection.path : !c.path,
   );
@@ -105,16 +149,44 @@ export const Discussion = forwardRef<
           <>
             <code>{selection.path}</code>
             <span>
-              {selection.side === "LEFT" ? "Old" : "New"} lines{" "}
-              {selection.startLine}
-              {selection.startLine !== selection.line && `–${selection.line}`}
+              {selection.side === "LEFT" ? "Old" : "New"} {lineRange(selection)}
             </span>
+            <details className="selected-code">
+              <summary>
+                Selected code ({selectedLines.length}{" "}
+                {selectedLines.length === 1 ? "line" : "lines"})
+              </summary>
+              <pre>
+                {selectedLines
+                  .map(
+                    (l) =>
+                      `${selection.side === "LEFT" ? l.old : l.new}  ${l.text}`,
+                  )
+                  .join("\n")}
+              </pre>
+            </details>
           </>
         ) : (
           <span>Pull request discussion</span>
         )}
       </div>
       <div className="messages">
+        {otherRanges.length > 0 && (
+          <details className="related-discussions">
+            <summary>
+              Other discussions in this change ({otherRanges.length})
+            </summary>
+            {otherRanges.map((a) => (
+              <Button
+                key={`${a.side}/${a.startLine}/${a.line}`}
+                className="text-button"
+                onPress={() => onSelect(a)}
+              >
+                {a.side === "LEFT" ? "Old" : "New"} {lineRange(a)}
+              </Button>
+            ))}
+          </details>
+        )}
         {!notes.length && !remote.length && (
           <div className="discussion-empty">
             <Sparkles size={22} />
@@ -145,6 +217,19 @@ export const Discussion = forwardRef<
             >
               {n.body}
             </ReactMarkdown>
+            {n.role === "user" && !n.githubDraft && (
+              <Button
+                className="text-button"
+                isDisabled={busy}
+                onPress={() => {
+                  void flush()
+                    .then(() => onAsk(n))
+                    .catch(onError);
+                }}
+              >
+                <Sparkles size={12} /> Ask Codex about this comment
+              </Button>
+            )}
             {n.githubDraft && !n.publishedUrl && (
               <button
                 className="text-button"
@@ -183,6 +268,11 @@ export const Discussion = forwardRef<
             <div className="message-label">
               <Github size={13} />
               {c.author} · GitHub
+              {c.line && (
+                <span>
+                  {c.side === "LEFT" ? "Old" : "New"} line {c.line}
+                </span>
+              )}
               {c.commit && c.commit !== w.snapshot.pull.head && (
                 <span className="draft-tag">Earlier revision</span>
               )}
@@ -202,6 +292,7 @@ export const Discussion = forwardRef<
       </div>
       <div className="composer">
         <textarea
+          ref={composer}
           aria-label="Review note or Codex question"
           placeholder="Ask Codex or leave a private note…"
           value={body}
@@ -219,7 +310,7 @@ export const Discussion = forwardRef<
           ) : editingDraft ? (
             "GitHub draft · not published"
           ) : (
-            "Private · selected code only"
+            "Private · selected range and nearby code"
           )}
         </div>
         <div className="composer-actions">

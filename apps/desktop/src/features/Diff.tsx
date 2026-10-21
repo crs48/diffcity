@@ -1,12 +1,16 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { FileCode2, MessageSquare } from "lucide-react";
+import { Button } from "react-aria-components";
 import type { Anchor, Hunk, Note, RemoteComment, Side } from "../lib/api";
+import { containsLine, lineRange, rangeAnchor } from "../lib/selection";
+import { useLineSelection } from "./useLineSelection";
 
 export function Diff({
   hunk,
   selection,
   onSelect,
+  onDiscuss = onSelect,
   notes,
   comments,
   split,
@@ -15,6 +19,7 @@ export function Diff({
   hunk: Hunk;
   selection: Anchor | null;
   onSelect: (anchor: Anchor) => void;
+  onDiscuss?: (anchor: Anchor) => void;
   notes: Note[];
   comments: RemoteComment[];
   split: boolean;
@@ -30,18 +35,38 @@ export function Diff({
   const renderedRows = readingMode
     ? hunk.lines.map((_, index) => ({ index, key: index, start: index * 25 }))
     : rows.getVirtualItems();
-  const select = (line: number | null, side: Side, shift: boolean) => {
-    if (!line) return;
-    const same =
-      shift && selection?.hunkId === hunk.id && selection.side === side;
-    onSelect({
-      hunkId: hunk.id,
-      path: hunk.path,
-      side,
-      startLine: same ? Math.min(selection.startLine, line) : line,
-      line: same ? Math.max(selection.line, line) : line,
-    });
-  };
+  const interaction = useLineSelection(
+    hunk,
+    selection,
+    scroll,
+    onSelect,
+    (index) => {
+      if (readingMode) scroll.current?.scrollTo({ top: index * 25 });
+      else rows.scrollToIndex(index);
+    },
+  );
+  const selected = interaction.selected;
+  const activeRange = selected?.hunkId === hunk.id ? selected : null;
+  const lineControls = (line: number | null, side: Side) => ({
+    tabIndex: line ? 0 : -1,
+    disabled: !line,
+    "aria-hidden": !line,
+    "data-side": side,
+    "data-line": line,
+    className: "line-number",
+    "aria-label": `Select ${hunk.path} ${side === "LEFT" ? "old " : ""}line ${line}`,
+    "aria-pressed": containsLine(selected, hunk, side, line),
+    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) =>
+      line && interaction.pointerDown(event, line, side),
+    // Pointer selection is committed on release. Keyboard and assistive clicks
+    // have no pointer event and retain native button behavior.
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (line && event.detail === 0)
+        interaction.select(line, side, event.shiftKey);
+    },
+    onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) =>
+      line && interaction.keyDown(event, line, side),
+  });
   return (
     <div className="diff-file">
       <div className="file-bar">
@@ -53,12 +78,28 @@ export function Diff({
         </span>
       </div>
       <div className="hunk-header">{hunk.header}</div>
+      <div className="range-toolbar">
+        <span role="status" aria-live="polite">
+          {activeRange
+            ? `${activeRange.side === "LEFT" ? "Old" : "New"} ${lineRange(activeRange)} selected`
+            : "Drag line numbers or Shift-click to select a range"}
+        </span>
+        {activeRange && !interaction.dragging && (
+          <Button className="secondary" onPress={() => onDiscuss(activeRange)}>
+            <MessageSquare size={13} /> Comment on {lineRange(activeRange)}
+          </Button>
+        )}
+      </div>
       <div
         ref={scroll}
         className={`diff-scroll ${split ? "split" : ""}`}
         role="region"
-        aria-label={`Code changes in ${hunk.path}. Plus marks additions; minus marks deletions. Shift-click line numbers to select a range.`}
+        aria-label={`Code changes in ${hunk.path}. Plus marks additions; minus marks deletions. Drag line numbers, Shift-click, or use Shift with Up and Down to select a range within this hunk.`}
         tabIndex={0}
+        onPointerMove={interaction.pointerMove}
+        onPointerUp={interaction.pointerUp}
+        onPointerCancel={interaction.pointerCancel}
+        onLostPointerCapture={interaction.pointerCancel}
         style={{ height: Math.min(hunk.lines.length * 25, 450) }}
       >
         <div
@@ -73,16 +114,14 @@ export function Diff({
             const side: Side = l.kind === "deletion" ? "LEFT" : "RIGHT";
             const line = side === "LEFT" ? l.old : l.new;
             const chosen =
-              selection?.hunkId === hunk.id &&
-              (selection.side === "LEFT" ? l.old : l.new) !== null &&
-              (selection.side === "LEFT" ? l.old! : l.new!) >=
-                selection.startLine &&
-              (selection.side === "LEFT" ? l.old! : l.new!) <= selection.line;
+              containsLine(selected, hunk, "LEFT", l.old) ||
+              containsLine(selected, hunk, "RIGHT", l.new);
             const annotated =
               notes.some(
                 (n) =>
                   n.anchor?.hunkId === hunk.id &&
-                  n.anchor.line === line &&
+                  n.anchor.startLine <= (line ?? 0) &&
+                  n.anchor.line >= (line ?? 0) &&
                   n.anchor.side === side,
               ) ||
               comments.some(
@@ -100,28 +139,8 @@ export function Diff({
                   width: "100%",
                 }}
               >
-                <button
-                  tabIndex={l.old ? 0 : -1}
-                  disabled={!l.old}
-                  aria-hidden={!l.old}
-                  className="line-number"
-                  aria-label={`Select ${hunk.path} old line ${l.old}`}
-                  aria-pressed={chosen && selection?.side === "LEFT"}
-                  onClick={(e) => select(l.old, "LEFT", e.shiftKey)}
-                >
-                  {l.old}
-                </button>
-                <button
-                  tabIndex={l.new ? 0 : -1}
-                  disabled={!l.new}
-                  aria-hidden={!l.new}
-                  className="line-number"
-                  aria-label={`Select ${hunk.path} line ${l.new}`}
-                  aria-pressed={chosen && selection?.side === "RIGHT"}
-                  onClick={(e) => select(l.new, "RIGHT", e.shiftKey)}
-                >
-                  {l.new}
-                </button>
+                <button {...lineControls(l.old, "LEFT")}>{l.old}</button>
+                <button {...lineControls(l.new, "RIGHT")}>{l.new}</button>
                 <span className="sr-only">
                   {l.kind === "addition"
                     ? "Added: "
@@ -151,9 +170,19 @@ export function Diff({
                 {line && (
                   <button
                     className={`line-comment ${annotated ? "has-comment" : ""}`}
-                    title="Discuss this line"
-                    aria-label={`Discuss ${hunk.path} line ${line}`}
-                    onClick={(e) => select(line, side, e.shiftKey)}
+                    title={
+                      chosen && activeRange
+                        ? `Discuss ${lineRange(activeRange)}`
+                        : "Discuss this line"
+                    }
+                    aria-label={`Discuss ${hunk.path} ${chosen && activeRange ? lineRange(activeRange) : `line ${line}`}`}
+                    onClick={() =>
+                      onDiscuss(
+                        chosen && activeRange
+                          ? activeRange
+                          : rangeAnchor(hunk, side, line, line),
+                      )
+                    }
                   >
                     <MessageSquare size={13} />
                   </button>

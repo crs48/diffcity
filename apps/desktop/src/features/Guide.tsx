@@ -33,6 +33,7 @@ export function GuideView({
   workspace: w,
   selection,
   onSelect,
+  onDiscuss,
   onProgress,
   onFinish,
   mode,
@@ -40,6 +41,7 @@ export function GuideView({
   workspace: ReviewWorkspace;
   selection: Anchor | null;
   onSelect: (a: Anchor) => void;
+  onDiscuss: (a: Anchor) => void;
   onProgress: (p: ReviewProgress) => void;
   onFinish: () => void;
   mode: "guide" | "files" | "overview";
@@ -79,6 +81,7 @@ export function GuideView({
           hunk={hunk}
           selection={selection}
           onSelect={onSelect}
+          onDiscuss={onDiscuss}
           notes={w.notes}
           comments={w.comments.filter((c) => c.commit === w.snapshot.pull.head)}
           split={split}
@@ -367,7 +370,7 @@ export function GuideView({
                 {split ? "Unified view" : "Split view"}
               </Button>
               <span className="muted">
-                Select a line to discuss · Shift-click for a range
+                Drag line numbers · Shift-click or Shift + ↑/↓ for a range
               </span>
             </div>
             {section.hunkIds.map(renderHunk)}
@@ -377,7 +380,7 @@ export function GuideView({
           <Button
             className="finding"
             key={i}
-            onPress={() => onSelect(f.anchor)}
+            onPress={() => onDiscuss(f.anchor)}
           >
             <span className="badge high">{f.severity} finding</span>
             <strong>{f.title}</strong>

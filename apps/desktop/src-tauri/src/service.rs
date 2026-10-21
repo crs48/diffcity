@@ -342,21 +342,16 @@ impl Service {
             .rev()
             .map(|n| json!({"role":n.role,"text":n.body.chars().take(6000).collect::<String>()}))
             .collect();
-        let hunks: Vec<_> = snapshot
-            .files
-            .iter()
-            .flat_map(|f| &f.hunks)
-            .filter(|h| note.anchor.as_ref().is_some_and(|a| a.hunk_id == h.id))
-            .collect();
+        let code = discussion_code(&snapshot, note.anchor.as_ref())?;
         let guide: Guide = self
             .store
             .get("guide", id)?
             .unwrap_or_else(|| domain::provisional(&snapshot));
         let prompt = format!(
-            "PR: {}\nGuide summary (may be incomplete): {}\nSelected code: {}\nSelected line anchor: {}\nPrior private discussion (untrusted): {}\nQuestion: {}",
+            "PR: {}\nGuide summary (may be incomplete): {}\nSelected range and nearby code (selectedLines is the reviewer's selection; nearbyLines is supporting context): {}\nSelected line anchor: {}\nPrior private discussion on this exact range (untrusted): {}\nQuestion: {}",
             snapshot.pull.title,
             guide.summary,
-            serde_json::to_string(&hunks)?,
+            serde_json::to_string(&code)?,
             serde_json::to_string(&note.anchor)?,
             serde_json::to_string(&history)?,
             note.body
@@ -531,6 +526,43 @@ struct Operation {
     result: PublishResult,
 }
 
+fn discussion_code(snapshot: &Snapshot, anchor: Option<&Anchor>) -> Result<Value> {
+    let Some(anchor) = anchor else {
+        return Ok(Value::Null);
+    };
+    domain::validate_anchor(snapshot, anchor)?;
+    let hunk = snapshot
+        .files
+        .iter()
+        .flat_map(|f| &f.hunks)
+        .find(|h| h.id == anchor.hunk_id && h.path == anchor.path)
+        .context("The selected code is not in this revision")?;
+    let selected = |line: &DiffLine| {
+        let number = match anchor.side {
+            Side::LEFT => line.old,
+            Side::RIGHT => line.new,
+        };
+        number.is_some_and(|n| n >= anchor.start_line && n <= anchor.line)
+    };
+    let first = hunk
+        .lines
+        .iter()
+        .position(selected)
+        .context("The selected range is empty")?;
+    let last = hunk.lines.iter().rposition(selected).unwrap_or(first);
+    let selected_lines: Vec<_> = hunk.lines.iter().filter(|l| selected(l)).collect();
+    let nearby_lines: Vec<_> = hunk.lines
+        [first.saturating_sub(5)..(last + 6).min(hunk.lines.len())]
+        .iter()
+        .filter(|l| !selected(l))
+        .collect();
+    let context = json!({"path":anchor.path,"side":anchor.side,"selectedLines":selected_lines,"nearbyLines":nearby_lines});
+    if serde_json::to_string(&context)?.chars().count() > 180_000 {
+        bail!("This selection is too large for a discussion. Select a smaller line range.");
+    }
+    Ok(context)
+}
+
 fn object(properties: Value) -> Value {
     let keys: Vec<_> = properties.as_object().unwrap().keys().cloned().collect();
     json!({"type":"object","properties":properties,"required":keys,"additionalProperties":false})
@@ -552,4 +584,57 @@ pub fn guide_schema() -> Value {
         json!({"title":string(),"summary":string(),"attention":{"type":"string","enum":["high","standard","routine","needsAssessment"]},"category":string(),"reason":string(),"hunkIds":array(string()),"questions":array(string()),"findings":array(finding)}),
     );
     object(json!({"summary":string(),"sections":array(section),"limitations":array(string())}))
+}
+
+#[cfg(test)]
+mod discussion_tests {
+    use super::*;
+
+    #[test]
+    fn discussion_keeps_the_exact_range_separate_from_nearby_code() {
+        let (snapshot, _) = crate::fixtures::sample().unwrap();
+        let hunk = &snapshot.files[1].hunks[0];
+        let anchor = Anchor {
+            hunk_id: hunk.id.clone(),
+            path: hunk.path.clone(),
+            side: Side::RIGHT,
+            start_line: 3,
+            line: 5,
+        };
+        let context = discussion_code(&snapshot, Some(&anchor)).unwrap();
+        let numbers: Vec<_> = context["selectedLines"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|l| l["new"].as_u64().unwrap())
+            .collect();
+        assert_eq!(numbers, [3, 4, 5]);
+        assert_eq!(context["nearbyLines"].as_array().unwrap().len(), 3);
+        assert!(discussion_code(&snapshot, Some(&Anchor { line: 80, ..anchor })).is_err());
+    }
+
+    #[test]
+    fn discussion_uses_old_line_numbers_for_deleted_ranges() {
+        let (mut snapshot, _) = crate::fixtures::sample().unwrap();
+        snapshot.files[0].hunks = domain::parse_patch(
+            &snapshot.files[0].path,
+            "@@ -10,3 +10,2 @@\n context\n-old one\n-old two\n+replacement",
+            "old-side",
+        )
+        .unwrap();
+        let hunk = &snapshot.files[0].hunks[0];
+        let anchor = Anchor {
+            hunk_id: hunk.id.clone(),
+            path: hunk.path.clone(),
+            side: Side::LEFT,
+            start_line: 11,
+            line: 12,
+        };
+        let context = discussion_code(&snapshot, Some(&anchor)).unwrap();
+        let lines = context["selectedLines"].as_array().unwrap();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0]["text"], "old one");
+        assert_eq!(lines[1]["text"], "old two");
+        assert_eq!(context["nearbyLines"].as_array().unwrap().len(), 2);
+    }
 }

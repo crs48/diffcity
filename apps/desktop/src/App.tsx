@@ -37,6 +37,7 @@ import {
   type RunEvent,
 } from "./lib/api";
 import { bucket, key, parsePullUrl } from "./lib/review";
+import { sameAnchor } from "./lib/selection";
 import { GuideView } from "./features/Guide";
 import { Discussion, type DiscussionHandle } from "./features/Discussion";
 import { Connections, Finish, Projects } from "./features/Dialogs";
@@ -49,6 +50,9 @@ export default function App() {
   const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
   const [selection, setSelection] = useState<Anchor | null>(null);
   const [discussion, setDiscussion] = useState(false);
+  const [focusComposer, setFocusComposer] = useState(0);
+  const [activeQuestion, setActiveQuestion] = useState<Note | null>(null);
+  const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
   const [dialog, setDialog] = useState<
     "connections" | "projects" | "finish" | null
@@ -80,6 +84,9 @@ export default function App() {
     }
   };
   const panel = useRef<DiscussionHandle>(null);
+  useEffect(() => {
+    if (focusComposer) panel.current?.focus();
+  }, [focusComposer]);
   const current = useRef(workspace);
   current.current = workspace;
   const booted = useRef(false);
@@ -297,11 +304,21 @@ export default function App() {
       if (request === opening.current) setLoading(false);
     }
   };
-  const select = async (anchor: Anchor) => {
+  const select = async (anchor: Anchor, openDiscussion = false) => {
+    const request = ++selecting.current;
+    const snapshotId = workspace?.snapshot.id;
     try {
       await flush();
+      if (
+        request !== selecting.current ||
+        current.current?.snapshot.id !== snapshotId
+      )
+        return;
       setSelection(anchor);
-      setDiscussion(true);
+      if (openDiscussion) {
+        setDiscussion(true);
+        setFocusComposer((n) => n + 1);
+      }
     } catch (e) {
       onError(e);
     }
@@ -332,6 +349,7 @@ export default function App() {
   const ask = async (note: Note) => {
     const id = crypto.randomUUID();
     setRun(id);
+    setActiveQuestion(note);
     setStream("");
     setRunText("Asking Codex…");
     setError("");
@@ -342,6 +360,7 @@ export default function App() {
     } finally {
       setRun(null);
       setStream("");
+      setActiveQuestion(null);
     }
   };
   const visible = pulls.filter(
@@ -807,6 +826,7 @@ export default function App() {
                   workspace={workspace}
                   selection={selection}
                   onSelect={(a) => void select(a)}
+                  onDiscuss={(a) => void select(a, true)}
                   onProgress={progress}
                   onFinish={() => void finish()}
                   mode={mode}
@@ -814,12 +834,13 @@ export default function App() {
               </TabPanel>
               {discussion && (
                 <Discussion
-                  key={`${workspace.snapshot.id}/${selection?.hunkId ?? "overall"}/${selection?.startLine}/${selection?.line}`}
+                  key={`${workspace.snapshot.id}/${selection?.hunkId ?? "overall"}/${selection?.side}/${selection?.startLine}/${selection?.line}`}
                   ref={panel}
                   workspace={workspace}
                   selection={selection}
                   onNote={onNote}
                   onAsk={ask}
+                  onSelect={(a) => void select(a, true)}
                   onClose={() => {
                     void flush()
                       .then(() => setDiscussion(false))
@@ -827,7 +848,12 @@ export default function App() {
                   }}
                   onError={onError}
                   busy={!!run}
-                  stream={stream}
+                  stream={
+                    activeQuestion?.snapshotId === workspace.snapshot.id &&
+                    sameAnchor(activeQuestion.anchor, selection)
+                      ? stream
+                      : ""
+                  }
                 />
               )}
             </div>

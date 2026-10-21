@@ -930,6 +930,44 @@
     font-size: 12px;
     padding: 7px 15px;
   }
+  .range-toolbar {
+    min-height: 46px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .range-toolbar button {
+    font-size: 12px;
+    padding: 5px 9px;
+  }
+  .line-number {
+    touch-action: none;
+    user-select: none;
+    cursor: crosshair;
+  }
+  .selected-code {
+    font-size: 12px;
+  }
+  .selected-code pre {
+    max-height: 160px;
+    overflow: auto;
+    padding: 8px 0;
+  }
+  .related-discussions {
+    font-size: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .related-discussions button {
+    display: flex;
+    margin-top: 8px;
+  }
   .diff-scroll {
     overflow: auto;
     background: var(--code);
