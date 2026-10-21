@@ -319,3 +319,10 @@ Context requests use a known captured hunk rather than accepting arbitrary paths
 - [x] A live read-only smoke run loads surrounding context from `crs48/diffcity#2` and retrieves the same lines after restarting without a GitHub session.
 - [x] Production WebKit verifies a 3,000-line hunk, cumulative context and error recovery, guide/diff/thread collapse, a 35-line comment and 50-paragraph mirrored reply, growing editors, wrapped-line dragging, keyboard selection, and shared-viewport drag autoscroll from lines 180–199. No nested vertical scroll regions remain inside the review; light/dark axe WCAG A/AA and narrow-width checks pass. Next-step navigation starts at the explanation.
 - [x] The installed production app expands live GitHub context above `.gitignore` and below the first `Cargo.lock` hunk in `crs48/diffcity#2`, then collapses context through native controls. All eight original notes and the model preference remain byte-for-byte unchanged. [CI passes on 40e8e4a](https://github.com/crs48/diffcity/actions/runs/39658625704). The installed executable matches the packaged build, SHA-256 `825ad7d75d22e002cc919db96f0b4dc1428dd77c9d5254969fd5d7a9aa7534fc`.
+
+## Left gutter comments
+
+Inline comment buttons now precede the line numbers in unified and split diffs. Their 25px targets stay visible on selected rows and keyboard focus, and opening a comment preserves the entire selected range. Read-only expanded context uses the same gutter spacing.
+
+- [x] All 57 frontend tests, type checking, ESLint, and production packaging pass. Added regressions cover Shift-click selection followed by the gutter comment action in both views.
+- [x] Production WebKit verifies left-side placement, selected-button visibility, forward Shift-click ranges, reverse dragging on deleted lines, Shift-arrow keyboard ranges, inline focus, and expanded-context alignment in both layouts. Light/dark axe WCAG A/AA checks report no violations.

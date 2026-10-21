@@ -249,6 +249,26 @@ export function Diff({
                   <div
                     className={`diff-line ${l.kind} ${chosen ? "selected" : ""}`}
                   >
+                    {line && (
+                      <button
+                        className={`line-comment ${annotated ? "has-comment" : ""}`}
+                        title={
+                          chosen && activeRange
+                            ? `Discuss ${lineRange(activeRange)}`
+                            : "Discuss this line"
+                        }
+                        aria-label={`Discuss ${hunk.path} ${chosen && activeRange ? lineRange(activeRange) : `line ${line}`}`}
+                        onClick={() =>
+                          onDiscuss(
+                            chosen && activeRange
+                              ? activeRange
+                              : rangeAnchor(hunk, side, line, line),
+                          )
+                        }
+                      >
+                        <MessageSquare size={13} />
+                      </button>
+                    )}
                     <button {...lineControls(l.old, "LEFT")}>{l.old}</button>
                     <button {...lineControls(l.new, "RIGHT")}>{l.new}</button>
                     <span className="sr-only">
@@ -276,26 +296,6 @@ export function Diff({
                       </>
                     ) : (
                       <code>{l.text || " "}</code>
-                    )}
-                    {line && (
-                      <button
-                        className={`line-comment ${annotated ? "has-comment" : ""}`}
-                        title={
-                          chosen && activeRange
-                            ? `Discuss ${lineRange(activeRange)}`
-                            : "Discuss this line"
-                        }
-                        aria-label={`Discuss ${hunk.path} ${chosen && activeRange ? lineRange(activeRange) : `line ${line}`}`}
-                        onClick={() =>
-                          onDiscuss(
-                            chosen && activeRange
-                              ? activeRange
-                              : rangeAnchor(hunk, side, line, line),
-                          )
-                        }
-                      >
-                        <MessageSquare size={13} />
-                      </button>
                     )}
                   </div>
                 </div>

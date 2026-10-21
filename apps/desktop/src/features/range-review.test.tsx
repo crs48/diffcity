@@ -73,8 +73,10 @@ afterEach(async () => {
 
 function SelectionExample({
   onDiscuss = vi.fn(),
+  split = true,
 }: {
   onDiscuss?: (a: Anchor) => void;
+  split?: boolean;
 }) {
   const [selection, setSelection] = useState<Anchor | null>(null);
   return (
@@ -85,7 +87,7 @@ function SelectionExample({
       onDiscuss={onDiscuss}
       notes={[]}
       comments={[]}
-      split
+      split={split}
     />
   );
 }
@@ -95,6 +97,40 @@ const lineButton = (line: number, old = false) =>
   });
 
 describe("multi-line review", () => {
+  it.each([false, true])(
+    "keeps a Shift-click range when opening its gutter comment (split: %s)",
+    async (split) => {
+      const user = userEvent.setup();
+      const discuss = vi.fn();
+      render(<SelectionExample onDiscuss={discuss} split={split} />);
+      const region = screen.getByRole("region");
+      for (const [line, shiftKey] of [
+        [11, false],
+        [13, true],
+      ] as const) {
+        fireEvent.pointerDown(lineButton(line), {
+          pointerId: 1,
+          isPrimary: true,
+          button: 0,
+          shiftKey,
+        });
+        fireEvent.pointerUp(region, { pointerId: 1 });
+      }
+      expect(discuss).not.toHaveBeenCalled();
+      expect(lineButton(11).getAttribute("aria-pressed")).toBe("true");
+      expect(lineButton(13).getAttribute("aria-pressed")).toBe("true");
+      await user.click(
+        within(lineButton(13).closest(".diff-line") as HTMLElement).getByRole(
+          "button",
+          { name: `Discuss ${hunk.path} lines 11–13` },
+        ),
+      );
+      expect(discuss).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ side: "RIGHT", startLine: 11, line: 13 }),
+      );
+    },
+  );
+
   it("extends and shrinks a keyboard range while keeping its original endpoint", async () => {
     const user = userEvent.setup();
     const discuss = vi.fn();

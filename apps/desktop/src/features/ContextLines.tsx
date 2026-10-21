@@ -18,6 +18,7 @@ export function ContextLines({
     >
       {lines.map((line) => (
         <div className="diff-line context" key={`${line.old}/${line.new}`}>
+          <span className="line-comment-placeholder" aria-hidden="true" />
           <span className="line-number">{line.old}</span>
           <span className="line-number">{line.new}</span>
           <span className="diff-sign" aria-hidden="true">
@@ -31,7 +32,6 @@ export function ContextLines({
           ) : (
             <code>{line.text || " "}</code>
           )}
-          <span className="line-comment-placeholder" aria-hidden="true" />
         </div>
       ))}
     </div>
