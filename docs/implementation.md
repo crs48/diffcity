@@ -380,3 +380,13 @@ Scrolling updates the outline and saved active section without resetting the vie
 - [x] Production WebKit verifies two 400-line sections, sticky handoff, bounded annotations, full-context disclosure, outline/keyboard navigation, all chapters retained, a single scroll viewport, narrow stacking, and zero light/dark axe WCAG A/AA violations.
 - [x] WebKit renders all 19,890 diff lines of the stress fixture in 20 sections, retains them across jumps, and supports wheel scrolling. Multi-line questions and long replies remain inline across section jumps and mirror into PR chat; full-context disclosure from mid-section scrolls into view. Unchanged diff content is memoized. On this extreme fixture, in-page jump-to-second-frame measurements remain 1.6–1.7 seconds in WebKit, mostly scrolling/layout/paint; further large-document rendering optimization remains useful.
 - [x] The installed production app restores the active historical review, replaces its old 120-step provisional guide with four broad sections, and jumps to API compatibility with the heading focused and explanation beside the code. All eight private notes, settings, and model preference remain byte-for-byte unchanged. Installed executable SHA-256: `f8fa2f25e9ec027cf7b9105b909e497b4937d44f9112cdc1e7234df7deb37313`.
+
+## Compact review header
+
+Scrolling the shared review viewport reduces the PR heading to a 48px row containing the title and Codex action. Returning to the top restores author, check, and change-count details. Historical-review and revision notices scroll with the document. Active-run and incoming-update notices remain visible. The title retains its full accessible name, and the narrow layout preserves the action label for assistive technology.
+
+Header scroll state stays local to its component. Separate collapse/expand thresholds account for the reclaimed height so short reviews cannot oscillate as their scroll range changes. Guide jumps and restored positions use the same behavior; switching PR or view resets the heading.
+
+- [x] All 66 frontend tests, type checking, ESLint, formatting, production web/native builds, and [CI on 55c00f7](https://github.com/crs48/diffcity/actions/runs/39672516986) pass.
+- [x] Production WebKit verifies expansion, 48px compaction, preserved keyboard focus, scroll-away notices, guide jumps, view switching, short-review stability, and narrow layouts. Light/dark axe WCAG A/AA checks report no violations.
+- [x] The installed production app compacts the header on a real historical PR and restores its metadata at the top. All eight private notes, settings, and model preference remain byte-for-byte unchanged. Installed executable SHA-256: `ea45c295a539efc0cbf0e7e4afcb1caddccf1ddc6a8bb7c8a7461b03b4d8781f`.
