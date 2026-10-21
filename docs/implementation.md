@@ -38,6 +38,7 @@ GitHub publication has a persisted operation journal. The successful result and 
 - [x] Open the installed production app and render its sample guide.
 - [x] Verify live GitHub and Codex connections in the installed production app. After unlocking the host, the normal installed bundle connected as `crs48`, loaded the synthetic PR and checks, generated a fresh Codex guide, and streamed a private line-scoped answer.
 - [x] Quit and relaunch the installed production app. Both connections returned, the generated guide and two reviewed hunks persisted, and the private question and answer reopened on migration line 2 alongside the existing GitHub comment. Light appearance persisted; System appearance was restored after the check.
+- [x] In the updated production bundle, select migration lines 2–3 with Shift-click, save a private comment, and send it using **Ask Codex about this comment**. The live reply discusses both the required-column rollout and index locking. Quit/relaunch and reopen the thread through **Other discussions in this change**; both messages retain the identical RIGHT-side 2–3 anchor and remain private in SQLite.
 - [x] [GitHub Actions](https://github.com/crs48/diffcity/actions/runs/39521404628) passed contract generation, formatting, types, lint, tests, and the unsigned desktop build, including the monochrome themes and accessibility changes.
 
 The native harness initially exposed a stale-analysis race and two test synchronization problems (clicking before refresh completed and an unbounded driver request). Snapshot guards, readiness waits, and request timeouts were added. The final resumed run completed without reposting the approved review.
@@ -47,6 +48,8 @@ The installed production app's live connection and restart checks are complete. 
 Earlier connection attempts timed out for Rust TCP clients while curl and Python succeeded. Those timeouts did not recur in either installed-app launch after the host was unlocked. Their cause remains unconfirmed; no firewall or network-filter setting was changed. Connection errors retain their underlying cause, and `DIFFCITY_CONNECT_ONLY=1` runs the service smoke check without model inference.
 
 Native screenshots, logs, and isolated test databases live under ignored `.local/native-e2e/`. They are development artifacts, not shipped assets. The synthetic draft PR contains deliberate migration and authorization issues and is not intended to merge.
+
+Multi-line discussions use the exact selected range for their thread identity. Selecting a different range or side cannot reuse that draft or display its in-flight response. Other threads in the same hunk remain reachable through the discussion panel. Codex receives selected lines separately from nearby diff rows, and a reply inherits the question's snapshot, side, and endpoints. The installed multi-line build's executable SHA-256 is `6d5b9e0a409613c6a58c8ebfa6d154ca266e0807af555ed3956401e62a60ca03`, matching the built bundle.
 
 ## Current boundaries
 
