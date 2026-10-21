@@ -149,10 +149,11 @@ describe("multi-line review", () => {
     expect(screen.getByText("New line 13 selected")).toBeTruthy();
   });
 
-  it("saves a range comment, sends that saved comment to Codex, and keeps another range separate", async () => {
+  it("mirrors inline questions and replies in PR chat and preserves their original range", async () => {
     const user = userEvent.setup();
     const saved = new Map<string, Note>();
     const asked: Note[] = [];
+    let reply: ((note: Note) => void) | undefined;
     mockWindows("main");
     Object.assign(window, {
       __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener() {} },
@@ -190,20 +191,20 @@ describe("multi-line review", () => {
         if (command === "save_progress") return payload.progress;
         if (command === "save_note") {
           const note = payload.note as Note;
-          const result = { ...note, id: note.id || crypto.randomUUID() };
+          const result = {
+            ...note,
+            id: note.id || crypto.randomUUID(),
+            createdAt: note.createdAt || new Date().toISOString(),
+          };
           saved.set(result.id, result);
           return result;
         }
         if (command === "ask_codex") {
           const note = saved.get(payload.noteId as string)!;
           asked.push(note);
-          return {
-            ...note,
-            id: crypto.randomUUID(),
-            parentId: note.id,
-            role: "assistant",
-            body: "Backfill existing invitations before enforcing the constraint.",
-          };
+          return new Promise<Note>((resolve) => {
+            reply = resolve;
+          });
         }
         throw new Error(`Unexpected command: ${command}`);
       },
@@ -230,23 +231,30 @@ describe("multi-line review", () => {
       await screen.findByRole("button", { name: "Comment on lines 1–2" }),
     );
     const composer = screen.getByRole("textbox", {
-      name: "Review note or Codex question",
+      name: "Inline comment or Codex question",
     });
     await waitFor(() => expect(document.activeElement).toBe(composer));
     await user.type(
       composer,
       "Will these two migration statements work with existing rows?",
     );
-    await user.click(screen.getByRole("button", { name: "Save note" }));
+    await user.click(screen.getByRole("button", { name: "Save comment" }));
     await user.click(
       await screen.findByRole("button", {
         name: "Ask Codex about this comment",
       }),
     );
+    const thread = screen.getByRole("region", {
+      name: `Discussion for ${path}, New lines 1–2`,
+    });
+    expect(screen.queryByRole("complementary", { name: "PR chat" })).toBeNull();
     expect(
-      await screen.findByText(
-        "Backfill existing invitations before enforcing the constraint.",
-      ),
+      within(thread).getByLabelText("Codex response in progress"),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /^PR chat/ }));
+    const chat = screen.getByRole("complementary", { name: "PR chat" });
+    expect(
+      within(chat).getByLabelText("Codex response in progress"),
     ).toBeTruthy();
     expect(asked).toHaveLength(1);
     expect(asked[0].anchor).toMatchObject({
@@ -255,21 +263,69 @@ describe("multi-line review", () => {
       line: 2,
     });
     expect(asked[0].githubDraft).toBe(false);
+    // Changing the selection while Codex is running must not move its response.
     fireEvent.click(first, { detail: 0 });
-    await waitFor(() =>
-      expect(
-        screen.queryByText(
-          "Backfill existing invitations before enforcing the constraint.",
-        ),
-      ).toBeNull(),
+    reply!({
+      ...asked[0],
+      id: "answer-one",
+      parentId: asked[0].id,
+      role: "assistant",
+      body: "Backfill existing invitations before enforcing the constraint.",
+      createdAt: new Date().toISOString(),
+    });
+    const answer = await within(thread).findByText(
+      "Backfill existing invitations before enforcing the constraint.",
     );
-    await user.click(screen.getByText("Other discussions in this change (1)"));
-    await user.click(screen.getByRole("button", { name: "New lines 1–2" }));
+    const mirror = await within(chat).findByText(answer.textContent!);
+    expect(answer.closest("article")?.dataset.noteId).toBe(
+      mirror.closest("article")?.dataset.noteId,
+    );
+    expect(saved.size).toBe(1); // Mirroring never persists a second copy.
+    await user.click(
+      within(chat).getAllByRole("button", {
+        name: `${path} · New lines 1–2`,
+      })[0],
+    );
+    await waitFor(() => expect(document.activeElement).toBe(composer));
+    await user.type(composer, "Keep this unfinished inline thought.");
+    await user.click(screen.getByRole("tab", { name: /Overview/ }));
+    await user.click(screen.getByRole("tab", { name: "Guide" }));
     expect(
-      await screen.findByText(
-        "Backfill existing invitations before enforcing the constraint.",
+      (
+        screen.getByRole("textbox", {
+          name: "Inline comment or Codex question",
+        }) as HTMLTextAreaElement
+      ).value,
+    ).toBe("Keep this unfinished inline thought.");
+    await user.type(
+      within(chat).getByRole("textbox", {
+        name: "Message to Codex about this PR",
+      }),
+      "How does that affect the rest of the PR?",
+    );
+    await user.click(within(chat).getByRole("button", { name: "Ask Codex" }));
+    await waitFor(() => expect(asked).toHaveLength(2));
+    expect(asked[1].anchor).toBeNull();
+    reply!({
+      ...asked[1],
+      id: "answer-two",
+      parentId: asked[1].id,
+      role: "assistant",
+      body: "The API must accommodate the migration rollout.",
+      createdAt: new Date().toISOString(),
+    });
+    expect(
+      await within(chat).findByText(
+        "The API must accommodate the migration rollout.",
       ),
     ).toBeTruthy();
+    expect(
+      within(
+        screen.getByRole("region", {
+          name: `Discussion for ${path}, New lines 1–2`,
+        }),
+      ).queryByText("The API must accommodate the migration rollout."),
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: "Finish review" }));
     expect(
       within(screen.getByRole("dialog", { name: "Finish review" })).getByText(

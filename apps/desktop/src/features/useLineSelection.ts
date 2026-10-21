@@ -13,19 +13,23 @@ const rowHeight = 25;
 type Endpoint = { side: Side; origin: number; end: number };
 type Drag = Endpoint & { pointerId: number; clientY: number };
 
-const lineAtPointer = (hunk: Hunk, element: HTMLDivElement, active: Drag) => {
+const lineAtPointer = (
+  hunk: Hunk,
+  element: HTMLDivElement,
+  active: Drag,
+  indexAtOffset?: (offset: number) => number | null,
+) => {
   const bounds = element.getBoundingClientRect();
   const y = active.clientY - bounds.top;
-  const index = Math.max(
-    0,
-    Math.min(
-      hunk.lines.length - 1,
-      Math.floor(
-        (Math.max(0, Math.min(bounds.height - 1, y)) + element.scrollTop) /
-          rowHeight,
-      ),
-    ),
-  );
+  const offset =
+    Math.max(0, Math.min(bounds.height - 1, y)) + element.scrollTop;
+  const index = indexAtOffset
+    ? indexAtOffset(offset)
+    : Math.max(
+        0,
+        Math.min(hunk.lines.length - 1, Math.floor(offset / rowHeight)),
+      );
+  if (index === null) return active.end;
   const position = hunk.lines[index];
   return (active.side === "LEFT" ? position.old : position.new) ?? active.end;
 };
@@ -36,6 +40,7 @@ export function useLineSelection(
   scroll: RefObject<HTMLDivElement | null>,
   onSelect: (anchor: Anchor) => void,
   scrollToIndex: (index: number) => void,
+  indexAtOffset?: (offset: number) => number | null,
 ) {
   const pivot = useRef<Endpoint | null>(null);
   const drag = useRef<Drag | null>(null);
@@ -72,7 +77,7 @@ export function useLineSelection(
       if (y < 24) element.scrollTop -= Math.min(16, (24 - y) / 2);
       else if (y > bounds.height - 24)
         element.scrollTop += Math.min(16, (y - bounds.height + 24) / 2);
-      const end = lineAtPointer(hunk, element, active);
+      const end = lineAtPointer(hunk, element, active, indexAtOffset);
       if (end !== active.end) {
         active.end = end;
         setPreview(rangeAnchor(hunk, active.side, active.origin, end));
@@ -81,7 +86,7 @@ export function useLineSelection(
     };
     frame = requestAnimationFrame(update);
     return () => cancelAnimationFrame(frame);
-  }, [dragging, hunk, scroll]);
+  }, [dragging, hunk, scroll, indexAtOffset]);
 
   const pointerDown = (
     event: PointerEvent<HTMLButtonElement>,
@@ -148,7 +153,7 @@ export function useLineSelection(
       const active = drag.current;
       if (active?.pointerId === event.pointerId && scroll.current) {
         active.clientY = event.clientY;
-        active.end = lineAtPointer(hunk, scroll.current, active);
+        active.end = lineAtPointer(hunk, scroll.current, active, indexAtOffset);
         setPreview(rangeAnchor(hunk, active.side, active.origin, active.end));
       }
     },

@@ -1,10 +1,13 @@
-import { useRef } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import { FileCode2, MessageSquare } from "lucide-react";
 import { Button } from "react-aria-components";
 import type { Anchor, Hunk, Note, RemoteComment, Side } from "../lib/api";
 import { containsLine, lineRange, rangeAnchor } from "../lib/selection";
 import { useLineSelection } from "./useLineSelection";
+import { anchorKey, diffRows } from "../lib/diffRows";
+import { InlineDiscussion } from "./InlineDiscussion";
+import { useConversation } from "./conversation";
 
 export function Diff({
   hunk,
@@ -26,24 +29,84 @@ export function Diff({
   readingMode?: boolean;
 }) {
   const scroll = useRef<HTMLDivElement>(null);
+  const conversation = useConversation();
+  const hasConversation = !!conversation;
+  const editing =
+    conversation?.inline.draft?.snapshotId ===
+    conversation?.workspace.snapshot.id
+      ? (conversation?.inline.draft?.anchor ?? null)
+      : null;
+  const items = useMemo(
+    () =>
+      diffRows(
+        hunk,
+        hasConversation ? notes : [],
+        hasConversation ? comments : [],
+        editing,
+      ),
+    [hunk, notes, comments, editing, hasConversation],
+  );
+  const [focusedRow, setFocusedRow] = useState<string | null>(null);
+  const activeIndex =
+    editing?.hunkId === hunk.id
+      ? items.findIndex((item) => item.key === anchorKey(editing))
+      : -1;
+  const focusIndex = items.findIndex((item) => item.key === focusedRow);
   const rows = useVirtualizer({
-    count: hunk.lines.length,
+    count: items.length,
     getScrollElement: () => scroll.current,
-    estimateSize: () => 25,
+    getItemKey: (index) => items[index].key,
+    estimateSize: (index) => (items[index].kind === "code" ? 25 : 280),
+    rangeExtractor: (range) =>
+      [
+        ...new Set(
+          [...defaultRangeExtractor(range), activeIndex, focusIndex].filter(
+            (i) => i >= 0,
+          ),
+        ),
+      ].sort((a, b) => a - b),
     overscan: 12,
   });
   const renderedRows = readingMode
-    ? hunk.lines.map((_, index) => ({ index, key: index, start: index * 25 }))
+    ? items.map((item, index) => ({ index, key: item.key, start: 0 }))
     : rows.getVirtualItems();
+  const indexAtOffset = useCallback(
+    (offset: number) => {
+      const index = readingMode
+        ? Array.from(
+            scroll.current?.querySelectorAll<HTMLElement>("[data-index]") ?? [],
+          ).find(
+            (el) =>
+              offset >= el.offsetTop && offset < el.offsetTop + el.offsetHeight,
+          )?.dataset.index
+        : rows.getVirtualItemForOffset(offset)?.index;
+      const item = index === undefined ? null : items[Number(index)];
+      return item?.kind === "code" ? item.codeIndex : null;
+    },
+    [readingMode, rows, items],
+  );
+  const scrollToCode = (index: number) => {
+    const position = items.findIndex(
+      (item) => item.kind === "code" && item.codeIndex === index,
+    );
+    if (readingMode)
+      scroll.current
+        ?.querySelector<HTMLElement>(`[data-index="${position}"]`)
+        ?.scrollIntoView({ block: "nearest" });
+    else rows.scrollToIndex(position);
+  };
+  const focusRequest = conversation?.inline.focus;
+  useEffect(() => {
+    if (activeIndex >= 0 && !readingMode)
+      rows.scrollToIndex(activeIndex, { align: "auto" });
+  }, [activeIndex, focusRequest, readingMode, rows]);
   const interaction = useLineSelection(
     hunk,
     selection,
     scroll,
     onSelect,
-    (index) => {
-      if (readingMode) scroll.current?.scrollTo({ top: index * 25 });
-      else rows.scrollToIndex(index);
-    },
+    scrollToCode,
+    conversation ? indexAtOffset : undefined,
   );
   const selected = interaction.selected;
   const activeRange = selected?.hunkId === hunk.id ? selected : null;
@@ -100,17 +163,47 @@ export function Diff({
         onPointerUp={interaction.pointerUp}
         onPointerCancel={interaction.pointerCancel}
         onLostPointerCapture={interaction.pointerCancel}
-        style={{ height: Math.min(hunk.lines.length * 25, 450) }}
+        onFocusCapture={(e) =>
+          setFocusedRow(
+            (e.target as HTMLElement).closest<HTMLElement>("[data-row-key]")
+              ?.dataset.rowKey ?? null,
+          )
+        }
+        style={{
+          height: Math.min(
+            rows.getTotalSize(),
+            items.some((item) => item.kind === "thread") ? 680 : 450,
+          ),
+        }}
       >
         <div
           style={{
-            height: readingMode ? hunk.lines.length * 25 : rows.getTotalSize(),
+            height: readingMode ? "auto" : rows.getTotalSize(),
             position: "relative",
             minWidth: "100%",
           }}
         >
           {renderedRows.map((row) => {
-            const l = hunk.lines[row.index];
+            const item = items[row.index];
+            const wrapper = {
+              "data-index": row.index,
+              "data-row-key": item.key,
+              ref: readingMode ? undefined : rows.measureElement,
+              style: readingMode
+                ? undefined
+                : {
+                    position: "absolute" as const,
+                    top: row.start,
+                    width: "100%",
+                  },
+            };
+            if (item.kind === "thread")
+              return (
+                <div key={row.key} {...wrapper}>
+                  <InlineDiscussion thread={item.thread} />
+                </div>
+              );
+            const l = hunk.lines[item.codeIndex];
             const side: Side = l.kind === "deletion" ? "LEFT" : "RIGHT";
             const line = side === "LEFT" ? l.old : l.new;
             const chosen =
@@ -129,64 +222,63 @@ export function Diff({
                   c.path === hunk.path && c.line === line && c.side === side,
               );
             return (
-              <div
-                key={row.key}
-                className={`diff-line ${l.kind} ${chosen ? "selected" : ""}`}
-                style={{
-                  position: "absolute",
-                  top: row.start,
-                  height: 25,
-                  width: "100%",
-                }}
-              >
-                <button {...lineControls(l.old, "LEFT")}>{l.old}</button>
-                <button {...lineControls(l.new, "RIGHT")}>{l.new}</button>
-                <span className="sr-only">
-                  {l.kind === "addition"
-                    ? "Added: "
-                    : l.kind === "deletion"
-                      ? "Removed: "
-                      : "Unchanged: "}
-                </span>
-                <span className="diff-sign" aria-hidden="true">
-                  {l.kind === "addition"
-                    ? "+"
-                    : l.kind === "deletion"
-                      ? "−"
-                      : " "}
-                </span>
-                {split ? (
-                  <>
-                    <code className="split-code old">
-                      {l.kind !== "addition" ? l.text : ""}
-                    </code>
-                    <code className="split-code new">
-                      {l.kind !== "deletion" ? l.text : ""}
-                    </code>
-                  </>
-                ) : (
-                  <code>{l.text || " "}</code>
-                )}
-                {line && (
-                  <button
-                    className={`line-comment ${annotated ? "has-comment" : ""}`}
-                    title={
-                      chosen && activeRange
-                        ? `Discuss ${lineRange(activeRange)}`
-                        : "Discuss this line"
-                    }
-                    aria-label={`Discuss ${hunk.path} ${chosen && activeRange ? lineRange(activeRange) : `line ${line}`}`}
-                    onClick={() =>
-                      onDiscuss(
+              <div key={row.key} {...wrapper}>
+                <div
+                  className={`diff-line ${l.kind} ${chosen ? "selected" : ""}`}
+                  style={{
+                    height: 25,
+                    width: "100%",
+                  }}
+                >
+                  <button {...lineControls(l.old, "LEFT")}>{l.old}</button>
+                  <button {...lineControls(l.new, "RIGHT")}>{l.new}</button>
+                  <span className="sr-only">
+                    {l.kind === "addition"
+                      ? "Added: "
+                      : l.kind === "deletion"
+                        ? "Removed: "
+                        : "Unchanged: "}
+                  </span>
+                  <span className="diff-sign" aria-hidden="true">
+                    {l.kind === "addition"
+                      ? "+"
+                      : l.kind === "deletion"
+                        ? "−"
+                        : " "}
+                  </span>
+                  {split ? (
+                    <>
+                      <code className="split-code old">
+                        {l.kind !== "addition" ? l.text : ""}
+                      </code>
+                      <code className="split-code new">
+                        {l.kind !== "deletion" ? l.text : ""}
+                      </code>
+                    </>
+                  ) : (
+                    <code>{l.text || " "}</code>
+                  )}
+                  {line && (
+                    <button
+                      className={`line-comment ${annotated ? "has-comment" : ""}`}
+                      title={
                         chosen && activeRange
-                          ? activeRange
-                          : rangeAnchor(hunk, side, line, line),
-                      )
-                    }
-                  >
-                    <MessageSquare size={13} />
-                  </button>
-                )}
+                          ? `Discuss ${lineRange(activeRange)}`
+                          : "Discuss this line"
+                      }
+                      aria-label={`Discuss ${hunk.path} ${chosen && activeRange ? lineRange(activeRange) : `line ${line}`}`}
+                      onClick={() =>
+                        onDiscuss(
+                          chosen && activeRange
+                            ? activeRange
+                            : rangeAnchor(hunk, side, line, line),
+                        )
+                      }
+                    >
+                      <MessageSquare size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}

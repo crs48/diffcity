@@ -29,7 +29,7 @@ GitHub publication has a persisted operation journal. The successful result and 
 ## Validation evidence
 
 - [x] Strict TypeScript, ESLint, Rust formatting, and Clippy pass.
-- [x] All 25 Rust tests and 11 TypeScript/component tests pass. Tests cover canonical additions/deletions, multiline anchors, incomplete patches, attention floors, invalid model output, omitted coverage, unchanged progress transfer, explicit publication payload selection, dialog focus, keyboard navigation, appearance, full-line reading, range selection, and exact-range Codex context.
+- [x] All 28 Rust tests and 14 TypeScript/component tests pass. Tests cover canonical additions/deletions, multiline anchors, incomplete patches, attention floors, invalid model output, omitted coverage, unchanged progress transfer, explicit publication payload selection, dialog focus, keyboard navigation, appearance, full-line reading, range selection, and exact-range Codex context.
 - [x] Live local GitHub identity, repository inbox, Codex handshake/model catalog, guide generation, and selected-line discussion succeed.
 - [x] The packaged WKWebView reaches a real GitHub PR, generates and displays a grounded Codex guide, saves a line discussion, and previews only deliberately prepared GitHub feedback.
 - [x] Native restart, cancellation, and new-revision recovery pass. A real push changed the migration hunk, invalidated its review mark, and left earlier notes accessible.
@@ -49,7 +49,25 @@ Earlier connection attempts timed out for Rust TCP clients while curl and Python
 
 Native screenshots, logs, and isolated test databases live under ignored `.local/native-e2e/`. They are development artifacts, not shipped assets. The synthetic draft PR contains deliberate migration and authorization issues and is not intended to merge.
 
-Multi-line discussions use the exact selected range for their thread identity. Selecting a different range or side cannot reuse that draft or display its in-flight response. Other threads in the same hunk remain reachable through the discussion panel. Codex receives selected lines separately from nearby diff rows, and a reply inherits the question's snapshot, side, and endpoints. The installed multi-line build's executable SHA-256 is `6d5b9e0a409613c6a58c8ebfa6d154ca266e0807af555ed3956401e62a60ca03`, matching the built bundle.
+Inline discussions use the exact selected range for their thread identity and appear beneath its final line. PR chat mirrors those same saved messages and includes code links back to their guide section. A response inherits its question’s snapshot, side, and endpoints even if the reviewer changes selection while it streams. PR-wide questions have no code anchor. Every request rebuilds a bounded recent conversation across the current snapshot, with separately identified exact selection and supporting PR code; it does not retain a long-running Codex thread.
+
+```mermaid
+flowchart LR
+  Inline[Inline thread] <--> Notes[Canonical saved messages]
+  Chat[PR chat] <--> Notes
+  Notes --> Context[Recent PR conversation + bounded code]
+  Context --> Codex[Local Codex app-server]
+  Codex --> Reply[Stream + anchored reply]
+  Reply --> Inline
+  Reply --> Chat
+  Reply --> Notes
+```
+
+- [x] Inline and sidebar replies share message IDs; mirroring never writes duplicate messages. A PR-wide answer stays in chat, and a pending inline answer stays on its original range after selection changes.
+- [x] Draft state survives guide navigation and virtualized rows. Failed saves retain the composer, and overlapping saves reuse the original note ID.
+- [x] An 80-line WebKit fixture with an expanded thread between rows preserves drag selection on lines 11–12 and keyboard selection on 79–80 while virtualizing code rows.
+- [x] Sampled light and dark inline/chat states have no axe-core WCAG A/AA violations. This is not a complete assistive-technology audit.
+- [ ] Verify a live inline response and a PR-wide follow-up in the installed production app, then restart to confirm persistence.
 
 ## Current boundaries
 

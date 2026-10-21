@@ -36,10 +36,11 @@ import {
   type ReviewWorkspace,
   type RunEvent,
 } from "./lib/api";
-import { bucket, key, parsePullUrl } from "./lib/review";
-import { sameAnchor } from "./lib/selection";
+import { bucket, key, newNote, parsePullUrl } from "./lib/review";
 import { GuideView } from "./features/Guide";
-import { Discussion, type DiscussionHandle } from "./features/Discussion";
+import { Discussion } from "./features/Discussion";
+import { ConversationContext } from "./features/conversation";
+import { useNoteComposer } from "./features/useNoteComposer";
 import { Connections, Finish, Projects } from "./features/Dialogs";
 import "./styles.css";
 
@@ -50,7 +51,6 @@ export default function App() {
   const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
   const [selection, setSelection] = useState<Anchor | null>(null);
   const [discussion, setDiscussion] = useState(false);
-  const [focusComposer, setFocusComposer] = useState(0);
   const [activeQuestion, setActiveQuestion] = useState<Note | null>(null);
   const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
@@ -83,10 +83,6 @@ export default function App() {
       });
     }
   };
-  const panel = useRef<DiscussionHandle>(null);
-  useEffect(() => {
-    if (focusComposer) panel.current?.focus();
-  }, [focusComposer]);
   const current = useRef(workspace);
   current.current = workspace;
   const booted = useRef(false);
@@ -102,9 +98,13 @@ export default function App() {
       ),
     [],
   );
-  const flush = async () => {
-    await panel.current?.flush();
-  };
+  const inline = useNoteComposer(onNote, onError);
+  const chat = useNoteComposer(onNote, onError);
+  const flushInline = inline.flush;
+  const flushChat = chat.flush;
+  const flush = useCallback(async () => {
+    await Promise.all([flushInline(), flushChat()]);
+  }, [flushInline, flushChat]);
   const finish = async () => {
     try {
       await flush();
@@ -117,7 +117,7 @@ export default function App() {
     const subscription = getCurrentWindow().onCloseRequested(async (event) => {
       event.preventDefault();
       try {
-        await panel.current?.flush();
+        await flush();
         await getCurrentWindow().destroy();
       } catch (e) {
         onError(e);
@@ -126,7 +126,7 @@ export default function App() {
     return () => {
       void subscription.then((unlisten) => unlisten());
     };
-  }, [onError]);
+  }, [onError, flush]);
   useEffect(() => {
     const preference = matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
@@ -304,23 +304,57 @@ export default function App() {
       if (request === opening.current) setLoading(false);
     }
   };
-  const select = async (anchor: Anchor, openDiscussion = false) => {
+  const select = async (
+    anchor: Anchor,
+    openDiscussion = false,
+    jumpToCode = false,
+  ) => {
     const request = ++selecting.current;
     const snapshotId = workspace?.snapshot.id;
     try {
-      await flush();
+      if (openDiscussion) await inline.start(snapshotId!, anchor);
       if (
         request !== selecting.current ||
         current.current?.snapshot.id !== snapshotId
       )
         return;
       setSelection(anchor);
-      if (openDiscussion) {
-        setDiscussion(true);
-        setFocusComposer((n) => n + 1);
+      if (jumpToCode) {
+        // A chat reference may point into another section or a filtered file.
+        const section = workspace?.guide.sections.find((s) =>
+          s.hunkIds.includes(anchor.hunkId),
+        );
+        setMode("guide");
+        if (section && workspace)
+          progress({ ...workspace.progress, activeSection: section.id });
       }
     } catch (e) {
       onError(e);
+    }
+  };
+  const openChat = async (anchor: Anchor | null) => {
+    if (!workspace) return;
+    try {
+      await chat.start(workspace.snapshot.id, anchor);
+      setDiscussion(true);
+    } catch (e) {
+      onError(e);
+    }
+  };
+  const prepare = async (note: Note) => {
+    const draft = await api.note({
+      ...newNote(note.snapshotId, note.anchor, note.body),
+      githubDraft: true,
+      parentId: note.id,
+    });
+    onNote(draft);
+  };
+  const edit = async (note: Note, inCode: boolean) => {
+    if (inCode && note.anchor)
+      await inline.start(note.snapshotId, note.anchor, note);
+    else {
+      await chat.start(note.snapshotId, note.anchor, note);
+      setDiscussion(true);
     }
   };
   const progress = (p: ReviewProgress) => {
@@ -354,6 +388,7 @@ export default function App() {
     setRunText("Asking Codex…");
     setError("");
     try {
+      await flush();
       onNote(await api.ask(note.snapshotId, note.id, id));
     } catch (e) {
       onError(e);
@@ -729,15 +764,18 @@ export default function App() {
                 className="text-button"
                 onPress={async () => {
                   try {
-                    await flush();
-                    setSelection(null);
-                    setDiscussion(!discussion);
+                    if (discussion) {
+                      await chat.flush();
+                      setDiscussion(false);
+                    } else if (chat.draft?.snapshotId === workspace.snapshot.id)
+                      setDiscussion(true);
+                    else await openChat(null);
                   } catch (e) {
                     onError(e);
                   }
                 }}
               >
-                <MessageSquare size={14} /> Notes{" "}
+                <MessageSquare size={14} /> PR chat{" "}
                 <span>{workspace.notes.length}</span>
               </Button>
             </div>
@@ -819,44 +857,47 @@ export default function App() {
                 previous revision. Unchanged reviewed code was preserved.
               </div>
             )}
-            <div className="review-body">
-              <TabPanel id={mode} className="review-panel">
-                <GuideView
-                  key={workspace.snapshot.id}
-                  workspace={workspace}
-                  selection={selection}
-                  onSelect={(a) => void select(a)}
-                  onDiscuss={(a) => void select(a, true)}
-                  onProgress={progress}
-                  onFinish={() => void finish()}
-                  mode={mode}
-                />
-              </TabPanel>
-              {discussion && (
-                <Discussion
-                  key={`${workspace.snapshot.id}/${selection?.hunkId ?? "overall"}/${selection?.side}/${selection?.startLine}/${selection?.line}`}
-                  ref={panel}
-                  workspace={workspace}
-                  selection={selection}
-                  onNote={onNote}
-                  onAsk={ask}
-                  onSelect={(a) => void select(a, true)}
-                  onClose={() => {
-                    void flush()
-                      .then(() => setDiscussion(false))
-                      .catch(onError);
-                  }}
-                  onError={onError}
-                  busy={!!run}
-                  stream={
-                    activeQuestion?.snapshotId === workspace.snapshot.id &&
-                    sameAnchor(activeQuestion.anchor, selection)
-                      ? stream
-                      : ""
-                  }
-                />
-              )}
-            </div>
+            <ConversationContext.Provider
+              value={{
+                workspace,
+                inline,
+                chat,
+                busy: !!run,
+                activeQuestion,
+                stream,
+                ask,
+                prepare,
+                edit,
+                openInline: (a) => void select(a, true, true),
+                openChat: (a) => void openChat(a),
+                onError,
+              }}
+            >
+              <div className="review-body">
+                <TabPanel id={mode} className="review-panel">
+                  <GuideView
+                    key={workspace.snapshot.id}
+                    workspace={workspace}
+                    selection={selection}
+                    onSelect={(a) => void select(a)}
+                    onDiscuss={(a) => void select(a, true)}
+                    onProgress={progress}
+                    onFinish={() => void finish()}
+                    mode={mode}
+                  />
+                </TabPanel>
+                {discussion && (
+                  <Discussion
+                    onClose={() => {
+                      void chat
+                        .flush()
+                        .then(() => setDiscussion(false))
+                        .catch(onError);
+                    }}
+                  />
+                )}
+              </div>
+            </ConversationContext.Provider>
           </Tabs>
         ) : (
           <div className="welcome">

@@ -1213,6 +1213,68 @@
     flex-direction: column;
     background: var(--surface);
   }
+  .inline-thread {
+    margin: 10px 12px 14px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    min-width: 0;
+    overflow: hidden;
+    font-family: inherit;
+  }
+  .inline-thread > header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .inline-thread > header strong {
+    flex: 1;
+  }
+  .inline-thread > header .text-button {
+    font-size: 12px;
+  }
+  .inline-messages {
+    padding: 0 14px;
+    max-height: 400px;
+    overflow: auto;
+  }
+  .inline-thread .composer {
+    padding: 12px;
+  }
+  .inline-thread .composer textarea {
+    min-height: 80px;
+  }
+  .inline-thread .message:last-of-type {
+    border-bottom: 0;
+    margin-bottom: 4px;
+  }
+  .inline-reply {
+    margin: 6px 14px 12px;
+    font-size: 12px;
+  }
+  .message-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .message-location {
+    display: block;
+    text-align: left;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+    white-space: normal;
+    margin-bottom: 8px;
+  }
+  .message-scope {
+    color: var(--muted);
+    font-size: 12px;
+  }
   .discussion > header {
     height: 52px;
     padding: 0 17px;

@@ -183,7 +183,7 @@ try {
       await click("Next step");
     await click(`Discuss ${path} line 1`);
     await input(
-      '[aria-label="Review note or Codex question"]',
+      '[aria-label="Inline comment or Codex question"]',
       "What happens to existing rows when this migration runs?",
     );
     await click("Ask Codex");
@@ -200,15 +200,15 @@ try {
     );
     await screenshot("03-discussion");
     console.log("PASS: selected-line Codex discussion persists");
-    await input('[aria-label="Review note or Codex question"]', marker);
-    await click("Save note");
+    await input('[aria-label="Inline comment or Codex question"]', marker);
+    await click("Save comment");
     await waitText(marker);
     await script(
       'const article=[...document.querySelectorAll(".message")].find(el=>el.textContent.includes(arguments[0])); const b=[...article.querySelectorAll("button")].find(b=>b.textContent.includes("Prepare GitHub draft")); if(!b) throw new Error("Draft action missing"); b.click(); return true;',
       [marker],
     );
     await waitText("GitHub draft");
-    await click("Close discussion");
+    await click("Close inline composer");
     await click("Mark code reviewed");
     await click("Finish review");
     await waitText("Selected GitHub drafts");
@@ -282,7 +282,7 @@ try {
   );
   await screenshot("06-restored");
   if (process.env.DIFFCITY_TEST_REVISION === "yes") {
-    await click("Close discussion");
+    await click("Close inline composer");
     await writeFile(
       resolve(artifacts, "await-update.json"),
       JSON.stringify({
