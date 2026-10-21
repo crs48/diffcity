@@ -1,0 +1,2 @@
+.inbox-compact { --row-gap: 4px; --row-padding: 8px; }
+.inbox-comfortable { --row-gap: 8px; --row-padding: 14px; }
