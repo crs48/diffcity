@@ -390,3 +390,15 @@ Header scroll state stays local to its component. Separate collapse/expand thres
 - [x] All 66 frontend tests, type checking, ESLint, formatting, production web/native builds, and [CI on 55c00f7](https://github.com/crs48/diffcity/actions/runs/39672516986) pass.
 - [x] Production WebKit verifies expansion, 48px compaction, preserved keyboard focus, scroll-away notices, guide jumps, view switching, short-review stability, and narrow layouts. Light/dark axe WCAG A/AA checks report no violations.
 - [x] The installed production app compacts the header on a real historical PR and restores its metadata at the top. All eight private notes, settings, and model preference remain byte-for-byte unchanged. Installed executable SHA-256: `ea45c295a539efc0cbf0e7e4afcb1caddccf1ddc6a8bb7c8a7461b03b4d8781f`.
+
+## GitHub-flavored comment Markdown
+
+One memoized renderer now handles local notes, GitHub comments, streamed Codex replies, draft previews, and overview descriptions/discussion. It uses [remark-gfm](https://github.com/remarkjs/remark-gfm) for tables, task lists, strikethrough, autolinks, and footnotes, and [remark-breaks](https://github.com/remarkjs/remark-breaks) for GitHub-style comment line breaks. Scoped styles restore list markers and readable headings, quotes, code blocks, and tables. Code and table cells wrap without introducing nested scroll regions.
+
+Task checkboxes are read-only and labeled from their text. Every rendered copy namespaces its footnote IDs and accessibility references, so inline/chat mirrors navigate within the correct comment and return focus without removing links from the tab order. Draft selection stays separate from links and task checkboxes in the preview. Saved bodies and publication payloads remain raw Markdown.
+
+User-activated HTTP/HTTPS links open through the native browser command. Both UI and backend reject local/executable schemes and embedded credentials. Active HTML stays inert and remote images are represented by their alternative text without fetching them.
+
+- [x] All 73 Rust and 71 frontend tests pass, including Markdown semantics, task labels, safe link dispatch/error handling, mirrored footnote navigation, and partially streamed code fences. Types, ESLint, Clippy, formatting, and production packaging pass.
+- [x] Production WebKit verifies inline/chat/overview/preview rendering, keyboard link activation, independent draft selection, unique footnotes, long wrapped code, and narrow layouts without horizontal overflow or nested Markdown scrolling. Light/dark and draft-preview axe WCAG A/AA checks report no violations.
+- [x] The installed app renders existing GitHub review comments as semantic tables, formatted text, and code. All eight private notes, settings, and model preference remain byte-for-byte unchanged. [CI passes on ee18030](https://github.com/crs48/diffcity/actions/runs/39678168549). Installed executable SHA-256: `e67a0299e76fac6e46ff1607291c568256df3076c0c52135ac78f4f12abc190a`.
