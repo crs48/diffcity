@@ -280,7 +280,7 @@ impl GitHub {
                 continue;
             }
             let id = domain::hash(&format!(
-                "{repo}/{number}/{}/{}/{}",
+                "capture-v2/{repo}/{number}/{}/{}/{}",
                 after.base,
                 after.head,
                 serde_json::to_string(&files)?
@@ -293,14 +293,74 @@ impl GitHub {
                     after.changed_files
                 ));
             }
-            let parsed=files.iter().map(|v|{
-                let path=string(v,"filename");
-                let (hunks,unavailable)=match v["patch"].as_str(){
-                    Some(p)=>match domain::parse_patch(&path,p,&id){Ok(h) if !h.is_empty()=>(h,None),Ok(_)=>(vec![],Some("No text hunks available; inspect the file in GitHub.".into())),Err(e)=>(vec![],Some(e.to_string()))},
-                    None=>(vec![],Some("GitHub did not supply a text patch (binary, oversized, renamed-only, or unavailable content).".into()))
+            let mut parsed: Vec<ChangedFile> = files.iter().map(|v| {
+                let path = string(v, "filename");
+                let (hunks, unavailable) = match v["patch"].as_str() {
+                    Some(p) => match domain::parse_patch(&path, p, &id) {
+                        Ok(h) if !h.is_empty() && crate::text_diff::matches_counts(&h, integer(v, "additions"), integer(v, "deletions")) => (h, None),
+                        Ok(_) => (vec![], Some("GitHub supplied no complete text patch; inspect file metadata in GitHub.".into())),
+                        Err(e) => (vec![], Some(e.to_string())),
+                    },
+                    None => (vec![], Some("GitHub did not supply a text patch (binary, metadata-only, or oversized content).".into())),
                 };
-                ChangedFile{path,previous_path:v["previous_filename"].as_str().map(str::to_string),status:string(v,"status"),additions:integer(v,"additions"),deletions:integer(v,"deletions"),hunks,unavailable}
+                ChangedFile { path, previous_path: v["previous_filename"].as_str().map(str::to_string), status: string(v, "status"), additions: integer(v, "additions"), deletions: integer(v, "deletions"), hunks, unavailable }
             }).collect();
+            let needs_content = parsed
+                .iter()
+                .any(|f| f.unavailable.is_some() && f.additions + f.deletions > 0);
+            if needs_content {
+                // PR diffs compare the merge base, which can differ from the target branch tip.
+                let comparison = self
+                    .request(
+                        Method::GET,
+                        &format!(
+                            "/repos/{repo}/compare/{}...{}?per_page=1",
+                            after.base, after.head
+                        ),
+                        None,
+                        true,
+                    )
+                    .await;
+                let merge_base = comparison
+                    .as_ref()
+                    .ok()
+                    .and_then(|v| v["merge_base_commit"]["sha"].as_str());
+                let mut bytes_left = 16 * 1024 * 1024;
+                for (index, file) in parsed
+                    .iter_mut()
+                    .filter(|f| f.unavailable.is_some() && f.additions + f.deletions > 0)
+                    .enumerate()
+                {
+                    let result = match merge_base {
+                        Some(base) if index < 20 && bytes_left > 0 => {
+                            self.reconstruct_file(
+                                repo,
+                                base,
+                                &after.head,
+                                file,
+                                &id,
+                                &mut bytes_left,
+                            )
+                            .await
+                        }
+                        Some(_) => Err(anyhow::anyhow!(
+                            "Text fallback budget reached (20 files / 16 MiB)"
+                        )),
+                        None => Err(anyhow::anyhow!(
+                            "Could not determine the immutable merge base for text reconstruction"
+                        )),
+                    };
+                    match result {
+                        Ok(hunks) => {
+                            file.hunks = hunks;
+                            file.unavailable = None;
+                        }
+                        Err(error) => {
+                            file.unavailable = Some(format!("Text capture unavailable: {error}"))
+                        }
+                    }
+                }
+            }
             return Ok(Snapshot {
                 id,
                 pull: after,
@@ -310,6 +370,93 @@ impl GitHub {
             });
         }
         bail!("The PR kept changing during capture. Try refreshing when the push finishes.")
+    }
+    async fn text_at(
+        &self,
+        repo: &str,
+        revision: &str,
+        path: &str,
+        bytes_left: &mut usize,
+    ) -> Result<String> {
+        let mut url = reqwest::Url::parse("https://api.github.com")?;
+        url.path_segments_mut()
+            .expect("base URL supports paths")
+            .extend(["repos"])
+            .extend(repo.split('/'))
+            .push("contents")
+            .extend(path.split('/'));
+        url.query_pairs_mut().append_pair("ref", revision);
+        let mut guard = self.session.lock().await;
+        let session = guard.as_mut().context("Connect GitHub first")?;
+        if session.next_request > Instant::now() {
+            let delay = session
+                .next_request
+                .saturating_duration_since(Instant::now());
+            if delay > Duration::from_secs(3) {
+                bail!("GitHub rate limit; retry later");
+            }
+            tokio::time::sleep(delay).await;
+        }
+        let mut response = self
+            .client
+            .get(url)
+            .bearer_auth(&session.token)
+            .header("Accept", "application/vnd.github.raw+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .send()
+            .await?;
+        session.next_request = Instant::now() + Duration::from_millis(100);
+        if !response.status().is_success() {
+            if response.status() == StatusCode::TOO_MANY_REQUESTS
+                || response.status() == StatusCode::FORBIDDEN
+            {
+                session.next_request = Instant::now() + Duration::from_secs(60);
+            }
+            bail!("GitHub content returned {}", response.status());
+        }
+        let limit = crate::text_diff::MAX_FILE_BYTES.min(*bytes_left);
+        if response
+            .content_length()
+            .is_some_and(|size| size > limit as u64)
+        {
+            bail!("File exceeds the remaining text capture budget");
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await? {
+            if bytes.len() + chunk.len() > limit {
+                bail!("File exceeds the remaining text capture budget");
+            }
+            *bytes_left -= chunk.len();
+            bytes.extend_from_slice(&chunk);
+        }
+        String::from_utf8(bytes).context("File is binary or not UTF-8 text")
+    }
+    async fn reconstruct_file(
+        &self,
+        repo: &str,
+        base: &str,
+        head: &str,
+        file: &ChangedFile,
+        revision: &str,
+        bytes_left: &mut usize,
+    ) -> Result<Vec<Hunk>> {
+        let old = if file.status == "added" {
+            String::new()
+        } else {
+            self.text_at(
+                repo,
+                base,
+                file.previous_path.as_deref().unwrap_or(&file.path),
+                bytes_left,
+            )
+            .await?
+        };
+        let new = if file.status == "removed" {
+            String::new()
+        } else {
+            self.text_at(repo, head, &file.path, bytes_left).await?
+        };
+        crate::text_diff::reconstruct(file, &old, &new, revision)
     }
     pub async fn comments(&self, pull: &PullRequest) -> Result<Vec<RemoteComment>> {
         let base = format!("/repos/{}", pull.repository);

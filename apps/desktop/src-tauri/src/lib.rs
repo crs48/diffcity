@@ -6,6 +6,7 @@ pub mod fixtures;
 pub mod github;
 pub mod migrations;
 pub mod service;
+pub mod text_diff;
 
 use std::sync::Arc;
 use tauri::Manager;

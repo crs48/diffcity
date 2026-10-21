@@ -75,7 +75,7 @@ flowchart LR
 
 The personal alpha uses an existing GitHub CLI login. GitHub App onboarding and organization installation flows are not implemented. It supports github.com, one GitHub identity per local data directory, and read-only model analysis. The app can publish new reviews and read remote feedback; thread resolution and targeted replies to existing review threads remain later work.
 
-Large or unavailable GitHub patches are reported as incomplete; there is no Git-object download fallback yet. The model receives a bounded 180,000-character hunk context. Diff rows are virtualized, but the full large-PR benchmark and curated comparative guide-quality study have not been completed. No claim that this guide outperforms Linear or Diffity has been established.
+Missing or truncated GitHub text patches use a bounded reconstruction fallback from immutable merge-base/head file contents. Capture checks the reconstructed addition/deletion counts against GitHub; binary, metadata-only, oversized, and mismatched files remain explicitly unavailable. The fallback permits 20 files, 2 MiB and 50,000 lines per file side, and 16 MiB total. Diff computation has a 750 ms deadline. The model receives a bounded 180,000-character hunk context. Diff rows are virtualized. A real 16,868-line GitHub fixture now exercises large capture and rendering; this is a bounded corpus check, not a broad performance benchmark. A curated comparative guide-quality study has not been completed. No claim that this guide outperforms Linear or Diffity has been established.
 
 The local macOS bundle is not a signed/notarized release, and other OS/architecture combinations are not yet validated. Auto-update, public downloads, the diff.city website, dependency-license audit, and clean-machine distribution gates remain on the release roadmap. Repository visibility stays private until the owner chooses a public launch.
 
@@ -99,3 +99,5 @@ flowchart LR
   Steps -->|error| Rollback[Roll back entire upgrade]
   Version -->|newer| Stop[Require a newer app]
 ```
+
+The large-text fallback uses the PR merge base rather than the target branch tip, so unrelated changes on the target branch cannot enter the reconstructed diff. It reads through GitHub's authenticated contents endpoint without following redirects. Snapshot capture format version 2 keeps newly reconstructed code separate from earlier incomplete captures. [GitHub content media types](https://docs.github.com/en/rest/repos/contents) and the [similar diff library](https://docs.rs/similar/latest/similar/) document the underlying APIs.
