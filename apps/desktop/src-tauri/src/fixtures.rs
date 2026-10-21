@@ -179,7 +179,7 @@ mod inbox_tests {
             .await
             .unwrap_err();
         assert!(error.to_string().contains("sample PR is local"));
-        let history = service.history(Some(INBOX_REPO), 1).await.unwrap();
+        let history = service.history(Some(INBOX_REPO), 1, None).await.unwrap();
         assert_eq!(history.pulls.len(), 6);
         assert!(history.pulls.iter().all(|p| p.state != "open"));
     }

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { PullRequest } from "./api";
-import { inboxGroup, inboxGroups, reviewLabel, visiblePulls } from "./inbox";
+import {
+  inboxGroup,
+  inboxGroups,
+  reviewLabel,
+  visiblePulls,
+  repositoryOwners,
+  repositoriesForOwner,
+  resolveScope,
+} from "./inbox";
 import fixture from "../../../../tests/fixtures/review-workspace.json";
 const now = Date.parse("2026-10-21T12:00:00Z");
 const ago = (days: number) => new Date(now - days * 86_400_000).toISOString();
@@ -115,4 +123,48 @@ describe("repo inbox priorities", () => {
     ).toEqual([3]);
     expect(pulls.map((p) => p.number)).toEqual([1, 2, 3]);
   });
+});
+
+it("narrows accounts and repos without losing review priority or completion rules", () => {
+  const pulls = [
+    pr({ number: 1, repository: "Acme/api" }),
+    pr({ number: 2, repository: "acme/web" }),
+    pr({ number: 3, repository: "another/api" }),
+    pr({
+      number: 4,
+      repository: "acme/api",
+      state: "merged",
+      mergedAt: ago(1),
+      author: "ME",
+    }),
+  ];
+  expect(
+    visiblePulls(pulls, { ...options, owner: "ACME" }).map((p) => p.number),
+  ).toEqual([1, 2, 4]);
+  expect(
+    visiblePulls(pulls, {
+      ...options,
+      owner: "acme",
+      repository: "ACME/API",
+    }).map((p) => p.number),
+  ).toEqual([1, 4]);
+  expect(
+    visiblePulls(pulls, { ...options, owner: "acme", history: true }).map(
+      (p) => p.number,
+    ),
+  ).toEqual([4]);
+});
+it("deduplicates account names and falls back when a tracked repo or account is removed", () => {
+  const repos = ["Acme/api", "acme/web", "me/personal"];
+  expect(repositoryOwners(repos)).toEqual(["acme", "me"]);
+  expect(repositoriesForOwner(repos, "ACME")).toEqual(["Acme/api", "acme/web"]);
+  expect(
+    resolveScope({ owner: "ACME", repository: "acme/deleted" }, repos),
+  ).toEqual({ owner: "acme", repository: null });
+  expect(
+    resolveScope({ owner: "gone", repository: "gone/repo" }, repos),
+  ).toEqual({ owner: null, repository: null });
+  expect(
+    resolveScope({ owner: "acme", repository: "me/personal" }, repos),
+  ).toEqual({ owner: "acme", repository: null });
 });

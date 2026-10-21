@@ -240,5 +240,13 @@
   "Local samples · fictional authors and review states": "Local samples · fictional authors and review states",
   "Local sample · shared invitation code, fictional PR metadata": "Local sample · shared invitation code, fictional PR metadata",
   "Simulate submitted review": "Simulate submitted review",
-  "Simulate review request": "Simulate review request"
+  "Simulate review request": "Simulate review request",
+  "All accounts": "All accounts",
+  "Organizations and accounts": "Organizations and accounts",
+  "Choose an organization or account": "Choose an organization or account",
+  "Pull requests across your tracked repos": "Pull requests across your tracked repos",
+  "View tracked repos": "View tracked repos",
+  "GitHub connected as {{login}}": "GitHub connected as {{login}}",
+  "Repo": "Repo",
+  "All tracked repos": "All tracked repos"
 }

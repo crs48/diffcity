@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     settings.repositories = vec![repository.clone()];
     service.settings(settings)?;
     let inbox = service.inbox().await?;
-    let history = service.history(Some(&repository), 1).await?;
+    let history = service.history(Some(&repository), 1, None).await?;
     ensure!(
         history.sync_error.is_none(),
         "History must come from GitHub"

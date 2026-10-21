@@ -37,6 +37,7 @@ export function visiblePulls(
   {
     login,
     repository,
+    owner = null,
     query,
     history,
     completedDays,
@@ -44,6 +45,7 @@ export function visiblePulls(
   }: {
     login: string;
     repository: string | null;
+    owner?: string | null;
     query: string;
     history: boolean;
     completedDays: number;
@@ -55,7 +57,8 @@ export function visiblePulls(
     ...new Map(pulls.map((p) => [`${p.repository}#${p.number}`, p])).values(),
   ]
     .filter((p) => {
-      if (repository && p.repository !== repository) return false;
+      if (repository && !sameLogin(p.repository, repository)) return false;
+      if (owner && !sameLogin(p.repository.split("/")[0], owner)) return false;
       if (
         !`${p.title} ${p.number} ${p.author} ${p.repository} ${p.state}`
           .toLowerCase()
@@ -103,4 +106,37 @@ export function reviewLabel(p: PullRequest, login: string) {
   if (p.reviewDecision === "APPROVED") return "Approved";
   if (p.reviewDecision === "CHANGES_REQUESTED") return "Changes requested";
   return "Awaiting review";
+}
+
+export type InboxScope = { owner: string | null; repository: string | null };
+export const repositoryOwners = (repositories: string[]) =>
+  [
+    ...new Map(
+      repositories.map((repo) => {
+        const owner = repo.split("/")[0];
+        return [owner.toLowerCase(), owner];
+      }),
+    ).values(),
+  ].sort((a, b) => a.localeCompare(b));
+export const repositoriesForOwner = (
+  repositories: string[],
+  owner: string | null,
+) =>
+  repositories.filter((repo) => !owner || sameLogin(repo.split("/")[0], owner));
+// Removing a tracked repo/account returns to the nearest available scope.
+export function resolveScope(
+  scope: InboxScope,
+  repositories: string[],
+): InboxScope {
+  if (scope.repository === SAMPLE_REPO)
+    return { owner: null, repository: SAMPLE_REPO };
+  const owner =
+    repositoryOwners(repositories).find((name) =>
+      sameLogin(name, scope.owner || ""),
+    ) ?? null;
+  const repository =
+    repositoriesForOwner(repositories, owner).find((repo) =>
+      sameLogin(repo, scope.repository || ""),
+    ) ?? null;
+  return { owner, repository };
 }

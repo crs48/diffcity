@@ -170,38 +170,30 @@
     height: 100dvh;
     overflow: hidden;
   }
-  .project-rail {
-    width: 205px;
+  .account-rail {
+    width: 64px;
     flex-shrink: 0;
-    background: var(--subtle);
-    color: var(--muted);
     display: flex;
     flex-direction: column;
-    padding: 0 12px;
+    align-items: center;
+    padding: 0 8px 12px;
+    gap: 8px;
+    background: var(--rail);
+    color: var(--muted);
+    border-right: 1px solid var(--border);
   }
   .traffic-spacer {
-    height: 40px;
+    height: 36px;
     flex-shrink: 0;
   }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 13px 10px 33px;
+  .rail-brand {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-bottom: 8px;
     color: var(--text);
-  }
-  .brand strong {
-    font-size: 23px;
-    letter-spacing: -1px;
-    font-weight: 650;
-  }
-  .brand > span {
-    font-size: 12px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 2px 4px;
-    color: var(--muted);
-    margin-left: auto;
   }
   .brand-mark {
     display: flex;
@@ -210,7 +202,7 @@
     height: 22px;
   }
   .brand-mark i {
-    background: var(--subtle);
+    background: currentColor;
     width: 6px;
     height: 15px;
     border-radius: 1px;
@@ -221,73 +213,131 @@
   .brand-mark i:nth-child(3) {
     height: 19px;
   }
-  .workspace-label,
-  .rail-heading {
-    font-size: 12px;
-    font-weight: 650;
-    letter-spacing: 1.7px;
-    padding: 0 11px;
-    color: var(--muted);
+  .account-list {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 8px;
+    margin: -4px -8px;
   }
-  .workspace-label {
-    margin-bottom: 12px;
+  .account-button {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    padding: 4px;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
-  .rail-item {
-    width: 100%;
-    justify-content: flex-start;
-    border-radius: 6px;
-    padding: 10px;
-    gap: 10px;
-    font-size: 12px;
-    text-align: left;
-    min-width: 0;
-  }
-  .rail-item > span {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .rail-item small {
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .rail-item:hover {
-    background: var(--subtle);
-  }
-  .rail-item.active {
-    background: var(--subtle);
+  .account-button:hover {
+    background: var(--selected);
     color: var(--text);
   }
-  .rail-item.active svg {
-    color: var(--muted);
+  .account-button[aria-pressed="true"] {
+    color: var(--text);
+    background: var(--selected);
+    border-color: var(--text);
   }
-  .rail-heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 25px 0 10px;
+  .account-button[aria-pressed="true"]::before {
+    content: "";
+    position: absolute;
+    width: 3px;
+    height: 18px;
+    left: -8px;
+    border-radius: 2px;
+    background: currentColor;
   }
-  .add-project {
-    margin-top: 6px;
-    color: var(--muted);
+  .account-avatar {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--subtle);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .account-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(1);
   }
   .rail-bottom {
     margin-top: auto;
-    padding-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
   }
-  .rail-bottom .rail-item {
-    font-size: 12px;
+  .connection-attention {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    color: var(--surface);
+    font-size: 10px;
+    line-height: 14px;
   }
-  .connection-summary {
+  .rail-tooltip {
+    z-index: 100;
+    max-width: 280px;
+    padding: 9px 12px;
+    border: 1px solid var(--control-border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
     font-size: 12px;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+  }
+  .rail-tooltip strong,
+  .rail-tooltip span {
+    display: block;
+  }
+  .rail-tooltip span {
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .repo-filter {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 8px 11px 0;
+    gap: 10px;
+    margin: 0 16px 12px;
+    font-size: 12px;
   }
-  .connection-summary > span:nth-child(2) {
-    flex: 1;
+  .repo-filter > span {
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .repo-filter select {
+    width: 100%;
+    min-height: 34px;
+    min-width: 0;
+    padding: 7px 6px;
+    text-overflow: ellipsis;
+    border: 1px solid var(--control-border);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  .inbox-account {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .status-dot {
     display: inline-block;
@@ -308,11 +358,8 @@
   .icon-button:hover {
     background: var(--subtle);
   }
-  .project-rail .icon-button:hover {
-    background: var(--subtle);
-  }
   .inbox-pane {
-    width: 270px;
+    width: 300px;
     flex-shrink: 0;
     border-right: 1px solid var(--border);
     display: flex;
@@ -1664,11 +1711,8 @@
     color: var(--green);
   }
   @media (max-width: 1250px) {
-    .project-rail {
-      width: 180px;
-    }
     .inbox-pane {
-      width: 230px;
+      width: 270px;
     }
     .reading-area {
       padding: 24px;
@@ -1747,28 +1791,6 @@
   }
   .search-box {
     border-color: var(--control-border);
-  }
-  .project-rail {
-    background: var(--rail);
-    color: var(--muted);
-    border-right: 1px solid var(--border);
-  }
-  .brand,
-  .brand-mark,
-  .rail-item.active,
-  .rail-item.active svg {
-    color: var(--text);
-  }
-  .brand-mark i {
-    background: currentColor;
-  }
-  .rail-item.active {
-    background: var(--selected);
-    box-shadow: inset 3px 0 var(--text);
-  }
-  .rail-item:hover,
-  .project-rail .icon-button:hover {
-    background: var(--subtle);
   }
   .inbox-pane {
     background: var(--rail);
@@ -1974,13 +1996,13 @@
     .secondary,
     .icon-button,
     .line-comment,
-    .rail-item,
+    .account-button,
     .pull-card,
     [role="tab"],
     [role="menuitem"] {
       border: 1px solid ButtonText;
     }
-    .rail-item.active,
+    .account-button[aria-pressed="true"],
     .pull-card.active,
     [role="tab"][data-selected] {
       outline: 2px solid Highlight;
@@ -2007,34 +2029,6 @@
     }
     .app:not(.inbox-hidden) .workspace {
       display: none;
-    }
-    .project-rail {
-      width: 64px;
-      padding: 0 8px;
-    }
-    .brand {
-      padding: 14px 12px 24px;
-    }
-    .brand > strong,
-    .brand > span,
-    .workspace-label,
-    .rail-heading,
-    .connection-summary,
-    .rail-item small {
-      display: none;
-    }
-    .rail-item > span {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-    .rail-item {
-      justify-content: center;
-      min-height: 40px;
     }
     .inbox-pane {
       position: static;

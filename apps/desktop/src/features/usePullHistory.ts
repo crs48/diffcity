@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type PullRequest } from "../lib/api";
 import { key } from "../lib/review";
 
-export function usePullHistory(repository: string | null, enabled: boolean) {
+export function usePullHistory(
+  repository: string | null,
+  enabled: boolean,
+  owner: string | null = null,
+  repositoriesKey = "",
+) {
   const [pulls, setPulls] = useState<PullRequest[]>([]);
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -14,7 +19,7 @@ export function usePullHistory(repository: string | null, enabled: boolean) {
       setLoading(true);
       setError("");
       try {
-        const result = await api.history(repository, page);
+        const result = await api.history(repository, page, owner);
         if (id !== request.current) return;
         setPulls((previous) => [
           ...new Map(
@@ -32,7 +37,7 @@ export function usePullHistory(repository: string | null, enabled: boolean) {
         if (id === request.current) setLoading(false);
       }
     },
-    [repository],
+    [repository, owner],
   );
   useEffect(() => {
     if (!enabled) return;
@@ -43,6 +48,6 @@ export function usePullHistory(repository: string | null, enabled: boolean) {
     return () => {
       ++generation.current;
     };
-  }, [load, enabled]);
+  }, [load, enabled, repositoriesKey]);
   return { pulls, nextPage, loading, error, load };
 }

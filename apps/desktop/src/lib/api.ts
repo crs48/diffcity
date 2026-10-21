@@ -16,8 +16,8 @@ export type * from "../../../../packages/contracts/src";
 export const api = {
   bootstrap: () => invoke<Bootstrap>("bootstrap"),
   inbox: () => invoke<PullRequest[]>("refresh_inbox"),
-  history: (repository: string | null, page = 1) =>
-    invoke<PullPage>("list_pull_history", { repository, page }),
+  history: (repository: string | null, page = 1, owner: string | null = null) =>
+    invoke<PullPage>("list_pull_history", { repository, page, owner }),
   repositories: () => invoke<Repository[]>("list_repositories"),
   settings: (settings: Settings) =>
     invoke<Settings>("save_settings", { settings }),

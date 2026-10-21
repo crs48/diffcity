@@ -54,3 +54,29 @@ it("ignores an old repository response when the user changes projects", async ()
   );
   expect(result.current.pulls[0]?.number).toBe(2);
 });
+
+it("invalidates old account pages and reloads when its tracked repo set changes", async () => {
+  let finishOld: (value: PullPage) => void = () => {};
+  const history = vi
+    .spyOn(api, "history")
+    .mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishOld = resolve;
+      }),
+    )
+    .mockResolvedValue({ pulls: [pull(2)], nextPage: null, syncError: null });
+  const { result, rerender } = renderHook(
+    ({ owner, repos }) => usePullHistory(null, true, owner, repos),
+    { initialProps: { owner: "old", repos: "old/api" } },
+  );
+  rerender({ owner: "new", repos: "new/api" });
+  await waitFor(() => expect(result.current.pulls[0]?.number).toBe(2));
+  expect(history).toHaveBeenLastCalledWith(null, 1, "new");
+  await act(async () =>
+    finishOld({ pulls: [pull(1)], nextPage: 2, syncError: null }),
+  );
+  expect(result.current.pulls[0]?.number).toBe(2);
+  expect(result.current.nextPage).toBeNull();
+  rerender({ owner: "new", repos: "new/api,new/web" });
+  await waitFor(() => expect(history).toHaveBeenCalledTimes(3));
+});

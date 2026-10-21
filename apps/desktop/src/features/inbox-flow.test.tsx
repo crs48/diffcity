@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   within,
@@ -20,6 +21,8 @@ import type {
 import fixture from "../../../../tests/fixtures/review-workspace.json";
 const workspace = fixture as ReviewWorkspace;
 let settings: Settings;
+let livePulls: PullRequest[];
+const historyRequest = vi.fn();
 const ago = (days: number) =>
   new Date(Date.now() - days * 86_400_000).toISOString();
 const samples: PullRequest[] = [
@@ -63,6 +66,8 @@ const samples: PullRequest[] = [
 ];
 beforeEach(() => {
   localStorage.clear();
+  livePulls = [];
+  historyRequest.mockReset();
   settings = {
     repositories: ["owner/repo"],
     ghPath: null,
@@ -109,10 +114,14 @@ beforeEach(() => {
             detail: "Fixture",
           },
           models: [],
-          pulls: [],
+          pulls: livePulls,
           schemaVersion: 3,
           dataDirectory: "fixture",
         } satisfies Bootstrap;
+      if (command === "list_pull_history") {
+        historyRequest(payload);
+        return { pulls: [], nextPage: null, syncError: null };
+      }
       if (command === "sample_inbox") return structuredClone(samples);
       if (command === "open_pull")
         return {
@@ -162,9 +171,7 @@ it("moves a sample review down and back up without publishing or changing real i
     ),
   ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Open in GitHub" })).toBeNull();
-  await user.click(
-    screen.getByRole("button", { name: "Finish review" }),
-  );
+  await user.click(screen.getByRole("button", { name: "Finish review" }));
   const dialog = screen.getByRole("dialog");
   await user.type(
     within(dialog).getByLabelText("Review summary"),
@@ -200,14 +207,95 @@ it("persists display choices and keeps older and other-author completions in His
   render(<App />);
   await user.click(await screen.findByRole("button", { name: "Sample inbox" }));
   await screen.findByRole("button", { name: /Completed four days ago/ });
-  await user.click(
-    screen.getByRole("button", { name: "History" }),
-  );
+  await user.click(screen.getByRole("button", { name: "History" }));
   await screen.findByRole("button", { name: /Another author's merged PR/ });
-  await user.click(screen.getByRole("button", { name: /All pull requests/ }));
+  await user.click(screen.getByRole("button", { name: "All accounts" }));
   await waitFor(() =>
     expect(
       screen.queryByText("Local samples · fictional authors and review states"),
     ).toBeNull(),
+  );
+});
+
+it("filters all accounts to an account then a repo, preserving search and history scope", async () => {
+  settings.repositories = ["acme/api", "acme/web", "me/api"];
+  livePulls = settings.repositories.map((repository, index) => ({
+    ...workspace.snapshot.pull,
+    repository,
+    number: index + 1,
+    title: `Update ${repository}`,
+  }));
+  const user = userEvent.setup();
+  render(<App />);
+  const acme = await screen.findByRole("button", { name: "acme" });
+  const image = acme.querySelector("img")!;
+  fireEvent.error(image);
+  expect(acme.querySelector("img")).toBeNull();
+  expect(acme.textContent).toBe("AC");
+  acme.focus();
+  await user.keyboard("{Enter}");
+  expect(acme.getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("button", { name: /Update acme\/api/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Update me\/api/ })).toBeNull();
+  expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+    "All tracked repos",
+    "api",
+    "web",
+  ]);
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Repo" }),
+    "acme/web",
+  );
+  expect(screen.queryByRole("button", { name: /Update acme\/api/ })).toBeNull();
+  await user.type(
+    screen.getByRole("textbox", { name: "Search pull requests" }),
+    "Update",
+  );
+  await user.click(screen.getByRole("button", { name: "me" }));
+  expect(
+    (screen.getByRole("combobox", { name: "Repo" }) as HTMLSelectElement).value,
+  ).toBe("");
+  expect(screen.getByRole("button", { name: /Update me\/api/ })).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("textbox", {
+        name: "Search pull requests",
+      }) as HTMLInputElement
+    ).value,
+  ).toBe("Update");
+  await user.click(screen.getByRole("button", { name: "History" }));
+  await waitFor(() =>
+    expect(historyRequest).toHaveBeenLastCalledWith({
+      repository: null,
+      owner: "me",
+      page: 1,
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "acme" }));
+  await waitFor(() =>
+    expect(historyRequest).toHaveBeenLastCalledWith({
+      repository: null,
+      owner: "acme",
+      page: 1,
+    }),
+  );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Repo" }),
+    "acme/api",
+  );
+  await waitFor(() =>
+    expect(historyRequest).toHaveBeenLastCalledWith({
+      repository: "acme/api",
+      owner: "acme",
+      page: 1,
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "All accounts" }));
+  await waitFor(() =>
+    expect(historyRequest).toHaveBeenLastCalledWith({
+      repository: null,
+      owner: null,
+      page: 1,
+    }),
   );
 });

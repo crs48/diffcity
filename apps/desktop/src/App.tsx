@@ -17,7 +17,6 @@ import {
   FolderGit2,
   GitPullRequest,
   Github,
-  Inbox,
   LoaderCircle,
   MessageSquare,
   PanelLeftClose,
@@ -46,6 +45,7 @@ import { ConversationContext } from "./features/conversation";
 import { useNoteComposer } from "./features/useNoteComposer";
 import { Connections, Finish, Repos } from "./features/Dialogs";
 import { DisplaySettings } from "./features/DisplaySettings";
+import { AccountNavigation, RepoFilter } from "./features/AccountNavigation";
 import { PullList } from "./features/PullList";
 import {
   SAMPLE_REPO,
@@ -53,6 +53,10 @@ import {
   sameLogin,
   requestedFrom,
   visiblePulls,
+  repositoryOwners,
+  repositoriesForOwner,
+  resolveScope,
+  type InboxScope,
 } from "./lib/inbox";
 import "./styles.css";
 
@@ -61,10 +65,18 @@ export default function App() {
   const [inboxView, setInboxView] = useState<"open" | "history">("open");
   const [data, setData] = useState<Bootstrap | null>(null);
   const [pulls, setPulls] = useState<PullRequest[]>([]);
-  const [repo, setRepo] = useState<string | null>(null);
+  const [scope, setScope] = useState<InboxScope>({
+    owner: null,
+    repository: null,
+  });
+  const repositories = data?.settings.repositories ?? [];
+  const { owner, repository: repo } = resolveScope(scope, repositories);
+  const scopedRepositories = repositoriesForOwner(repositories, owner);
   const history = usePullHistory(
     repo,
     inboxView === "history" && repo !== SAMPLE_REPO,
+    owner,
+    scopedRepositories.join(","),
   );
   const [samplePulls, setSamplePulls] = useState<PullRequest[]>([]);
   const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
@@ -94,9 +106,7 @@ export default function App() {
     if (matchMedia("(max-width: 1000px)").matches) {
       requestAnimationFrame(() => {
         const target = open
-          ? document.querySelector<HTMLInputElement>(
-              '[aria-label="Search pull requests"]',
-            )
+          ? document.getElementById("pull-search")
           : document.getElementById("review-workspace");
         target?.focus();
       });
@@ -434,6 +444,7 @@ export default function App() {
     {
       login,
       repository: repo,
+      owner,
       query,
       history: inboxView === "history",
       completedDays: data?.settings.completedDays ?? 2,
@@ -442,7 +453,7 @@ export default function App() {
   const exploreInbox = async () => {
     try {
       setSamplePulls(await api.sampleInbox());
-      setRepo(SAMPLE_REPO);
+      setScope({ owner: null, repository: SAMPLE_REPO });
       setInboxView("open");
       setQuery("");
       setInboxOpen(true);
@@ -481,118 +492,25 @@ export default function App() {
       >
         {t("Skip to review")}{" "}
       </a>
-      <aside className="project-rail" aria-label={t("Repos and connections")}>
-        <div className="traffic-spacer" data-tauri-drag-region />
-        <div className="brand">
-          <div className="brand-mark">
-            <i />
-            <i />
-            <i />
-          </div>
-          <strong>diffcity</strong>
-          <span>alpha</span>
-        </div>
-        <div className="workspace-label">{t("YOUR WORKSPACE")} </div>
-        <Button
-          className={`rail-item ${!repo ? "active" : ""}`}
-          aria-pressed={!repo}
-          onPress={() => {
-            setRepo(null);
-            setInboxOpen(true);
-          }}
-        >
-          <Inbox size={17} />
-          <span>{t("All pull requests")} </span>
-          <small>{pulls.filter((p) => p.state === "open").length}</small>
-        </Button>
-        <div className="rail-heading">
-          {t("REPOS")}{" "}
-          <Button
-            className="icon-button"
-            aria-label={t("Add repos")}
-            onPress={() => setDialog("repos")}
-          >
-            <Plus size={15} />
-          </Button>
-        </div>
-        <nav aria-label={t("Repos")}>
-          {data?.settings.repositories.map((name) => (
-            <Button
-              className={`rail-item ${repo === name ? "active" : ""}`}
-              aria-pressed={repo === name}
-              aria-label={name}
-              key={name}
-              onPress={() => {
-                setRepo(name);
-                setInboxOpen(true);
-              }}
-            >
-              <FolderGit2 size={16} />
-              <span>{name.split("/")[1]}</span>
-              <small>
-                {
-                  pulls.filter(
-                    (p) => p.repository === name && p.state === "open",
-                  ).length
-                }
-              </small>
-            </Button>
-          ))}
-        </nav>
-        <Button
-          className="rail-item add-project"
-          onPress={() => setDialog("repos")}
-        >
-          <Plus size={15} />
-          <span>{t("Add repo")} </span>
-        </Button>
-        <div className="rail-bottom">
-          <Button
-            className={`rail-item ${samples ? "active" : ""}`}
-            aria-pressed={samples}
-            onPress={() => void exploreInbox()}
-          >
-            <Inbox size={16} />
-            <span>{t("Sample inbox")}</span>
-          </Button>
-          <Button className="rail-item" onPress={() => void sample()}>
-            <BookOpen size={16} />
-            <span>{t("Explore a sample")} </span>
-          </Button>
-          <Button
-            className="rail-item"
-            onPress={() => setDialog("connections")}
-          >
-            <Settings2 size={16} />
-            <span>{t("Connections")} </span>
-          </Button>
-          <div className="connection-summary">
-            <span
-              className={`status-dot ${data?.github.connected ? "online" : ""}`}
-            />
-            <span>{data?.github.identity || "GitHub disconnected"}</span>
-            <Github size={13} />
-          </div>
-          <div className="connection-summary">
-            <span
-              className={`status-dot ${data?.codex.connected ? "online" : ""}`}
-            />
-            <span>
-              {data?.codex.connected
-                ? t("Codex connected")
-                : t("Codex disconnected")}
-            </span>
-            <Sparkles size={13} />
-          </div>
-        </div>
-      </aside>
+      <AccountNavigation
+        owners={repositoryOwners(repositories)}
+        owner={owner}
+        samples={samples}
+        data={data}
+        onOwner={(owner) => {
+          setScope({ owner, repository: null });
+          setInboxOpen(true);
+        }}
+        onRepos={() => setDialog("repos")}
+        onSamples={() => void exploreInbox()}
+        onExample={() => void sample()}
+        onConnections={() => setDialog("connections")}
+      />
       {inboxVisible && (
         <aside className="inbox-pane" aria-label={t("Pull request inbox")}>
           <header data-tauri-drag-region>
-            <span>
-              {samples
-                ? t("Sample inbox")
-                : repo?.split("/")[1] || t("Pull requests")}
+            <span className="inbox-account" title={owner || undefined}>
+              {samples ? t("Sample inbox") : owner || t("All accounts")}
             </span>
             <Button
               className="icon-button close-inbox"
@@ -624,9 +542,18 @@ export default function App() {
               <RefreshCw size={15} />
             </Button>
           </header>
+          {!samples && (
+            <RepoFilter
+              repositories={scopedRepositories}
+              owner={owner}
+              repository={repo}
+              onChange={(repository) => setScope({ owner, repository })}
+            />
+          )}
           <div className="search-box inbox-search">
             <Search size={14} />
             <input
+              id="pull-search"
               aria-label={t("Search pull requests")}
               placeholder={t("Search pull requests")}
               value={query}

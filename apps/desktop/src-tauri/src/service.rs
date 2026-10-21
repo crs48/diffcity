@@ -92,8 +92,13 @@ impl Service {
         self.store.put("cache", "inbox", &pulls)?;
         Ok(pulls)
     }
-    pub async fn history(&self, repository: Option<&str>, page: u32) -> Result<PullPage> {
-        if repository == Some(fixtures::INBOX_REPO) {
+    pub async fn history(
+        &self,
+        repository: Option<&str>,
+        page: u32,
+        owner: Option<&str>,
+    ) -> Result<PullPage> {
+        if repository == Some(fixtures::INBOX_REPO) && owner.is_none() {
             let login = self
                 .store
                 .get::<String>("identity", "github")?
@@ -115,11 +120,7 @@ impl Service {
             bail!("Invalid history page");
         }
         let settings = self.store.settings()?;
-        let repositories = match repository {
-            Some(repo) if settings.repositories.iter().any(|r| r == repo) => vec![repo.to_string()],
-            Some(_) => bail!("Choose a tracked repository to browse its history"),
-            None => settings.repositories,
-        };
+        let repositories = history_repositories(&settings.repositories, repository, owner)?;
         let cache_key = format!(
             "history-{}-{page}",
             domain::hash(&serde_json::to_string(&repositories)?)
@@ -621,6 +622,35 @@ struct Operation {
     result: PublishResult,
 }
 
+fn history_repositories(
+    tracked: &[String],
+    repository: Option<&str>,
+    owner: Option<&str>,
+) -> Result<Vec<String>> {
+    let scoped: Vec<String> = tracked
+        .iter()
+        .filter(|repo| {
+            owner.is_none_or(|owner| {
+                repo.split('/')
+                    .next()
+                    .is_some_and(|name| name.eq_ignore_ascii_case(owner))
+            })
+        })
+        .cloned()
+        .collect();
+    if owner.is_some() && scoped.is_empty() {
+        bail!("Choose an account with tracked repositories to browse its history");
+    }
+    match repository {
+        Some(repo) => scoped
+            .into_iter()
+            .find(|name| name.eq_ignore_ascii_case(repo))
+            .map(|name| vec![name])
+            .context("Choose a tracked repository in this account to browse its history"),
+        None => Ok(scoped),
+    }
+}
+
 fn discussion_history(notes: &[Note], current: &Note) -> Vec<Value> {
     let mut relevant: Vec<_> = notes
         .iter()
@@ -844,5 +874,27 @@ mod discussion_tests {
         assert_eq!(lines[0]["text"], "old one");
         assert_eq!(lines[1]["text"], "old two");
         assert_eq!(context["nearbyLines"].as_array().unwrap().len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod navigation_tests {
+    use super::history_repositories;
+    #[test]
+    fn history_is_scoped_to_tracked_repos_and_case_insensitive_accounts() {
+        let tracked = vec!["Acme/api".into(), "acme/web".into(), "me/api".into()];
+        assert_eq!(history_repositories(&tracked, None, None).unwrap(), tracked);
+        assert_eq!(
+            history_repositories(&tracked, None, Some("ACME")).unwrap(),
+            vec!["Acme/api", "acme/web"]
+        );
+        assert_eq!(
+            history_repositories(&tracked, Some("acme/API"), Some("acme")).unwrap(),
+            vec!["Acme/api"]
+        );
+        assert!(history_repositories(&tracked, Some("me/api"), Some("acme")).is_err());
+        assert!(history_repositories(&tracked, None, Some("unknown")).is_err());
+        assert!(history_repositories(&tracked, Some("acme/untracked"), None).is_err());
+        assert!(history_repositories(&[], None, None).unwrap().is_empty());
     }
 }

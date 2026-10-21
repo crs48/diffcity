@@ -24,9 +24,10 @@ pub async fn list_pull_history(
     service: State<'_, Arc<Service>>,
     repository: Option<String>,
     page: u32,
+    owner: Option<String>,
 ) -> Output<PullPage> {
     service
-        .history(repository.as_deref(), page)
+        .history(repository.as_deref(), page, owner.as_deref())
         .await
         .map_err(error)
 }
