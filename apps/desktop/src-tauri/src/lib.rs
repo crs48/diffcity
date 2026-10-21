@@ -1,5 +1,6 @@
 pub mod codex;
 mod commands;
+mod context;
 pub mod contracts;
 pub mod domain;
 pub mod fixtures;
@@ -36,6 +37,7 @@ pub fn run() {
             commands::pin_pull,
             commands::open_pull,
             commands::open_saved_review,
+            commands::hunk_context,
             commands::check_pull,
             commands::save_note,
             commands::delete_note,

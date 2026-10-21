@@ -313,5 +313,19 @@
   "High": "Alto",
   "Extra high": "Muy alto",
   "Maximum": "Máximo",
-  "Ultra": "Ultra"
+  "Ultra": "Ultra",
+  "Unchanged surrounding code": "Código sin cambios alrededor",
+  "Expand diff {{path}}": "Expandir diff {{path}}",
+  "Collapse diff {{path}}": "Contraer diff {{path}}",
+  "Show 25 lines above": "Mostrar 25 líneas anteriores",
+  "Show 25 lines below": "Mostrar 25 líneas siguientes",
+  "Collapse context": "Contraer contexto",
+  "Extra context is read-only; comment within the diff.": "El contexto adicional es de solo lectura; comenta dentro del diff.",
+  "Loading surrounding code…": "Cargando código circundante…",
+  "No more unchanged lines below this hunk.": "No hay más líneas sin cambios debajo de este bloque.",
+  "No more unchanged lines above this hunk.": "No hay más líneas sin cambios encima de este bloque.",
+  "Collapse changes": "Contraer cambios",
+  "Changes collapsed": "Cambios contraídos",
+  "Expand inline discussion": "Expandir conversación en línea",
+  "Collapse inline discussion": "Contraer conversación en línea"
 }

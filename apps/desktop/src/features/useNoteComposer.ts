@@ -3,7 +3,7 @@ import { api, type Anchor, type Note } from "../lib/api";
 import { newNote } from "../lib/review";
 import { sameAnchor } from "../lib/selection";
 
-// Workspace-owned state survives navigation and virtualization of an editor.
+// Workspace-owned state survives navigation and collapsing an editor.
 export function useNoteComposer(
   onNote: (note: Note) => void,
   onError: (error: unknown) => void,

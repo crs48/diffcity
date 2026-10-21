@@ -4,7 +4,13 @@ import { usePullHistory } from "./features/usePullHistory";
 import { Button, Tabs, TabList, Tab, TabPanel } from "react-aria-components";
 import { PinToggle } from "./ui/PinToggle";
 import { ThemeSwitcher } from "./ui/ThemeSwitcher";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -101,6 +107,11 @@ export default function App() {
   const [activeQuestion, setActiveQuestion] = useState<Note | null>(null);
   const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
+  const reviewScroll = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    // A new step starts at its explanation, even after a very long diff.
+    if (reviewScroll.current) reviewScroll.current.scrollTop = 0;
+  }, [mode, workspace?.snapshot.id, workspace?.progress.activeSection]);
   const [dialog, setDialog] = useState<
     "connections" | "finish" | "display" | "model" | null
   >(null);
@@ -1161,7 +1172,11 @@ export default function App() {
                 onError,
               }}
             >
-              <div className="review-body">
+              <div
+                ref={reviewScroll}
+                className="review-body"
+                data-review-scroll
+              >
                 <TabPanel id={mode} className="review-panel">
                   <GuideView
                     key={workspace.snapshot.id}

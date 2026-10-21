@@ -71,12 +71,14 @@ export function useLineSelection(
       const active = drag.current;
       const element = scroll.current;
       if (!active || !element) return;
-      const bounds = element.getBoundingClientRect();
+      const container =
+        element.closest<HTMLElement>("[data-review-scroll]") ?? element;
+      const bounds = container.getBoundingClientRect();
       const y = active.clientY - bounds.top;
-      // Keep dragging usable when a hunk has virtualized, offscreen rows.
-      if (y < 24) element.scrollTop -= Math.min(16, (24 - y) / 2);
+      // Selection scrolls the shared review viewport, never an individual diff.
+      if (y < 24) container.scrollTop -= Math.min(16, (24 - y) / 2);
       else if (y > bounds.height - 24)
-        element.scrollTop += Math.min(16, (y - bounds.height + 24) / 2);
+        container.scrollTop += Math.min(16, (y - bounds.height + 24) / 2);
       const end = lineAtPointer(hunk, element, active, indexAtOffset);
       if (end !== active.end) {
         active.end = end;

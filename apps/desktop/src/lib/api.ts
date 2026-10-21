@@ -3,6 +3,7 @@ import type {
   Bootstrap,
   ModelCatalog,
   ModelPreference,
+  HunkContext,
   Pins,
   Settings,
   RepositoryDirectory,
@@ -36,6 +37,13 @@ export const api = {
     invoke<ReviewWorkspace>("open_pull", { repository, number, refresh }),
   saved: (snapshotId: string) =>
     invoke<ReviewWorkspace>("open_saved_review", { snapshotId }),
+  context: (
+    snapshotId: string,
+    hunkId: string,
+    before: number,
+    after: number,
+  ) =>
+    invoke<HunkContext>("hunk_context", { snapshotId, hunkId, before, after }),
   check: (repository: string, number: number) =>
     invoke<PullRequest>("check_pull", { repository, number }),
   sampleInbox: () => invoke<PullRequest[]>("sample_inbox"),

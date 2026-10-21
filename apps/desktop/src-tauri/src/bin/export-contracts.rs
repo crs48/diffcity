@@ -24,6 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         LineKind,
         DiffLine,
         Hunk,
+        HunkContext,
         ChangedFile,
         Snapshot,
         Attention,

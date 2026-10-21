@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import "../i18n";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Button } from "react-aria-components";
 import { Check, Send } from "lucide-react";
 import type { Note } from "../lib/api";
@@ -24,6 +24,25 @@ export function NoteComposer({
   useEffect(() => {
     if (state.focus) input.current?.focus();
   }, [state.focus]);
+  useLayoutEffect(() => {
+    const element = input.current;
+    if (!element) return;
+    const resize = () => {
+      element.style.height = "auto";
+      element.style.height = `${element.scrollHeight + 2}px`;
+    };
+    resize();
+    let width = element.getBoundingClientRect().width;
+    const observer = new ResizeObserver(() => {
+      const next = element.getBoundingClientRect().width;
+      if (next !== width) {
+        width = next;
+        resize();
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [state.draft?.body]);
   if (!state.draft) return null;
   const editing = state.draft.githubDraft;
   return (

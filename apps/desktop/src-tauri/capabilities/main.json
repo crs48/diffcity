@@ -15,6 +15,7 @@
     "allow-pin-pull",
     "allow-open-pull",
     "allow-open-saved-review",
+    "allow-hunk-context",
     "core:window:allow-destroy",
     "allow-check-pull",
     "allow-save-note",

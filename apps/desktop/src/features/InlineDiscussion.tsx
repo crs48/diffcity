@@ -1,21 +1,26 @@
 import { useTranslation } from "react-i18next";
 import "../i18n";
 import { Button } from "react-aria-components";
-import { MessageSquare, PanelRightOpen, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  PanelRightOpen,
+  X,
+} from "lucide-react";
 import type { InlineThread } from "../lib/diffRows";
 import { lineRange, sameAnchor } from "../lib/selection";
 import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
-import { useConversationScroll } from "./useConversationScroll";
+import { useState } from "react";
 
 export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const { t } = useTranslation();
   const c = useConversation();
-  const messages = useConversationScroll(
-    thread.notes.length + thread.remote.length,
-    c?.stream ?? "",
-  );
+  const [collapsedAt, setCollapsedAt] = useState<number | null>(null);
+  const focus = c?.inline.focus ?? 0;
+  const collapsed = collapsedAt === focus;
   if (!c) return null;
   const active =
     c.inline.draft?.snapshotId === c.workspace.snapshot.id &&
@@ -30,6 +35,18 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
       aria-label={`Discussion for ${thread.anchor.path}, ${label}`}
     >
       <header>
+        <Button
+          className="icon-button"
+          aria-label={t(
+            collapsed
+              ? "Expand inline discussion"
+              : "Collapse inline discussion",
+          )}
+          aria-expanded={!collapsed}
+          onPress={() => setCollapsedAt(collapsed ? null : focus)}
+        >
+          {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        </Button>
         <MessageSquare size={14} />
         <strong>{label}</strong>
         <Button
@@ -49,32 +66,36 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
           </Button>
         )}
       </header>
-      <div className="inline-messages" {...messages}>
-        <ReviewMessages
-          notes={thread.notes.filter(
-            (n) => !active || n.id !== c.inline.draft?.id,
+      {!collapsed && (
+        <>
+          <div className="inline-messages">
+            <ReviewMessages
+              notes={thread.notes.filter(
+                (n) => !active || n.id !== c.inline.draft?.id,
+              )}
+              remote={thread.remote}
+              conversation={c}
+              inline
+              streaming={streaming}
+            />
+          </div>
+          {active ? (
+            <NoteComposer
+              state={c.inline}
+              inline
+              busy={c.busy}
+              onAsk={c.ask}
+              onError={c.onError}
+            />
+          ) : (
+            <Button
+              className="text-button inline-reply"
+              onPress={() => c.openInline(thread.anchor)}
+            >
+              {t("Reply or ask Codex")}{" "}
+            </Button>
           )}
-          remote={thread.remote}
-          conversation={c}
-          inline
-          streaming={streaming}
-        />
-      </div>
-      {active ? (
-        <NoteComposer
-          state={c.inline}
-          inline
-          busy={c.busy}
-          onAsk={c.ask}
-          onError={c.onError}
-        />
-      ) : (
-        <Button
-          className="text-button inline-reply"
-          onPress={() => c.openInline(thread.anchor)}
-        >
-          {t("Reply or ask Codex")}{" "}
-        </Button>
+        </>
       )}
     </section>
   );

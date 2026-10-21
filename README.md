@@ -46,7 +46,7 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 
 Use the appearance menu in the toolbar to choose **Light**, **Dark**, or **System**. The interface uses neutral black, white, and gray surfaces; PR status, diff additions/deletions, primary actions, and attention warnings retain semantic color. Appearance saves immediately without reconnecting accounts.
 
-Tailwind CSS supplies the styling foundation, and React Aria supplies buttons, tabs, menus, and dialog behavior. Keyboard users can skip to the review, switch tabs with arrow keys, navigate the guide outline, and dismiss dialogs with Escape. Focus returns to the opener. **All lines for assistive reading** renders the complete hunk instead of only the visible virtualized rows. Added and removed lines also have textual labels. See [accessibility checks and remaining work](docs/accessibility.md).
+Tailwind CSS supplies the styling foundation, and React Aria supplies buttons, tabs, menus, and dialog behavior. Keyboard users can skip to the review, switch tabs with arrow keys, navigate the guide outline, and dismiss dialogs with Escape. Focus returns to the opener. Code and discussions flow in one review scrollbar, with every expanded line available to assistive technology. Use **Collapse changes**, individual diff controls, or inline discussion controls to compact a section. **Show 25 lines above/below** reveals unchanged context from the captured revision; repeat to see more, or use **Collapse context**. Extra context is read-only and stops at adjacent changes. Added and removed lines also have textual labels. See [accessibility checks and remaining work](docs/accessibility.md).
 
 ## Data and integrations
 

@@ -313,5 +313,19 @@
   "High": "High",
   "Extra high": "Extra high",
   "Maximum": "Maximum",
-  "Ultra": "Ultra"
+  "Ultra": "Ultra",
+  "Unchanged surrounding code": "Unchanged surrounding code",
+  "Expand diff {{path}}": "Expand diff {{path}}",
+  "Collapse diff {{path}}": "Collapse diff {{path}}",
+  "Show 25 lines above": "Show 25 lines above",
+  "Show 25 lines below": "Show 25 lines below",
+  "Collapse context": "Collapse context",
+  "Extra context is read-only; comment within the diff.": "Extra context is read-only; comment within the diff.",
+  "Loading surrounding code…": "Loading surrounding code…",
+  "No more unchanged lines below this hunk.": "No more unchanged lines below this hunk.",
+  "No more unchanged lines above this hunk.": "No more unchanged lines above this hunk.",
+  "Collapse changes": "Collapse changes",
+  "Changes collapsed": "Changes collapsed",
+  "Expand inline discussion": "Expand inline discussion",
+  "Collapse inline discussion": "Collapse inline discussion"
 }

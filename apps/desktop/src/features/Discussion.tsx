@@ -6,15 +6,10 @@ import { lineRange } from "../lib/selection";
 import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
-import { useConversationScroll } from "./useConversationScroll";
 
 export function Discussion({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const c = useConversation();
-  const messages = useConversationScroll(
-    (c?.workspace.notes.length ?? 0) + (c?.workspace.comments.length ?? 0),
-    c?.stream ?? "",
-  );
   if (!c) return null;
   const anchor = c.chat.draft?.anchor;
   return (
@@ -48,7 +43,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
           </span>
         )}
       </div>
-      <div className="messages" {...messages}>
+      <div className="messages">
         {!c.workspace.notes.length && (
           <div className="discussion-empty">
             <Sparkles size={22} />

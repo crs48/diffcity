@@ -526,6 +526,66 @@ impl GitHub {
         };
         crate::text_diff::reconstruct(file, &old, &new, revision)
     }
+    pub(crate) async fn context_base(&self, pull: &PullRequest) -> Result<String> {
+        let valid_sha = |sha: &str| sha.len() == 40 && sha.chars().all(|c| c.is_ascii_hexdigit());
+        anyhow::ensure!(
+            domain::valid_repo(&pull.repository) && valid_sha(&pull.base) && valid_sha(&pull.head),
+            "Invalid captured GitHub revision"
+        );
+        let comparison = self
+            .request(
+                Method::GET,
+                &format!(
+                    "/repos/{}/compare/{}...{}?per_page=1",
+                    pull.repository, pull.base, pull.head
+                ),
+                None,
+                true,
+            )
+            .await?;
+        let base = comparison["merge_base_commit"]["sha"]
+            .as_str()
+            .filter(|sha| valid_sha(sha))
+            .context("GitHub did not return an immutable merge base")?;
+        Ok(base.into())
+    }
+    pub(crate) async fn context_sources(
+        &self,
+        pull: &PullRequest,
+        base: &str,
+        file: &ChangedFile,
+    ) -> Result<(String, String)> {
+        let valid_path = |path: &str| {
+            !path.is_empty()
+                && !path.contains('\\')
+                && path
+                    .split('/')
+                    .all(|part| !part.is_empty() && part != "." && part != "..")
+        };
+        anyhow::ensure!(
+            valid_path(&file.path) && file.previous_path.as_deref().is_none_or(valid_path),
+            "Invalid captured file path"
+        );
+        let mut budget = 4 * 1024 * 1024;
+        let old = if file.status == "added" {
+            String::new()
+        } else {
+            self.text_at(
+                &pull.repository,
+                base,
+                file.previous_path.as_deref().unwrap_or(&file.path),
+                &mut budget,
+            )
+            .await?
+        };
+        let new = if file.status == "removed" {
+            String::new()
+        } else {
+            self.text_at(&pull.repository, &pull.head, &file.path, &mut budget)
+                .await?
+        };
+        Ok((old, new))
+    }
     pub async fn comments(&self, pull: &PullRequest) -> Result<Vec<RemoteComment>> {
         let base = format!("/repos/{}", pull.repository);
         let mut result = vec![];

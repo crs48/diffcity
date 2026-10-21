@@ -2,6 +2,19 @@ use crate::{contracts::*, fixtures, service::Service};
 use std::sync::Arc;
 use tauri::{Emitter, State};
 type Output<T> = Result<T, String>;
+#[tauri::command]
+pub async fn hunk_context(
+    service: State<'_, Arc<Service>>,
+    snapshot_id: String,
+    hunk_id: String,
+    before: u32,
+    after: u32,
+) -> Output<HunkContext> {
+    service
+        .hunk_context(&snapshot_id, &hunk_id, before, after)
+        .await
+        .map_err(error)
+}
 fn error(e: anyhow::Error) -> String {
     format!("{e:#}")
 }

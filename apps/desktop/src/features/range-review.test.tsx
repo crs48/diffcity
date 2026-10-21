@@ -86,7 +86,6 @@ function SelectionExample({
       notes={[]}
       comments={[]}
       split
-      readingMode
     />
   );
 }
@@ -128,6 +127,13 @@ describe("multi-line review", () => {
       top: 0,
       height: 150,
     } as DOMRect);
+    Array.from(region.children).forEach((row, index) => {
+      vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
+        top: index * 25,
+        bottom: (index + 1) * 25,
+        height: 25,
+      } as DOMRect);
+    });
     fireEvent.pointerDown(lineButton(12, true), {
       pointerId: 1,
       isPrimary: true,
@@ -237,11 +243,7 @@ describe("multi-line review", () => {
     await user.click(
       await screen.findByRole("button", { name: "Explore a sample" }),
     );
-    await user.click(
-      await screen.findByRole("checkbox", {
-        name: "All lines for assistive reading",
-      }),
-    );
+
     const path = workspace.snapshot.files[0].path;
     const first = screen.getByRole("button", { name: `Select ${path} line 1` });
     const last = screen.getByRole("button", { name: `Select ${path} line 2` });
@@ -314,6 +316,18 @@ describe("multi-line review", () => {
     );
     await waitFor(() => expect(document.activeElement).toBe(composer));
     await user.paste("Keep this unfinished inline thought.");
+    await user.click(
+      within(thread).getByRole("button", {
+        name: "Collapse inline discussion",
+      }),
+    );
+    expect(within(thread).queryByRole("textbox")).toBeNull();
+    await user.click(
+      within(thread).getByRole("button", { name: "Expand inline discussion" }),
+    );
+    expect(
+      (within(thread).getByRole("textbox") as HTMLTextAreaElement).value,
+    ).toBe("Keep this unfinished inline thought.");
     await user.click(screen.getByRole("tab", { name: /Overview/ }));
     await user.click(screen.getByRole("tab", { name: "Guide" }));
     expect(

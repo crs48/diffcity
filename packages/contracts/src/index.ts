@@ -18,6 +18,7 @@ export type PullPage = { pulls: Array<PullRequest>, nextPage: number | null, syn
 export type LineKind = "context" | "addition" | "deletion" | "meta";
 export type DiffLine = { kind: LineKind, old: number | null, new: number | null, text: string, };
 export type Hunk = { id: string, fingerprint: string, path: string, header: string, lines: Array<DiffLine>, };
+export type HunkContext = { before: Array<DiffLine>, after: Array<DiffLine>, beforeRemaining: number, afterRemaining: number, };
 export type ChangedFile = { path: string, previousPath: string | null, status: string, additions: number, deletions: number, hunks: Array<Hunk>, unavailable: string | null, };
 export type Snapshot = { id: string, pull: PullRequest, capturedAt: string, files: Array<ChangedFile>, limitations: Array<string>, };
 export type Attention = "high" | "needsAssessment" | "standard" | "routine";

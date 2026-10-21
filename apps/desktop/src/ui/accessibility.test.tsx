@@ -227,7 +227,6 @@ describe("keyboard and assistive navigation", () => {
         notes={[]}
         comments={[]}
         split={false}
-        readingMode
       />,
     );
     expect(screen.getByText("added line 80")).toBeTruthy();

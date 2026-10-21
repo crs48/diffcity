@@ -20,12 +20,14 @@ flowchart LR
 - Review tabs use tab/tablist/tabpanel semantics with arrow-key navigation. Guide and appearance menus support keyboard selection and dismissal.
 - A skip link leads to the review workspace. Landmarks and controls have accessible names, and guide changes have a persistent live announcement.
 - Focus rings remain visible in both themes. Reduced-motion preferences remove transitions and animations. Forced-color rules preserve selection and focus indicators.
-- Diff signs and spoken added/removed labels provide alternatives to color. Line buttons expose selection state. Full-line reading mode keeps offscreen code in the accessibility tree, at the cost of rendering more rows.
-- Inline discussions sit immediately after their final code line; PR chat mirrors each saved message with a code reference that returns to the thread. The active editor stays mounted during virtualization. Agent responses expose a concise live status without announcing every streamed token.
-- Line ranges support dragging, Shift-click, and Shift + Up/Down. A live range label names the selected side and endpoints, and **Comment on lines** focuses the composer. Pointer dragging scrolls virtualized hunks; selections and discussions stay on their original side and range.
+- Diff signs and spoken added/removed labels provide alternatives to color. Line buttons expose selection state. Every expanded code line stays in the accessibility tree. Guide changes, individual hunks, and inline discussions can collapse completely.
+- Inline discussions sit immediately after their final code line; PR chat mirrors each saved message with a code reference that returns to the thread. Draft state survives collapsing and reopening the editor. Agent responses expose a concise live status without announcing every streamed token.
+- Line ranges support dragging, Shift-click, and Shift + Up/Down. A live range label names the selected side and endpoints, and **Comment on lines** focuses the composer. Pointer dragging scrolls the shared review viewport; selections and discussions stay on their original side and range.
 - Narrow layouts show the inbox or the review without covering controls. Opening a PR moves to the review; closing the inbox places focus in the workspace. Discussion stacks below the review at narrow widths.
 
 ## Verification
+
+The entries below include historical checks of the earlier virtualized layout. Current shared-scroll verification is recorded in the implementation log.
 
 - [x] Five component regression tests cover focus containment/restoration, busy-dialog Escape behavior, keyboard tabs and guide menus, persisted appearance without reconnecting, and keyboard selection of a distant line in full-line mode.
 - [x] All 42 automated tests, strict types, ESLint, and Clippy pass. Range regressions cover keyboard expansion/contraction, reverse dragging, old/new side isolation, and a saved multi-line comment sent to Codex.
@@ -37,6 +39,6 @@ flowchart LR
 - [x] WebKit pointer dragging selects lines 1–2 in reverse order and focuses the composer without collapsing the range. An 80-line virtualized fixture autoscrolls to select lines 1–33 while rendering only 43 rows. The sampled multi-line discussion has no axe-core WCAG A/AA violations.
 - [ ] Complete a manual VoiceOver audit of the installed app, including long diffs, line ranges, streamed answers, and new revisions.
 - [ ] Audit every interactive/error/disabled state, full 200–400% zoom behavior, and platform-specific high-contrast modes.
-- [ ] Validate large-PR performance when full-line reading is enabled.
+- [ ] Profile worst-case captures near the file and capture limits; the initial shared-scroll browser check uses a 3,000-line hunk.
 
 Browser checks use synthetic fixtures with mocked Tauri IPC and make no GitHub or Codex requests. They verify rendering and interaction, not native integration or live authentication. Local screenshots and browser logs are ignored under `output/playwright/` and `.playwright-cli/`.

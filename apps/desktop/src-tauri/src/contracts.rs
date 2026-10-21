@@ -215,6 +215,15 @@ pub struct Hunk {
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+pub struct HunkContext {
+    pub before: Vec<DiffLine>,
+    pub after: Vec<DiffLine>,
+    pub before_remaining: u32,
+    pub after_remaining: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
 pub struct ChangedFile {
     pub path: String,
     pub previous_path: Option<String>,

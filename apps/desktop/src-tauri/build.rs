@@ -12,6 +12,7 @@ fn main() {
             "pin_pull",
             "open_pull",
             "open_saved_review",
+            "hunk_context",
             "check_pull",
             "save_note",
             "delete_note",

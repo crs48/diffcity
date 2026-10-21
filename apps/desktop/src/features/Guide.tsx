@@ -23,6 +23,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Diff } from "./Diff";
+import { useConversation } from "./conversation";
+import { anchorKey } from "../lib/diffRows";
 import { labels, countProgress, sectionHasDiscussion } from "../lib/review";
 import type {
   Anchor,
@@ -49,7 +51,8 @@ export function GuideView({
   mode: "guide" | "files" | "overview";
 }) {
   const { t } = useTranslation();
-  const [readingMode, setReadingMode] = useState(false);
+  const conversation = useConversation();
+  const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const [split, setSplit] = useState(false);
   const [fileQuery, setFileQuery] = useState("");
   const sections = w.guide.sections;
@@ -89,7 +92,7 @@ export function GuideView({
           notes={w.notes}
           comments={w.comments.filter((c) => c.commit === w.snapshot.pull.head)}
           split={split}
-          readingMode={readingMode}
+          snapshotId={w.snapshot.id}
         />
       )
     );
@@ -140,16 +143,6 @@ export function GuideView({
   if (mode === "files")
     return (
       <div className="reading-area">
-        <div className="reading-controls">
-          <label>
-            <input
-              type="checkbox"
-              checked={readingMode}
-              onChange={(e) => setReadingMode(e.target.checked)}
-            />{" "}
-            {t("All lines for assistive reading")}{" "}
-          </label>
-        </div>
         <div className="file-tools">
           <input
             aria-label={t("Find a file")}
@@ -192,11 +185,13 @@ export function GuideView({
         </p>
       </div>
     );
+  const expansionKey = `${section.id}/${conversation?.inline.focus ?? 0}/${selection ? anchorKey(selection) : ""}`;
   const expanded =
-    !section.foldable ||
-    w.progress.expanded.includes(section.id) ||
-    sectionHasDiscussion(section, w) ||
-    (!!selection && section.hunkIds.includes(selection.hunkId));
+    collapsedAt !== expansionKey &&
+    (!section.foldable ||
+      w.progress.expanded.includes(section.id) ||
+      sectionHasDiscussion(section, w) ||
+      (!!selection && section.hunkIds.includes(selection.hunkId)));
   const reviewed =
     section.hunkIds.length > 0 &&
     section.hunkIds.every((id) => w.progress.reviewed.includes(id));
@@ -328,7 +323,13 @@ export function GuideView({
             <div className="fold-icon">
               <ChevronsUpDown size={23} />
             </div>
-            <h3>{t("Routine changes, kept together")} </h3>
+            <h3>
+              {t(
+                section.foldable
+                  ? "Routine changes, kept together"
+                  : "Changes collapsed",
+              )}{" "}
+            </h3>
             <p>
               {section.hunkIds.length} {t("hunks ·")}{" "}
               {
@@ -345,12 +346,13 @@ export function GuideView({
             </p>
             <Button
               className="secondary"
-              onPress={() =>
+              onPress={() => {
+                setCollapsedAt(null);
                 onProgress({
                   ...w.progress,
-                  expanded: [...w.progress.expanded, section.id],
-                })
-              }
+                  expanded: [...new Set([...w.progress.expanded, section.id])],
+                });
+              }}
             >
               <Eye size={15} />
               {t("Expand all changes")}{" "}
@@ -364,16 +366,6 @@ export function GuideView({
           </div>
         ) : (
           <>
-            <div className="reading-controls">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={readingMode}
-                  onChange={(e) => setReadingMode(e.target.checked)}
-                />{" "}
-                {t("All lines for assistive reading")}{" "}
-              </label>
-            </div>
             <div className="code-toolbar">
               <span>
                 <FileCode2 size={14} />
@@ -381,6 +373,9 @@ export function GuideView({
               </span>
               <Button onPress={() => setSplit(!split)}>
                 {split ? t("Unified view") : t("Split view")}
+              </Button>
+              <Button onPress={() => setCollapsedAt(expansionKey)}>
+                {t("Collapse changes")}
               </Button>
               <span className="muted">
                 {t(

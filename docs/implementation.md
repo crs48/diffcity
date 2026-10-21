@@ -297,3 +297,25 @@ The provider/model/effort preference has a dedicated document and command, so co
 - [x] Live Codex discovery returns seven models and confirms Astra/Extra high. An isolated smoke run persists the selection across restart, produces a three-section guided review, and answers a sample PR question using the saved default.
 - [x] Production WebKit checks model switching, effort adjustment, failed-save recovery, refresh, persistence, Escape/focus return, narrow layout, and light/dark axe WCAG A/AA. The multiline discussion regression uses user paste events for longer comments to avoid per-character timing sensitivity while retaining focus, anchoring, and mirroring assertions.
 - [x] The installed production app refreshes all seven models and saves Astra/Extra high through its native controls, and restores that choice after a full quit/relaunch. All eight existing private notes remain unchanged. [Model-selector CI](https://github.com/crs48/diffcity/actions/runs/39650762195) passes on `ecc7bc5`; the installed executable matches the packaged build, SHA-256 `bbc858c758bb570d127828463f1b6ff2344779e5b58520a879c4cfce62dc0a44`.
+
+## Shared review scrolling and surrounding context
+
+Guides, code, inline discussions, and the optional PR chat now flow inside one review viewport. Expanded hunks render every line, with long source and response text wrapping instead of creating nested scrollbars. Comment editors grow with their content. Guide changes, individual hunks, and inline threads can collapse completely; unfinished draft state survives reopening. Pointer range selection uses actual row geometry, including wrapped lines and inserted threads, and scrolls the shared viewport. Changing a guide step or review view returns to its beginning.
+
+```mermaid
+flowchart LR
+  Expand[Show 25 lines above or below] --> Capture[Captured snapshot and hunk]
+  Capture --> Revisions[Immutable head and merge base]
+  Revisions --> Fetch[Bounded source fetch]
+  Fetch --> Verify[Verify captured lines and unchanged context]
+  Verify --> Cache[SQLite source cache]
+  Cache --> Page[Expand within shared review scroll]
+```
+
+Context requests use a known captured hunk rather than accepting arbitrary paths. Renames use the prior path for the base source. Added/deleted files have an empty opposite side. Expansion stops at neighboring hunks and respects the existing 2 MiB and 50,000-line per-file bounds. A mismatching source produces an inline retryable error. Cached source is usable after restarting offline. Additional lines are read-only: existing comment anchors and bounded AI context remain unchanged.
+
+- [x] 67 Rust tests and 55 frontend tests pass. New coverage includes neighboring hunks, zero-context insertions/deletions, renames, Unicode/CRLF/no-final-newline text, stale or oversized source rejection, cached restart, cumulative expansion, complete collapse, and preserved inline drafts and anchors.
+- [x] Type checking, ESLint, Clippy, formatting, generated contracts, and the production frontend build pass.
+- [x] A live read-only smoke run loads surrounding context from `crs48/diffcity#2` and retrieves the same lines after restarting without a GitHub session.
+- [ ] Verify production WebKit scrolling, long code/discussions, context controls, and light/dark accessibility.
+- [ ] Install and verify the native production app, preserving existing private notes.
