@@ -300,7 +300,7 @@ The provider/model/effort preference has a dedicated document and command, so co
 
 ## Shared review scrolling and surrounding context
 
-Guides, code, inline discussions, and the optional PR chat now flow inside one review viewport. Expanded hunks render every line, with long source and response text wrapping instead of creating nested scrollbars. Comment editors grow with their content. Guide changes, individual hunks, and inline threads can collapse completely; unfinished draft state survives reopening. Pointer range selection uses actual row geometry, including wrapped lines and inserted threads, and scrolls the shared viewport. Changing review views returns to their beginning; the continuous guide now restores its active section.
+Guides, code, and inline discussions flow inside one review viewport; PR chat has its own adjacent pane. Expanded hunks render every line, with long source and response text wrapping instead of creating nested scrollbars. Inline comment editors grow with their content. Guide changes, individual hunks, and inline threads can collapse completely; unfinished draft state survives reopening. Pointer range selection uses actual row geometry, including wrapped lines and inserted threads, and scrolls the shared viewport. Changing review views returns to their beginning; the continuous guide now restores its active section.
 
 ```mermaid
 flowchart LR
@@ -402,3 +402,12 @@ User-activated HTTP/HTTPS links open through the native browser command. Both UI
 - [x] All 73 Rust and 71 frontend tests pass, including Markdown semantics, task labels, safe link dispatch/error handling, mirrored footnote navigation, and partially streamed code fences. Types, ESLint, Clippy, formatting, and production packaging pass.
 - [x] Production WebKit verifies inline/chat/overview/preview rendering, keyboard link activation, independent draft selection, unique footnotes, long wrapped code, and narrow layouts without horizontal overflow or nested Markdown scrolling. Light/dark and draft-preview axe WCAG A/AA checks report no violations.
 - [x] The installed app renders existing GitHub review comments as semantic tables, formatted text, and code. All eight private notes, settings, and model preference remain byte-for-byte unchanged. [CI passes on ee18030](https://github.com/crs48/diffcity/actions/runs/39678168549). Installed executable SHA-256: `e67a0299e76fac6e46ff1607291c568256df3076c0c52135ac78f4f12abc190a`.
+
+## Independent PR chat scrolling
+
+The review viewport and PR chat are sibling panes. Chat messages scroll independently with contained overscroll, while the chat header, context, and composer stay available. Long chat drafts have a bounded editor so they cannot push the conversation or send controls out of the window; inline editors remain expanded within the review. Replies follow the bottom only while the reader stays near it. Reading older messages suppresses automatic following.
+
+On narrow windows, chat occupies its own panel and the covered review is hidden from keyboard and assistive navigation without unmounting it. Escape and close restore focus to the chat toggle. Code references close the narrow panel and focus the inline thread. Opening, scrolling, or closing chat preserves the review's reading position.
+
+- [x] All 71 frontend tests, type checking, ESLint, formatting, and production web/native builds pass. WebKit verifies independent wheel/keyboard scrolling, scroll-boundary containment, fixed header/composer, new-reply following, preserved older-message position, bounded long drafts, and narrow-panel return to code. Light/dark axe WCAG A/AA checks report no violations.
+- [x] The installed app shows the restored real review beside its own bounded chat pane, with the latest GitHub comments and composer visible. All eight private notes, settings, and model preference remain unchanged. [CI passes on 93cb5b4](https://github.com/crs48/diffcity/actions/runs/39680579229). Installed executable SHA-256: `325e7909d6b220c79d30c2984651a4fe93be0f6801121f212cd58ed1a3ed889f`.
