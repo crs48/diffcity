@@ -26,7 +26,7 @@ impl Store {
             "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;",
         )?;
         let version = crate::migrations::version(&connection)?;
-        if version > 0 && version < crate::migrations::VERSION {
+        if version > 0 && version + 1 < crate::migrations::VERSION {
             let backup = directory.join(format!(
                 "before-schema-{version}-{}.sqlite",
                 chrono::Utc::now().timestamp_millis()

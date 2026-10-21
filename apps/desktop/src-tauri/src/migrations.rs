@@ -18,6 +18,7 @@ const MIGRATIONS: &[Migration] = &[
         name: "language_preference",
         sql: include_str!("../migrations/003_language_preference.sql"),
     },
+    Migration { name: "workspace_scope", sql: include_str!("../migrations/004_workspace_scope.sql") },
 ];
 pub const VERSION: u32 = MIGRATIONS.len() as u32;
 pub fn version(connection: &Connection) -> Result<u32> {
