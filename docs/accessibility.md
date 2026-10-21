@@ -39,6 +39,7 @@ The entries below include historical checks of the earlier virtualized layout. C
 - [x] WebKit pointer dragging selects lines 1–2 in reverse order and focuses the composer without collapsing the range. An 80-line virtualized fixture autoscrolls to select lines 1–33 while rendering only 43 rows. The sampled multi-line discussion has no axe-core WCAG A/AA violations.
 - [ ] Complete a manual VoiceOver audit of the installed app, including long diffs, line ranges, streamed answers, and new revisions.
 - [ ] Audit every interactive/error/disabled state, full 200–400% zoom behavior, and platform-specific high-contrast modes.
-- [ ] Profile worst-case captures near the file and capture limits; the initial shared-scroll browser check uses a 3,000-line hunk.
+- [x] Profile a 19,890-line, 20-section shared-scroll review; paint containment retains all lines and improves scrolling without virtualization. Cross-block selection, inline replies, expanded context, and light/dark/narrow axe checks pass.
+- [ ] Profile worst-case captures near the file and capture limits, including initial rendering.
 
 Browser checks use synthetic fixtures with mocked Tauri IPC and make no GitHub or Codex requests. They verify rendering and interaction, not native integration or live authentication. Local screenshots and browser logs are ignored under `output/playwright/` and `.playwright-cli/`.

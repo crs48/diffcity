@@ -74,14 +74,16 @@ afterEach(async () => {
 function SelectionExample({
   onDiscuss = vi.fn(),
   split = true,
+  source = hunk,
 }: {
   onDiscuss?: (a: Anchor) => void;
   split?: boolean;
+  source?: Hunk;
 }) {
   const [selection, setSelection] = useState<Anchor | null>(null);
   return (
     <Diff
-      hunk={hunk}
+      hunk={source}
       selection={selection}
       onSelect={setSelection}
       onDiscuss={onDiscuss}
@@ -97,6 +99,63 @@ const lineButton = (line: number, old = false) =>
   });
 
 describe("multi-line review", () => {
+  it.each([false, true])(
+    "selects across paint boundaries with pointer and keyboard (split: %s)",
+    async (split) => {
+      const user = userEvent.setup();
+      const discuss = vi.fn();
+      const source: Hunk = {
+        ...hunk,
+        lines: Array.from({ length: 140 }, (_, index) => ({
+          kind: "addition",
+          old: null,
+          new: index + 1,
+          text: `line ${index + 1}`,
+        })),
+      };
+      render(
+        <SelectionExample source={source} split={split} onDiscuss={discuss} />,
+      );
+      const region = screen.getByRole("region");
+      const bounds = (top: number, bottom: number) =>
+        ({ top, bottom, height: bottom - top }) as DOMRect;
+      vi.spyOn(region, "getBoundingClientRect").mockReturnValue(
+        bounds(-100, 3400),
+      );
+      Array.from(region.children).forEach((chunk, index) => {
+        vi.spyOn(chunk, "getBoundingClientRect").mockReturnValue(
+          bounds(index * 1600 - 100, Math.min((index + 1) * 1600, 3500) - 100),
+        );
+      });
+      Array.from(region.querySelectorAll("[data-index]")).forEach(
+        (row, index) => {
+          vi.spyOn(row, "getBoundingClientRect").mockReturnValue(
+            bounds(index * 25 - 100, (index + 1) * 25 - 100),
+          );
+        },
+      );
+      fireEvent.pointerDown(lineButton(63), {
+        pointerId: 1,
+        isPrimary: true,
+        button: 0,
+        clientY: 1460,
+      });
+      fireEvent.pointerMove(region, { pointerId: 1, clientY: 1560 });
+      fireEvent.pointerUp(region, { pointerId: 1, clientY: 1560 });
+      expect(screen.getByText("New lines 63–67 selected")).toBeTruthy();
+      lineButton(67).focus();
+      await user.keyboard("{Shift>}{ArrowUp}{ArrowUp}{ArrowUp}{/Shift}");
+      await waitFor(() => expect(document.activeElement).toBe(lineButton(64)));
+      await user.click(
+        screen.getByRole("button", { name: "Comment on lines 63–64" }),
+      );
+      expect(discuss).toHaveBeenCalledWith(
+        expect.objectContaining({ side: "RIGHT", startLine: 63, line: 64 }),
+      );
+      expect(region.querySelectorAll("[data-code-index]")).toHaveLength(140);
+    },
+  );
+
   it.each([false, true])(
     "keeps a Shift-click range when opening its gutter comment (split: %s)",
     async (split) => {
@@ -163,13 +222,20 @@ describe("multi-line review", () => {
       top: 0,
       height: 150,
     } as DOMRect);
-    Array.from(region.children).forEach((row, index) => {
-      vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
-        top: index * 25,
-        bottom: (index + 1) * 25,
-        height: 25,
-      } as DOMRect);
-    });
+    vi.spyOn(region.children[0], "getBoundingClientRect").mockReturnValue({
+      top: 0,
+      bottom: 150,
+      height: 150,
+    } as DOMRect);
+    Array.from(region.querySelectorAll("[data-index]")).forEach(
+      (row, index) => {
+        vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
+          top: index * 25,
+          bottom: (index + 1) * 25,
+          height: 25,
+        } as DOMRect);
+      },
+    );
     fireEvent.pointerDown(lineButton(12, true), {
       pointerId: 1,
       isPrimary: true,

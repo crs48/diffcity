@@ -1266,6 +1266,13 @@
   .diff-content {
     background: var(--code);
   }
+  .diff-chunk {
+    contain: layout style paint;
+  }
+  .diff-chunk .line-number:focus-visible,
+  .diff-chunk .line-comment:focus-visible {
+    outline-offset: -2px;
+  }
   .diff-line {
     display: flex;
     align-items: flex-start;

@@ -155,7 +155,6 @@ The separate **Sample inbox** contains 23 labeled, fictional scenarios and a ses
 
 The installed bundle matches the build from `ef57f00`; its executable SHA-256 is `1e7829616ecbac8a8de7e5401a1b1f414d0115ac8039885649cbc637ddb7f97e`. The synthetic GitHub PRs remain unmerged. Sample metadata resets when reloaded, while sample notes and code-reading progress are stored separately for each sample.
 
-
 ## Compact account navigation
 
 A 64-pixel rail selects **All accounts**, a GitHub organization, or a personal account. Accounts combine GitHub organization memberships, accessible repo owners, and the signed-in personal account and use monochrome GitHub avatars with initials as an offline fallback. The selected account name remains visible in the inbox header. A labeled **Repo** selector narrows its accessible repos; under All accounts, options include the owner to distinguish same-name repos. The standard PR list is 300 pixels wide, leaving 111 more pixels for the review than the former 205 + 270 pixel layout.
@@ -194,7 +193,6 @@ The rail has 44-pixel circular buttons, named controls, React Aria hover/focus t
 
 The installed executable matches the bundle built from `d44bd6e`, SHA-256 `5144f59116bdc2fb6fe55c2fe72b4404e8dc79bb4126b29a216d0f42e6b244d8`. WebKit's native select appearance initially ignored the desired control height; an explicit chevron now preserves native select semantics while allowing a verified 34-pixel target. [Navigation CI](https://github.com/crs48/diffcity/actions/runs/39624993187) passes on `d10c7d8`; the final select styling also passes all local checks and the production bundle.
 
-
 ## Automatic GitHub discovery
 
 The application discovers organization memberships through `/user/orgs` and all repos available to the local credential through `/user/repos`, including owned, collaborator, and organization-member repos. Both REST lists paginate. Connecting or launching the app discovers the directory and starts the inbox sync; no Add repos step is required. Legacy selected-repo settings only seed the directory cache on an older installation's first launch.
@@ -214,7 +212,6 @@ Discovery runs every 15 minutes while visible, with a manual refresh action in t
 
 A failed discovery retains the last successful directory with an error. A failed repo query retains that repo's cached PRs while successful batches update normally. Errors and sync progress are visible in the UI; a partial sync never receives a new successful-sync timestamp. Repo source contents are fetched only when a PR is opened; directory discovery and inbox sync do not start Codex or publish GitHub feedback.
 
-
 ### Discovery verification (October 21, 2026)
 
 - [x] 50 Rust tests and 31 TypeScript/component tests pass. Tests cover cached discovery on failure, repositories losing access, empty organization history, pagination cursors, complete review metadata, automatic account/repo filters, incremental PR delivery, and partial-sync visibility. Type checking, ESLint, Clippy, formatting, and contract generation pass.
@@ -225,7 +222,6 @@ The live check exposed GitHub 502 responses when requesting diff statistics for 
 
 - [x] The installed production app automatically discovers the full live directory through the registered Tauri command, renders all 19 repos in the selected organization's menu, filters the inbox to its main repo, and loads 30 historical PRs. Background sync reaches all 179 repos and reports success. All eight pre-existing note records are byte-for-byte unchanged at schema 3.
 - [x] [Discovery CI](https://github.com/crs48/diffcity/actions/runs/39638310475) passes on `41b2490`. The installed executable matches that source build and the packaged bundle, SHA-256 `9e2577d46041e0404eb70d0959291c9fbcfe13b898190aecb10a480fb61013eb`.
-
 
 ## Local repo and PR pins
 
@@ -249,10 +245,8 @@ Pin buttons use React Aria, named tooltips, pressed state, visible keyboard focu
 - [x] 54 Rust tests and 35 TypeScript/component tests pass, with types, ESLint, Clippy, formatting, and generated contracts checked. Coverage includes persistence, case-insensitive identity, independent settings, offline pinned history, current metadata, filters, failed saves, and focus restoration.
 - [x] Production WebKit verifies repo grouping/shortcuts, keyboard PR pinning without opening the review, a 60-day-old other-author completion retained in the Inbox, reload persistence, search, failed unpin recovery, and narrow layout. Light and dark states pass axe WCAG A/AA. The pin controls preserve the 64px rail and 300px inbox.
 
-
 - [x] The installed production app pins a repo and closed PR #15 through their native controls, restores both after quitting and relaunching, opens the repo through its pinned shortcut, and removes both test pins successfully. All eight original private notes remain byte-for-byte unchanged at schema 3.
 - [x] [Pinning CI](https://github.com/crs48/diffcity/actions/runs/39640448422) passes on `9563326`. The installed executable matches the packaged build, SHA-256 `03460445c681b286dedb6c3e80d9551f10be144f84d0dbc4997fa64807987bd6`.
-
 
 ## Rich PR status cards
 
@@ -275,7 +269,6 @@ Cards show the full repo identity, author, source/target branch, and localized r
 - [x] Production WebKit verifies all six color families, merged/closed icons, keyboard pinning and restored focus, search, narrow layout, and light/dark axe WCAG A/AA checks. The 23 local inbox samples now include varied status combinations.
 - [x] The installed production app displays live check and merge badges in the organization inbox, with purple merged and red closed icons verified in sample History. All eight original notes remain byte-for-byte unchanged at schema 3.
 - [x] [Rich-card CI](https://github.com/crs48/diffcity/actions/runs/39646986589) passes on `3a57306`. The installed executable matches the packaged build, SHA-256 `efcb39111ddab0c913b4b8e2b93936b221eb4f6330eeb39013d9be3b46f628d7`.
-
 
 ## Default model and reasoning
 
@@ -329,7 +322,6 @@ Inline comment buttons now precede the line numbers in unified and split diffs. 
 
 - [x] The range toolbar action is also left-aligned. Native verification Shift-selects migration lines 1–2, opens the left gutter comment, and focuses an inline composer with the complete range. All eight private notes remain unchanged. Installed executable SHA-256: `7a921e2440b8c84d1e746cacbabb6ff743f47f67da98634b06f794bbf15d5345`.
 
-
 ## Cached review loading and background preparation
 
 Opening a previously captured PR now reads SQLite immediately, including saved guides, notes, discussion, check results, and progress. A cold open captures code first; the selected review then refreshes GitHub metadata, comments, and checks independently. Directory discovery no longer blocks restoration of the last review. Previous-revision lookup reads a single ID instead of decoding every stored diff.
@@ -355,7 +347,6 @@ Background capture preserves revision-specific notes and guides, never writes ba
 - [x] All 70 Rust tests and 63 frontend tests pass, with type checking, ESLint, Clippy, formatting, production packaging, and [CI on b6b483f](https://github.com/crs48/diffcity/actions/runs/39662528011). Production WebKit switches among cached authored/draft/requested/assigned reviews in 77–125 ms while metadata responses are delayed three seconds. Review marks survive switching; light/dark axe WCAG A/AA and narrow-width checks pass.
 - [x] A read-only live smoke run prepares PRs #2, #3, and #4 in 3–6 seconds and reopens them offline in 0–184 ms (debug backend timings, including the 16,868-line fixture). The installed app automatically prepares reviews across repos despite an active repo filter, and renders draft/open PR code while background sync is visible. All eight private notes and saved settings remain unchanged. Installed executable SHA-256: `1532887471abac76fb59c0f3c317fdd8573617c917e60a5a498840c7fdc40146`.
 
-
 ## Continuous guided review
 
 The guide is one document with all sections rendered in priority order. Each section places a bounded explanation to the left of its code; it sticks below the outline while that section is visible and yields at the section boundary. A narrow workspace stacks the explanation above the code. An explanation that cannot fit in the available viewport stays in normal document flow. Full walkthroughs and review checks are visible by default in the code column and can be collapsed independently.
@@ -378,7 +369,7 @@ Scrolling updates the outline and saved active section without resetting the vie
 - [x] 72 Rust and 66 frontend tests pass, including partial model coverage, large legacy-guide compaction, preserved findings/progress, independent collapse state, manual-scroll tracking, final short-section detection, and keyboard outline focus. Types, ESLint, Clippy, formatting, and the production web build pass.
 - [x] A live local Codex run using the saved Astra/Extra high preference produces a three-section sample guide and a PR-chat answer.
 - [x] Production WebKit verifies two 400-line sections, sticky handoff, bounded annotations, full-context disclosure, outline/keyboard navigation, all chapters retained, a single scroll viewport, narrow stacking, and zero light/dark axe WCAG A/AA violations.
-- [x] WebKit renders all 19,890 diff lines of the stress fixture in 20 sections, retains them across jumps, and supports wheel scrolling. Multi-line questions and long replies remain inline across section jumps and mirror into PR chat; full-context disclosure from mid-section scrolls into view. Unchanged diff content is memoized. On this extreme fixture, in-page jump-to-second-frame measurements remain 1.6–1.7 seconds in WebKit, mostly scrolling/layout/paint; further large-document rendering optimization remains useful.
+- [x] WebKit renders all 19,890 diff lines of the stress fixture in 20 sections, retains them across jumps, and supports wheel scrolling. Multi-line questions and long replies remain inline across section jumps and mirror into PR chat; full-context disclosure from mid-section scrolls into view. Unchanged diff content is memoized. On this extreme fixture, in-page jump-to-second-frame measurements remain 1.6–1.7 seconds in WebKit, mostly scrolling/layout/paint; this historical measurement is superseded by the paint-containment work below.
 - [x] The installed production app restores the active historical review, replaces its old 120-step provisional guide with four broad sections, and jumps to API compatibility with the heading focused and explanation beside the code. All eight private notes, settings, and model preference remain byte-for-byte unchanged. Installed executable SHA-256: `f8fa2f25e9ec027cf7b9105b909e497b4937d44f9112cdc1e7234df7deb37313`.
 
 ## Compact review header
@@ -411,7 +402,6 @@ On narrow windows, chat occupies its own panel and the covered review is hidden 
 
 - [x] All 71 frontend tests, type checking, ESLint, formatting, and production web/native builds pass. WebKit verifies independent wheel/keyboard scrolling, scroll-boundary containment, fixed header/composer, new-reply following, preserved older-message position, bounded long drafts, and narrow-panel return to code. Light/dark axe WCAG A/AA checks report no violations.
 - [x] The installed app shows the restored real review beside its own bounded chat pane, with the latest GitHub comments and composer visible. All eight private notes, settings, and model preference remain unchanged. [CI passes on 93cb5b4](https://github.com/crs48/diffcity/actions/runs/39680579229). Installed executable SHA-256: `325e7909d6b220c79d30c2984651a4fe93be0f6801121f212cd58ed1a3ed889f`.
-
 
 ## Informative walkthroughs
 
@@ -447,3 +437,23 @@ The command saves the resulting workspace locally for qualitative review and che
 - [x] Live analysis of migration fixture PR #4 covers 3/3 hunks in two chapters, with 399 words of explanation, six concrete checks, and three validated findings. It correctly distinguishes a schema error that blocks upgrade from the destructive note deletion it masks, and connects the changed backup predicate to one-step upgrade recovery. Both guides survive restart.
 - [x] 76 Rust tests and 72 frontend tests pass. Generated contracts, types, formatting, lint, Clippy, production packaging, and [CI on 8427a47](https://github.com/crs48/diffcity/actions/runs/39682710550) pass.
 - [x] The production app is installed and restores the real historical review with the new guide and orientation. All eight private notes, settings, and model preference match the pre-update backup. Native accessibility verification confirms the restored PR and new orientation; native screenshot capture timed out, so visual layout verification uses production WebKit. Installed executable SHA-256: `d4fda08feb8ce492e98118617fe0f025e575c6199517f7efb43c606c5f31b61d`.
+
+## Large-review scroll rendering
+
+Code and expanded context use paint boundaries every 64 code rows. The browser can skip painting offscreen blocks while retaining exact layout and every mounted line. No height estimation, virtualized rows, or nested scrollers are introduced. Discussion insertion does not shift later block keys; keyboard focus and component identity remain stable. Selection binary-searches blocks and their actual variable-height rows, so wrapping and inline conversations preserve line anchors. Gutter focus outlines stay inside paint boundaries.
+
+The repeatable production WebKit stress check uses a 1600 × 1000 viewport, 19,890 rendered lines, and 20 expanded guide sections. After two settling frames, it moves the review by 100 pixels per animation frame for 45 frames, then back for 45. Measurements below compare the original layout with the final build on the same machine. These are scripted frame intervals, not a guarantee of hardware wheel-scroll FPS.
+
+| Measurement                                     |  Before |  After |
+| ----------------------------------------------- | ------: | -----: |
+| Median frame interval                           |  522 ms |  25 ms |
+| 95th percentile                                 |  735 ms |  58 ms |
+| Frames over 50 ms                               |   90/90 |   7/90 |
+| Total 90-frame sequence                         | 45.44 s | 2.77 s |
+| Section click to second frame, measured in-page |  1.50 s | 0.11 s |
+
+- [x] All 76 frontend tests, types, ESLint, production web/native builds, and diff whitespace checks pass. Regressions cover pointer/keyboard selection across paint boundaries, variable-height rows and thread gaps, and retained focus when a discussion is inserted.
+- [x] Production WebKit retains all 19,890 lines through five section jumps and wheel scrolling. Separate interaction checks verify cross-boundary drag and Shift selection in unified/split layouts, a 50-paragraph inline agent reply, 75 expanded context rows, no nested review scrollbars, and zero light/dark/narrow axe WCAG A/AA violations.
+- [x] The installed app restores the real historical PR and its nine-section guide; native section navigation focuses the destination heading and scrolling retains the sticky explanation and compact header. All eight private notes, settings, and model preference remain byte-for-byte unchanged. Installed executable SHA-256: `7fa0df0d24c34253779d92a8f65599fa921f4bcd5796441cb1cbdf7235f1d3ba`.
+
+Initial rendering still mounts the complete expanded document and can be expensive at capture limits. The measured stress fixture is well below the maximum possible capture; exhaustive worst-case profiling remains open.
