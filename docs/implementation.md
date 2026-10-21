@@ -212,3 +212,6 @@ A failed discovery retains the last successful directory with an error. A failed
 - [x] Production WebKit replay displays all 179 repos and 20 account/owner buttons, verifies account/repo narrowing and history scope, and keeps cached PRs visible after partial failure. The account rail scrolls independently. Light and dark states pass axe WCAG A/AA; keyboard tooltips/selection and a 1000-pixel layout pass.
 
 The live check exposed GitHub 502 responses when requesting diff statistics for many large PRs. Inbox/history queries now omit those unused statistics; opening a PR still retrieves complete metadata. No GitHub feedback or model inference occurs during this verification.
+
+- [x] The installed production app automatically discovers the full live directory through the registered Tauri command, renders all 19 repos in the selected organization's menu, filters the inbox to its main repo, and loads 30 historical PRs. Background sync reaches all 179 repos and reports success. All eight pre-existing note records are byte-for-byte unchanged at schema 3.
+- [x] [Discovery CI](https://github.com/crs48/diffcity/actions/runs/39638310475) passes on `41b2490`. The installed executable matches that source build and the packaged bundle, SHA-256 `9e2577d46041e0404eb70d0959291c9fbcfe13b898190aecb10a480fb61013eb`.
