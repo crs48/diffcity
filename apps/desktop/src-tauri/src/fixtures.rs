@@ -95,8 +95,9 @@ pub fn inbox(login: &str) -> Result<Vec<PullRequest>> {
         serde_json::from_str(include_str!("../../../../tests/fixtures/inbox.json"))?;
     let now = chrono::Utc::now();
     let ago = |hours: f64| (now - chrono::Duration::seconds((hours * 3600.0) as i64)).to_rfc3339();
+    let template = sample()?.0.pull;
     scenarios.iter().map(|s| {
-        let mut pull = sample()?.0.pull;
+        let mut pull = template.clone();
         pull.repository = INBOX_REPO.into();
         pull.number = s["number"].as_u64().unwrap() as u32;
         pull.title = github::string(s, "title");

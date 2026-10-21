@@ -32,6 +32,7 @@ export function DisplaySettings({
         <label>
           {t("Show your completed PRs")}
           <select
+            aria-label={t("Show your completed PRs")}
             value={value}
             onChange={(e) => setValue(Number(e.target.value))}
             aria-describedby="completed-help"
