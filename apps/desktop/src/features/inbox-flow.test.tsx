@@ -144,9 +144,7 @@ it("moves a sample review down and back up without publishing or changing real i
   const user = userEvent.setup();
   render(<App />);
   await user.click(await screen.findByRole("button", { name: "Sample inbox" }));
-  await user.click(
-    await screen.findByRole("button", { name: /Requested PR/ }),
-  );
+  await user.click(await screen.findByRole("button", { name: /Requested PR/ }));
   await user.click(
     await screen.findByRole("button", { name: "Simulate submitted review" }),
   );

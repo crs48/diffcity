@@ -119,3 +119,27 @@ The current installed executable SHA-256 is `bef045cee7c82e013f9b8945ca8091c1c1f
 - [x] Selecting Spanish translates the native interface. After quitting and relaunching, Spanish, closed PR #6, and both live connections return. SQLite remains at schema 3 with exactly three migration entries and all eight original private messages. English is restored after the check.
 - [x] The installed app captures all 16,868 changed lines in PR #3. Its 7,500-line generated-data hunk reaches RIGHT line 4,000 with 30 code rows in the accessibility tree.
 - [x] A fresh native Codex review creates an 18-section guide, placing the workspace migration and destructive cleanup first, followed by authorization changes and the API contract. Findings identify the missing migration backfill, deletion of every note, and missing required API path parameter. The bounded context supplies eight of 18 textual hunks; all ten omitted hunks remain visible as unassessed, alongside explicit binary and metadata limitations. Full capture does not imply full model coverage.
+
+## Repo inbox priority
+
+The sidebar calls GitHub repositories **repos**. The Inbox groups each PR once: your open PRs (including drafts), review requests, assigned work, other PRs awaiting review, reviewed PRs, other authors' drafts, then your recent completions. Within a group, recent activity sorts first; completed items use their completion time. Submitted GitHub reviews reduce priority and use subdued text with explicit status labels. A current review request overrides an earlier review. Private notes, Codex discussion, and local reading progress do not count as submitted reviews. Review-request matching currently covers individual requested reviewers; team-level requests are not expanded into membership.
+
+**Display settings** in the inbox header controls recently completed work: hidden, 24 hours, two days (default), one week, or 30 days. The preference is saved in SQLite with a backward-compatible default for older settings. Only your own completed PRs appear in the Inbox; **History** includes every author's closed and merged PRs independently of that preference. Counts in the repo rail include open work only.
+
+[GitHub's review fields](https://docs.github.com/en/graphql/reference/pulls) supply the signed-in user's latest submitted review and the aggregate review decision in batches of 25 PRs. Pending or dismissed reviews do not count as completed reviews. Current REST reviewer requests determine re-request priority. Recent completions use the paginated closed-PR list, stopping when the page falls outside the update window and filtering by actual `closed_at`; an old PR with a new comment cannot masquerade as recently completed. This avoids search-index lag. Pagination-budget failures retain the previous inbox and report an error instead of silently reporting complete results.
+
+```mermaid
+flowchart TD
+  GitHub[Open PRs + review metadata + recent completions] --> Cache[Persist inbox]
+  Cache --> Filter[Repo, search, completion window]
+  Filter --> Own[Your open PRs, including drafts]
+  Own --> Requested[Needs your review]
+  Requested --> Assigned[Assigned to you]
+  Assigned --> Awaiting[Awaiting review]
+  Awaiting --> Reviewed[Reviewed, subdued text]
+  Reviewed --> Drafts[Other drafts]
+  Drafts --> Completed[Your recent completions]
+  Reviewed -->|Fresh review request| Requested
+```
+
+The separate **Sample inbox** contains 23 labeled, fictional scenarios and a session-only review-request simulator. Its cards open real local walkthroughs, but sample identities are blocked from GitHub publication in both the UI and Rust service. The [corpus guide](../tests/corpus/README.md#inbox-ux-samples) documents nine additional live GitHub PRs and reproduction commands.

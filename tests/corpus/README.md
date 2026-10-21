@@ -55,3 +55,35 @@ DIFFCITY_CORPUS_ANALYZE=4 cargo run -p diffcity --bin corpus-smoke -- 4
 The harness uses the existing local `gh` login, opens each PR through the same Rust service as the app, validates every captured added/deleted line anchor, checks historical state, and reports capture limitations and renames. The optional analysis generates a real Codex guide and a private two-line migration discussion. It never publishes GitHub comments or merges anything. The default isolated database and JSON workspaces live in ignored `.local/corpus-smoke/`; override `DIFFCITY_DATA_DIR` and `DIFFCITY_REPOSITORY` if needed. The analysis option specifically expects the unsafe-migration fixture.
 
 GitHub omits several patches in the large fixture. Diffcity reconstructs bounded UTF-8 text changes from immutable merge-base/head content and checks their line counts against GitHub. Binary and metadata-only files remain explicitly unavailable. Capture discloses any remaining limitation rather than treating absent code as reviewed. The model also has a bounded source budget; a large PR can remain partly unassessed. Mode-only and rename-only files remain visible even without textual hunks.
+
+## Inbox UX samples
+
+Nine additional PRs exercise the owner's list in GitHub. All are authored by `crs48`, and none of the synthetic proposals is intended to merge.
+
+| PR | State | Scenario |
+| --- | --- | --- |
+| [#7](https://github.com/crs48/diffcity/pull/7) | Open, ready | Keyboard navigation |
+| [#8](https://github.com/crs48/diffcity/pull/8) | Open, ready | Notification batching |
+| [#9](https://github.com/crs48/diffcity/pull/9) | Open, ready | Schema backfill |
+| [#10](https://github.com/crs48/diffcity/pull/10) | Open, ready | API pagination |
+| [#11](https://github.com/crs48/diffcity/pull/11) | Draft | Compact layout |
+| [#12](https://github.com/crs48/diffcity/pull/12) | Draft | French catalog |
+| [#13](https://github.com/crs48/diffcity/pull/13) | Draft | Incremental cache |
+| [#14](https://github.com/crs48/diffcity/pull/14) | Closed, unmerged | Abandoned grouping experiment |
+| [#15](https://github.com/crs48/diffcity/pull/15) | Closed, unmerged | Abandoned notifications draft |
+
+Reproduce their local branches with `python3 tests/corpus/create_inbox.py --base HEAD --prefix fixtures/new-inbox-session`. Creation uses a temporary index and an atomic ref transaction; it never overwrites branches, switches the checkout, pushes, opens PRs, or merges anything.
+
+Choose **Sample inbox** in the desktop sidebar for 23 local PRs defined in `tests/fixtures/inbox.json`. They cover owned ready/draft PRs, requested and assigned reviews, approved/commented/changes-requested submissions, re-requests, other authors' ready/draft PRs, and completed work ranging from hours to 50 days old. Completion ages are relative to the time the samples load. The fictional authors are explicitly labeled, have no GitHub URLs, and cannot publish reviews. Each card opens the shared invitation walkthrough with separate saved notes and progress.
+
+For another author's open sample, **Simulate submitted review** moves it into Reviewed; **Simulate review request** restores its priority. These transitions change only the current sample inbox session. Refreshing the sample inbox resets its metadata. No review request is sent to a real person, and no second GitHub account is needed. Merged samples remain local, so synthetic code never has to merge to exercise the UX.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Requested
+  Requested --> Reviewed: Simulate submitted review
+  Reviewed --> Requested: Simulate review request
+  Requested --> Requested: Refresh resets fixtures
+```
+
+Run `cargo run -p diffcity --bin inbox-smoke -- crs48/diffcity` for read-only GitHub metadata checks and JSON exports under `.local/inbox-smoke/`. It checks that all open PRs carry review metadata and that recent completions belong to the signed-in user, then exports the isolated local samples for browser replay. It does not connect to Codex or publish feedback.
