@@ -221,7 +221,7 @@ The live check exposed GitHub 502 responses when requesting diff statistics for 
 
 Repo pins add compact shortcuts below the repo selector and a **Pinned repos** option group. They respect the selected account and do not widen the navigation rail. Pin controls appear beside a selected repo, on each PR card, and in the review toolbar.
 
-Pinned PRs occupy a single **Pinned pull requests** section before the usual priority groups. Pins remain subject to account, repo, and search filters; History continues to show only closed/merged work. A pinned completion remains in the Inbox regardless of author or completion window. Unpinning restores its ordinary priority and visibility. Sample pins stay in the sample inbox.
+Pinned PRs occupy a single **Pinned pull requests** section before the usual priority groups. Pins remain subject to account, repo, and search filters; History continues to show only closed/merged work. A pinned completion remains in the Inbox regardless of author or completion window. Unpinning restores its ordinary priority and visibility. Sample pins stay separate from the live GitHub inbox.
 
 ```mermaid
 flowchart LR
@@ -238,3 +238,7 @@ Pin buttons use React Aria, named tooltips, pressed state, visible keyboard focu
 
 - [x] 54 Rust tests and 35 TypeScript/component tests pass, with types, ESLint, Clippy, formatting, and generated contracts checked. Coverage includes persistence, case-insensitive identity, independent settings, offline pinned history, current metadata, filters, failed saves, and focus restoration.
 - [x] Production WebKit verifies repo grouping/shortcuts, keyboard PR pinning without opening the review, a 60-day-old other-author completion retained in the Inbox, reload persistence, search, failed unpin recovery, and narrow layout. Light and dark states pass axe WCAG A/AA. The pin controls preserve the 64px rail and 300px inbox.
+
+
+- [x] The installed production app pins a repo and closed PR #15 through their native controls, restores both after quitting and relaunching, opens the repo through its pinned shortcut, and removes both test pins successfully. All eight original private notes remain byte-for-byte unchanged at schema 3.
+- [x] [Pinning CI](https://github.com/crs48/diffcity/actions/runs/39640448422) passes on `9563326`. The installed executable matches the packaged build, SHA-256 `03460445c681b286dedb6c3e80d9551f10be144f84d0dbc4997fa64807987bd6`.
