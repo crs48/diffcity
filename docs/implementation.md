@@ -326,3 +326,5 @@ Inline comment buttons now precede the line numbers in unified and split diffs. 
 
 - [x] All 57 frontend tests, type checking, ESLint, and production packaging pass. Added regressions cover Shift-click selection followed by the gutter comment action in both views.
 - [x] Production WebKit verifies left-side placement, selected-button visibility, forward Shift-click ranges, reverse dragging on deleted lines, Shift-arrow keyboard ranges, inline focus, and expanded-context alignment in both layouts. Light/dark axe WCAG A/AA checks report no violations.
+
+- [x] The range toolbar action is also left-aligned. Native verification Shift-selects migration lines 1–2, opens the left gutter comment, and focuses an inline composer with the complete range. All eight private notes remain unchanged. Installed executable SHA-256: `7a921e2440b8c84d1e746cacbabb6ff743f47f67da98634b06f794bbf15d5345`.
