@@ -59,6 +59,7 @@ import {
   pinKey,
   pullPinId,
   accountOwners,
+  accountActivity,
   repositoriesForOwner,
   resolveScope,
   type InboxScope,
@@ -76,11 +77,12 @@ export default function App() {
   });
   const repositories =
     data?.directory.repositories.map((repo) => repo.fullName) ?? [];
+  const activity = accountActivity(data?.directory.repositories ?? [], pulls);
   const owners = accountOwners(
     data?.directory.repositories ?? [],
     data?.directory.organizations ?? [],
     data?.github.identity ?? "",
-    pulls,
+    activity,
   );
   const { owner, repository: repo } = resolveScope(scope, repositories, owners);
   const scopedRepositories = repositoriesForOwner(repositories, owner);
@@ -624,6 +626,7 @@ export default function App() {
       </div>
       <AccountNavigation
         owners={owners}
+        activity={activity}
         owner={owner}
         samples={samples}
         data={data}

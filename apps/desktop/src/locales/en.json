@@ -269,5 +269,8 @@
   "Pin pull request {{name}}": "Pin pull request {{name}}",
   "Unpin pull request {{name}}": "Unpin pull request {{name}}",
   "Pinned {{name}}": "Pinned {{name}}",
-  "Unpinned {{name}}": "Unpinned {{name}}"
+  "Unpinned {{name}}": "Unpinned {{name}}",
+  "Show inactive accounts ({{count}})": "Show inactive accounts ({{count}})",
+  "Hide inactive accounts ({{count}})": "Hide inactive accounts ({{count}})",
+  "No known updates in the last 30 days": "No known updates in the last 30 days"
 }

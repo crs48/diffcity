@@ -172,6 +172,8 @@ flowchart LR
 
 The personal account stays first. Other accounts sort by their most recent known activity across accessible repos: PR updates, repo pushes, or repository updates. Ties and accounts without activity data sort alphabetically. Cached directory timestamps keep this order available offline; older caches without timestamps remain readable. Incoming inbox batches update the order without changing the current account/repo selection or keyboard focus.
 
+Accounts without a known update in the last 30 days fold behind a compact count by default. The cutoff uses the same PR/repo activity as sorting; updates exactly at the cutoff remain visible. Personal and selected accounts stay visible. The disclosure expands older accounts in activity order, announces its expanded state and count, and supports keyboard activation. Hidden buttons leave the tab order and accessibility tree. All accounts and repo filters still include their PRs, and newly updated accounts return automatically. The fold resets on app launch; it does not change GitHub access or cached data.
+
 - [x] 55 Rust and 38 frontend tests pass, including activity ordering, stable selection/focus after reordering, and legacy caches. Types, ESLint, Clippy, formatting, generated contracts, and the production build pass.
 - [x] The installed app reads activity timestamps for 179 repos and displays all 20 accounts in the independently calculated order. Existing notes remain unchanged. [CI passes on `bde128a`](https://github.com/crs48/diffcity/actions/runs/39642045602); the installed executable matches the bundled build, SHA-256 `b110db55f8cbc864839be3f371c9cd7a6b6b5586556f6268ac85f5c0b2efd0b0`.
 

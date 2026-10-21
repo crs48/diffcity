@@ -4,6 +4,7 @@ import {
   BookOpen,
   Building2,
   ChevronDown,
+  ChevronUp,
   FlaskConical,
   RefreshCw,
   Pin,
@@ -11,19 +12,27 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PinToggle } from "../ui/PinToggle";
-import { sameLogin } from "../lib/inbox";
+import { groupAccountOwners, sameLogin } from "../lib/inbox";
 import type { Bootstrap } from "../lib/api";
 
 function RailButton({
   label,
   detail,
   selected,
+  expanded,
+  controls,
+  id,
+  hidden,
   onPress,
   children,
 }: {
   label: string;
   detail?: string;
   selected?: boolean;
+  expanded?: boolean;
+  controls?: string;
+  id?: string;
+  hidden?: boolean;
   onPress: () => void;
   children: ReactNode;
 }) {
@@ -33,6 +42,10 @@ function RailButton({
         className="account-button"
         aria-label={label}
         aria-pressed={selected}
+        aria-expanded={expanded}
+        aria-controls={controls}
+        id={id}
+        hidden={hidden}
         onPress={onPress}
       >
         {children}
@@ -64,6 +77,7 @@ function AccountAvatar({ owner }: { owner: string }) {
 
 export function AccountNavigation({
   owners,
+  activity,
   owner,
   samples,
   data,
@@ -74,6 +88,7 @@ export function AccountNavigation({
   onConnections,
 }: {
   owners: string[];
+  activity: ReadonlyMap<string, number>;
   owner: string | null;
   samples: boolean;
   data: Bootstrap | null;
@@ -84,6 +99,27 @@ export function AccountNavigation({
   onConnections: () => void;
 }) {
   const { t } = useTranslation();
+  const [showInactive, setShowInactive] = useState(false);
+  const { visible, inactive } = groupAccountOwners(
+    owners,
+    activity,
+    data?.github.identity ?? "",
+    owner,
+  );
+  const accountId = (name: string) => `account-${name.toLowerCase()}`;
+  const accountButton = (name: string, hidden = false) => (
+    <RailButton
+      key={accountId(name)}
+      id={accountId(name)}
+      label={name}
+      detail={t("View all repos")}
+      selected={owner === name && !samples}
+      hidden={hidden}
+      onPress={() => onOwner(name)}
+    >
+      <AccountAvatar owner={name} />
+    </RailButton>
+  );
   const connectionDetail = [
     data?.github.connected
       ? t("GitHub connected as {{login}}", { login: data.github.identity })
@@ -120,17 +156,34 @@ export function AccountNavigation({
         className="account-list"
         aria-label={t("Choose an organization or account")}
       >
-        {owners.map((name) => (
-          <RailButton
-            key={name}
-            label={name}
-            detail={t("View all repos")}
-            selected={owner === name && !samples}
-            onPress={() => onOwner(name)}
-          >
-            <AccountAvatar owner={name} />
-          </RailButton>
-        ))}
+        {[
+          ...visible.map((name) => accountButton(name)),
+          inactive.length > 0 && (
+            <RailButton
+              key="inactive-accounts"
+              label={t(
+                showInactive
+                  ? "Hide inactive accounts ({{count}})"
+                  : "Show inactive accounts ({{count}})",
+                { count: inactive.length },
+              )}
+              detail={t("No known updates in the last 30 days")}
+              expanded={showInactive}
+              controls={inactive.map(accountId).join(" ")}
+              onPress={() => setShowInactive((expanded) => !expanded)}
+            >
+              <span className="inactive-accounts-count" aria-hidden="true">
+                {showInactive ? (
+                  <ChevronUp size={14} />
+                ) : (
+                  <ChevronDown size={14} />
+                )}
+                <span>{inactive.length}</span>
+              </span>
+            </RailButton>
+          ),
+          ...inactive.map((name) => accountButton(name, !showInactive)),
+        ]}
       </nav>
       <RailButton label={t("Refresh repos and accounts")} onPress={onRefresh}>
         <RefreshCw size={19} aria-hidden="true" />

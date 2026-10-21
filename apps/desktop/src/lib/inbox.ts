@@ -144,14 +144,12 @@ export function resolveScope(
   return { owner, repository };
 }
 
-export const accountOwners = (
+export const accountActivity = (
   repositories: Pick<Repository, "fullName" | "updatedAt" | "pushedAt">[],
-  organizations: string[],
-  login: string,
   pulls: PullRequest[] = [],
 ) => {
   const timestamp = (date: string | null) => Date.parse(date ?? "") || 0;
-  const activity = [
+  return [
     ...repositories.map(
       (repo) =>
         [
@@ -171,6 +169,14 @@ export const accountOwners = (
       latest.set(owner, Math.max(latest.get(owner) ?? 0, time)),
     new Map<string, number>(),
   );
+};
+
+export const accountOwners = (
+  repositories: Pick<Repository, "fullName" | "updatedAt" | "pushedAt">[],
+  organizations: string[],
+  login: string,
+  activity: ReadonlyMap<string, number> = accountActivity(repositories),
+) => {
   const names = [
     ...new Map(
       [
@@ -187,3 +193,21 @@ export const accountOwners = (
     );
   return login ? [login, ...names] : names;
 };
+
+export function groupAccountOwners(
+  owners: string[],
+  activity: ReadonlyMap<string, number>,
+  login: string,
+  selected: string | null,
+  now = Date.now(),
+) {
+  const cutoff = now - 30 * 86_400_000;
+  const visible = (name: string) =>
+    sameLogin(name, login) ||
+    sameLogin(name, selected ?? "") ||
+    (activity.get(name.toLowerCase()) ?? 0) >= cutoff;
+  return {
+    visible: owners.filter(visible),
+    inactive: owners.filter((name) => !visible(name)),
+  };
+}

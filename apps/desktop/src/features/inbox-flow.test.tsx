@@ -391,6 +391,9 @@ it("discovers orgs, repos and PRs automatically without adding or saving reposit
   expect(screen.queryByRole("button", { name: "Add repos" })).toBeNull();
   expect(settings.repositories).toEqual(["owner/repo"]);
   expect(discoveryRequest).toHaveBeenCalledTimes(1);
+  await user.click(
+    screen.getByRole("button", { name: "Show inactive accounts (1)" }),
+  );
   await user.click(screen.getByRole("button", { name: "empty-org" }));
   expect(
     screen
@@ -425,10 +428,9 @@ it("reorders accounts after PR activity without changing the selected repo or ke
   const order = () =>
     within(rail)
       .getAllByRole("button")
+      .filter((b) => b.hasAttribute("aria-pressed"))
       .map((b) => b.getAttribute("aria-label"));
-  await waitFor(() =>
-    expect(order()).toEqual(["me", "alpha", "zeta", "empty"]),
-  );
+  await waitFor(() => expect(order()).toEqual(["me", "alpha", "zeta"]));
   const selectedAccount = within(rail).getByRole("button", { name: "alpha" });
   await user.click(selectedAccount);
   await user.selectOptions(
@@ -449,14 +451,85 @@ it("reorders accounts after PR activity without changing the selected repo or ke
       ],
     });
   });
-  await waitFor(() =>
-    expect(order()).toEqual(["me", "zeta", "alpha", "empty"]),
-  );
+  await waitFor(() => expect(order()).toEqual(["me", "zeta", "alpha"]));
   expect(selectedAccount.getAttribute("aria-pressed")).toBe("true");
   expect(document.activeElement).toBe(selectedAccount);
   expect(
     (screen.getByRole("combobox", { name: "Repo" }) as HTMLSelectElement).value,
   ).toBe("alpha/api");
+});
+
+it("folds inactive accounts with a keyboard disclosure while retaining inbox contents and selection", async () => {
+  connected = true;
+  discovered = {
+    organizations: ["fresh", "old", "unknown"],
+    syncError: null,
+    repositories: ["fresh/api", "old/api"].map((fullName, index) => ({
+      id: fullName,
+      fullName,
+      private: true,
+      description: "",
+      updatedAt: ago(index ? 45 : 1),
+      pushedAt: null,
+    })),
+  };
+  const oldPull = {
+    ...workspace.snapshot.pull,
+    repository: "old/api",
+    title: "Still open in an inactive account",
+    updatedAt: ago(45),
+  };
+  livePulls = [oldPull];
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole("button", {
+    name: /Still open in an inactive account/,
+  });
+  expect(screen.queryByRole("button", { name: "old" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "unknown" })).toBeNull();
+  expect(screen.getByRole("button", { name: "me" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "fresh" })).toBeTruthy();
+  const disclosure = screen.getByRole("button", {
+    name: "Show inactive accounts (2)",
+  });
+  expect(disclosure.getAttribute("aria-expanded")).toBe("false");
+  const controls = disclosure.getAttribute("aria-controls")!.split(" ");
+  expect(controls.every((id) => document.getElementById(id)?.hidden)).toBe(
+    true,
+  );
+  disclosure.focus();
+  await user.keyboard("{Enter}");
+  expect(disclosure.getAttribute("aria-expanded")).toBe("true");
+  await user.tab();
+  const oldAccount = screen.getByRole("button", { name: "old" });
+  expect(document.activeElement).toBe(oldAccount);
+  await user.keyboard("{Enter}");
+  expect(document.activeElement).toBe(oldAccount);
+  expect(oldAccount.getAttribute("aria-pressed")).toBe("true");
+  await user.click(
+    screen.getByRole("button", { name: "Hide inactive accounts (1)" }),
+  );
+  expect(screen.getByRole("button", { name: "old" })).toBe(oldAccount);
+  expect(screen.queryByRole("button", { name: "unknown" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "All accounts" }));
+  expect(screen.queryByRole("button", { name: "old" })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: /Still open in an inactive account/ }),
+  ).toBeTruthy();
+  // A new update brings a folded account back without a manual expansion.
+  await act(async () => {
+    await emit("inbox-sync", {
+      completed: 2,
+      total: 2,
+      pulls: [{ ...oldPull, updatedAt: ago(0) }],
+    });
+  });
+  await screen.findByRole("button", { name: "old" });
+  expect(
+    screen
+      .getByRole("button", { name: "Show inactive accounts (1)" })
+      .getAttribute("aria-expanded"),
+  ).toBe("false");
 });
 
 it("shows incremental PR batches and preserves them when a sync is partial", async () => {
@@ -529,6 +602,9 @@ it("persists repo shortcuts, groups selector options, and respects account scope
   expect(
     screen.getAllByRole("option").map((o) => (o as HTMLOptionElement).value),
   ).toEqual(["", "acme/web", "acme/api", "other/api"]);
+  await user.click(
+    screen.getByRole("button", { name: "Show inactive accounts (2)" }),
+  );
   await user.click(screen.getByRole("button", { name: "other" }));
   expect(screen.queryByRole("navigation", { name: "Pinned repos" })).toBeNull();
   view.unmount();
@@ -633,6 +709,9 @@ it("keeps an old pinned completion in the inbox, honors filters, and preserves p
   await screen.findByRole("region", { name: "Pinned pull requests" });
   await user.click(screen.getByRole("button", { name: "Inbox" }));
   expect(screen.getByRole("button", { name: /Old merged work/ })).toBeTruthy();
+  await user.click(
+    screen.getByRole("button", { name: "Show inactive accounts (2)" }),
+  );
   await user.click(screen.getByRole("button", { name: "other" }));
   expect(screen.queryByRole("button", { name: /Old merged work/ })).toBeNull();
   await user.click(screen.getByRole("button", { name: "All accounts" }));

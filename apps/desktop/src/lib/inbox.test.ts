@@ -8,6 +8,8 @@ import {
   visiblePulls,
   repositoryOwners,
   accountOwners,
+  accountActivity,
+  groupAccountOwners,
   repositoriesForOwner,
   resolveScope,
 } from "./inbox";
@@ -216,14 +218,14 @@ it("sorts accounts by their newest PR, repo update or push across all repos", ()
     pr({ repository: "Beta/api", updatedAt: "invalid" }),
     pr({ repository: "removed/repo", updatedAt: ago(0) }),
   ];
-  expect(accountOwners(repositories, organizations, "me", pulls)).toEqual([
-    "me",
-    "acme",
-    "Gamma",
-    "Beta",
-    "empty",
-    "unknown",
-  ]);
+  expect(
+    accountOwners(
+      repositories,
+      organizations,
+      "me",
+      accountActivity(repositories, pulls),
+    ),
+  ).toEqual(["me", "acme", "Gamma", "Beta", "empty", "unknown"]);
   expect(organizations).toEqual(["unknown", "Gamma", "Beta", "acme", "empty"]);
 });
 
@@ -234,6 +236,23 @@ it("uses alphabetical ties for equal activity, including before login is known",
     pushedAt: null,
   }));
   expect(accountOwners(repos, [], "")).toEqual(["alpha", "zeta"]);
+});
+
+it("folds activity older than 30 days, retaining the boundary, personal and selected accounts", () => {
+  const owners = ["me", "fresh", "boundary", "old", "selected", "unknown"];
+  const activity = new Map([
+    ["fresh", now],
+    ["boundary", Date.parse(ago(30))],
+    ["old", Date.parse(ago(30)) - 1],
+    ["selected", Date.parse(ago(60))],
+  ]);
+  expect(groupAccountOwners(owners, activity, "ME", "SELECTED", now)).toEqual({
+    visible: ["me", "fresh", "boundary", "selected"],
+    inactive: ["old", "unknown"],
+  });
+  expect(
+    groupAccountOwners(owners, activity, "me", null, now).inactive,
+  ).toEqual(["old", "selected", "unknown"]);
 });
 
 it("keeps pinned completions beyond the completion window without bypassing scope or search", () => {
