@@ -36,6 +36,12 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 
 **Explore a sample** works without a GitHub PR and demonstrates migrations, authorization, tests, documentation, and localization. It contains deliberate issues and cannot publish feedback.
 
+## Appearance and accessibility
+
+Use the appearance menu in the toolbar to choose **Light**, **Dark**, or **System**. The interface uses neutral black, white, and gray surfaces; diff additions/deletions, primary actions, and attention warnings retain semantic color. Appearance saves immediately without reconnecting accounts.
+
+Tailwind CSS supplies the styling foundation, and React Aria supplies buttons, tabs, menus, and dialog behavior. Keyboard users can skip to the review, switch tabs with arrow keys, navigate the guide outline, and dismiss dialogs with Escape. Focus returns to the opener. **All lines for assistive reading** renders the complete hunk instead of only the visible virtualized rows. Added and removed lines also have textual labels. See [accessibility checks and remaining work](docs/accessibility.md).
+
 ## Data and integrations
 
 - Tauri 2, React/TypeScript, Rust, and SQLite. No diffcity server or account is required.

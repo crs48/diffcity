@@ -29,12 +29,12 @@ GitHub publication has a persisted operation journal. The successful result and 
 ## Validation evidence
 
 - [x] Strict TypeScript, ESLint, Rust formatting, and Clippy pass.
-- [x] All 23 Rust tests and 3 TypeScript tests pass. Unit and integration tests cover canonical additions/deletions, multiline anchors, incomplete patches, attention floors, invalid model output, omitted coverage, unchanged progress transfer, and explicit publication payload selection.
+- [x] All 23 Rust tests and 8 TypeScript/component tests pass. Tests cover canonical additions/deletions, multiline anchors, incomplete patches, attention floors, invalid model output, omitted coverage, unchanged progress transfer, explicit publication payload selection, dialog focus, keyboard navigation, appearance, and full-line reading.
 - [x] Live local GitHub identity, repository inbox, Codex handshake/model catalog, guide generation, and selected-line discussion succeed.
 - [x] The packaged WKWebView reaches a real GitHub PR, generates and displays a grounded Codex guide, saves a line discussion, and previews only deliberately prepared GitHub feedback.
 - [x] Native restart, cancellation, and new-revision recovery pass. A real push changed the migration hunk, invalidated its review mark, and left earlier notes accessible.
 - [x] The explicitly authorized [test review](https://github.com/crs48/diffcity/pull/1#pullrequestreview-5593137216) was posted through the native app and reconciled into its line discussion. The original submission targeted RIGHT line 1; after the synthetic push GitHub reanchored it to line 2. The remote feedback contains exactly the approved inline text plus the labeled summary; the private question and model reply are absent.
-- [x] A normal production bundle was built and installed at `~/Applications/diffcity.app` (28.82 MiB). Its release dependency features exclude the WebDriver plugin, and the installed executable hash matches the built executable.
+- [x] A normal production bundle was built and installed at `~/Applications/diffcity.app`. Its release dependency features exclude the WebDriver plugin, and the installed executable hash matches the built executable.
 - [x] Open the installed production app and render its sample guide.
 - [ ] Verify live GitHub and Codex connections in the installed production app. Its GitHub requests currently time out; the host must be unlocked to inspect network-filter rules and complete the visible check.
 - [x] [GitHub Actions](https://github.com/crs48/diffcity/actions/runs/39517167547) passed contract generation, formatting, types, lint, tests, and the unsigned desktop build.
