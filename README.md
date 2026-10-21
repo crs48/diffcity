@@ -1,4 +1,4 @@
-# diffcity
+# Diff City
 
 A desktop workspace for reviewing GitHub pull requests through Codex-guided walkthroughs. Consequential changes come first; assessed routine changes fold into summaries you can expand.
 
@@ -17,7 +17,7 @@ Or build the standalone macOS application:
 
 ```sh
 pnpm desktop:build
-open target/release/bundle/macos/diffcity.app
+open target/release/bundle/macos/Diff City.app
 ```
 
 The local build is unsigned for distribution. Signing, notarization, automatic updates, Apple Silicon validation, and a public release remain separate release work.
@@ -44,7 +44,7 @@ Tailwind CSS supplies the styling foundation, and React Aria supplies buttons, t
 
 ## Data and integrations
 
-- Tauri 2, React/TypeScript, Rust, and SQLite. No diffcity server or account is required.
+- Tauri 2, React/TypeScript, Rust, and SQLite. No Diff City server or account is required.
 - The Rust backend reads the existing GitHub CLI credential into memory; the credential is not sent to the webview, SQLite, or Codex.
 - Codex runs through its local app-server using the existing login. Starting analysis sends the PR description and bounded diff context to the selected Codex model/provider. Asking a question sends the exact selected lines, nearby diff context (up to five rows before/after, plus opposite-side rows inside the range), guide summary, question, and recent private discussion across the current PR revision (up to 24 messages, 2,000 characters each). PR chat includes bounded supporting diff context, prioritizing high-attention changes. These conversations are reconstructed from saved messages on each request; earlier revisions remain separate. Oversized selections are rejected before inference. Source code is not guaranteed to remain on the device during model inference.
 - Codex has no shell, edit, browser, GitHub publication, or MCP-tool access from this review workflow. Findings are suggestions; only you mark code reviewed and choose publication.
@@ -68,7 +68,7 @@ pnpm desktop:build
 The native end-to-end harness uses the actual packaged WKWebView and actual local accounts:
 
 ```sh
-pnpm --filter @diffcity/desktop tauri build --debug --features e2e --bundles app
+pnpm --filter @Diff City/desktop tauri build --debug --features e2e --bundles app
 node tests/e2e/native.mjs
 ```
 
@@ -83,3 +83,7 @@ The harness currently targets the synthetic draft PR in this repository. It cons
 See [implementation and validation notes](docs/implementation.md) for supported versions, evidence, and remaining release work. The original [product plan](docs/plans/initial-product/README.md) and [guided review specification](docs/plans/initial-product/guided-review.md) remain the longer-term roadmap.
 
 Inspired by [Diffity](https://github.com/nilbuild/diffity). This is an original implementation; no Diffity source code was imported.
+
+## Historical review experiment
+
+Closed pull requests remain useful review material. This abandoned proposal is a history-view fixture and should not merge.
