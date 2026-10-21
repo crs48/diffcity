@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import "../i18n";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -17,17 +17,7 @@ import { useConversation } from "./conversation";
 import { useHunkContext } from "./useHunkContext";
 import { ContextLines } from "./ContextLines";
 
-export function Diff({
-  hunk,
-  file,
-  selection,
-  onSelect,
-  onDiscuss = onSelect,
-  notes,
-  comments,
-  split,
-  snapshotId,
-}: {
+type DiffProps = {
   hunk: Hunk;
   file?: { status: string; previousPath: string | null };
   selection: Anchor | null;
@@ -37,16 +27,64 @@ export function Diff({
   comments: RemoteComment[];
   split: boolean;
   snapshotId?: string;
+};
+
+// Conversation updates reach inline threads directly; unchanged code does not need
+// to rerender when the guide's active chapter or an unrelated chat message changes.
+export function Diff(props: DiffProps) {
+  const conversation = useConversation();
+  const callbacks = useRef(props);
+  callbacks.current = props;
+  const onSelect = useCallback(
+    (anchor: Anchor) => callbacks.current.onSelect(anchor),
+    [],
+  );
+  const onDiscuss = useCallback(
+    (anchor: Anchor) =>
+      (callbacks.current.onDiscuss ?? callbacks.current.onSelect)(anchor),
+    [],
+  );
+  const draft = conversation?.inline.draft;
+  const editing =
+    draft?.snapshotId === conversation?.workspace.snapshot.id &&
+    draft?.anchor?.hunkId === props.hunk.id
+      ? draft.anchor
+      : null;
+  return (
+    <DiffContent
+      {...props}
+      selection={
+        props.selection?.hunkId === props.hunk.id ? props.selection : null
+      }
+      onSelect={onSelect}
+      onDiscuss={onDiscuss}
+      editing={editing}
+      composerFocus={editing ? (conversation?.inline.focus ?? 0) : 0}
+      hasConversation={!!conversation}
+    />
+  );
+}
+
+const DiffContent = memo(function DiffContent({
+  hunk,
+  file,
+  selection,
+  onSelect,
+  onDiscuss = onSelect,
+  notes,
+  comments,
+  split,
+  snapshotId,
+  editing,
+  composerFocus,
+  hasConversation,
+}: DiffProps & {
+  editing: Anchor | null;
+  composerFocus: number;
+  hasConversation: boolean;
 }) {
   const { t } = useTranslation();
   const scroll = useRef<HTMLDivElement>(null);
-  const conversation = useConversation();
-  const hasConversation = !!conversation;
-  const editing =
-    conversation?.inline.draft?.snapshotId ===
-    conversation?.workspace.snapshot.id
-      ? (conversation?.inline.draft?.anchor ?? null)
-      : null;
   const items = useMemo(
     () =>
       diffRows(
@@ -58,7 +96,7 @@ export function Diff({
     [hunk, notes, comments, editing, hasConversation],
   );
   const context = useHunkContext(snapshotId, hunk.id);
-  const expansionKey = `${conversation?.inline.focus ?? 0}/${selection?.hunkId === hunk.id ? anchorKey(selection) : ""}`;
+  const expansionKey = `${composerFocus}/${selection?.hunkId === hunk.id ? anchorKey(selection) : ""}`;
   const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const collapsed = collapsedAt === expansionKey;
   const renderedRows = items.map((item, index) => ({ index, key: item.key }));
@@ -327,4 +365,4 @@ export function Diff({
       )}
     </div>
   );
-}
+});

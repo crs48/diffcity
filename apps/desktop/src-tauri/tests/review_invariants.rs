@@ -68,7 +68,14 @@ fn omitted_hunks_remain_visible_and_unassessed() {
     )
     .unwrap();
     assert_eq!(g.sections.iter().flat_map(|s| &s.hunk_ids).count(), 7);
-    assert_eq!(g.sections.iter().filter(|s| !s.assessed).count(), 6);
+    assert_eq!(
+        g.sections
+            .iter()
+            .filter(|s| !s.assessed)
+            .map(|s| s.hunk_ids.len())
+            .sum::<usize>(),
+        6
+    );
     assert!(
         g.sections
             .iter()

@@ -233,7 +233,7 @@ it("moves a sample review down and back up without publishing or changing real i
     ),
   ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Open in GitHub" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Finish review" }));
+  await user.click(screen.getAllByRole("button", { name: "Finish review" })[0]);
   const dialog = screen.getByRole("dialog");
   await user.type(
     within(dialog).getByLabelText("Review summary"),
@@ -910,7 +910,7 @@ it("keeps review progress and saved private notes when background metadata arriv
     await screen.findByRole("button", { name: /Review with private progress/ }),
   );
   await user.click(
-    await screen.findByRole("button", { name: "Mark code reviewed" }),
+    (await screen.findAllByRole("button", { name: "Mark code reviewed" }))[0],
   );
   expect(screen.getByRole("button", { name: "Code reviewed" })).toBeTruthy();
   await act(async () =>

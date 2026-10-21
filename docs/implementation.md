@@ -300,7 +300,7 @@ The provider/model/effort preference has a dedicated document and command, so co
 
 ## Shared review scrolling and surrounding context
 
-Guides, code, inline discussions, and the optional PR chat now flow inside one review viewport. Expanded hunks render every line, with long source and response text wrapping instead of creating nested scrollbars. Comment editors grow with their content. Guide changes, individual hunks, and inline threads can collapse completely; unfinished draft state survives reopening. Pointer range selection uses actual row geometry, including wrapped lines and inserted threads, and scrolls the shared viewport. Changing a guide step or review view returns to its beginning.
+Guides, code, inline discussions, and the optional PR chat now flow inside one review viewport. Expanded hunks render every line, with long source and response text wrapping instead of creating nested scrollbars. Comment editors grow with their content. Guide changes, individual hunks, and inline threads can collapse completely; unfinished draft state survives reopening. Pointer range selection uses actual row geometry, including wrapped lines and inserted threads, and scrolls the shared viewport. Changing review views returns to their beginning; the continuous guide now restores its active section.
 
 ```mermaid
 flowchart LR
@@ -354,3 +354,29 @@ Background capture preserves revision-specific notes and guides, never writes ba
 - [x] Regression coverage verifies offline cached opens while a network lock is held, interruption and foreground priority, revision freshness, progress transfer at open time, queue membership/order/deduplication/backoff, slow GitHub responses, rapid switching, and restoration before directory discovery completes.
 - [x] All 70 Rust tests and 63 frontend tests pass, with type checking, ESLint, Clippy, formatting, production packaging, and [CI on b6b483f](https://github.com/crs48/diffcity/actions/runs/39662528011). Production WebKit switches among cached authored/draft/requested/assigned reviews in 77–125 ms while metadata responses are delayed three seconds. Review marks survive switching; light/dark axe WCAG A/AA and narrow-width checks pass.
 - [x] A read-only live smoke run prepares PRs #2, #3, and #4 in 3–6 seconds and reopens them offline in 0–184 ms (debug backend timings, including the 16,868-line fixture). The installed app automatically prepares reviews across repos despite an active repo filter, and renders draft/open PR code while background sync is visible. All eight private notes and saved settings remain unchanged. Installed executable SHA-256: `1532887471abac76fb59c0f3c317fdd8573617c917e60a5a498840c7fdc40146`.
+
+
+## Continuous guided review
+
+The guide is one document with all sections rendered in priority order. Each section places a bounded explanation to the left of its code; it sticks below the outline while that section is visible and yields at the section boundary. A narrow workspace stacks the explanation above the code. An explanation that cannot fit in the available viewport stays in normal document flow. Full text and review questions expand in the code column, and opening them jumps to their section so they remain discoverable.
+
+```mermaid
+flowchart TD
+  Capture[Captured PR] --> Group[Group related behavior and tests]
+  Group --> Order[High attention first; routine work last]
+  Order --> Document[One continuous review document]
+  Document --> Left[Sticky section explanation]
+  Document --> Right[Code, context and inline discussions]
+  Scroll[Scroll position] --> Outline[Current section in outline]
+  Jump[Outline or up/down jump] --> Heading[Scroll and focus destination heading]
+```
+
+Codex is prompted for 5–20 high-level sections on substantial PRs, fewer on small changes, with concise summaries and rationales. The response schema caps model sections at 20. Provisional and omitted code groups by attention/category instead of one section per hunk, filtering already-covered hunks before grouping. Oversized saved guides compact within equal attention, assessment, and folding boundaries, preserving every explanation, question, finding, hunk, and unavailable path. Active and expanded section IDs remap while per-hunk progress stays unchanged.
+
+Scrolling updates the outline and saved active section without resetting the viewport or moving focus. Explicit jumps focus the destination heading. Code and discussion remain mounted across jumps; each section can independently collapse. Long diffs, surrounding context, full explanations, and inline threads share the review scrollbar.
+
+- [x] 72 Rust and 66 frontend tests pass, including partial model coverage, large legacy-guide compaction, preserved findings/progress, independent collapse state, manual-scroll tracking, final short-section detection, and keyboard outline focus. Types, ESLint, Clippy, formatting, and the production web build pass.
+- [x] A live local Codex run using the saved Astra/Extra high preference produces a three-section sample guide and a PR-chat answer.
+- [x] Production WebKit verifies two 400-line sections, sticky handoff, bounded annotations, full-context disclosure, outline/keyboard navigation, all chapters retained, a single scroll viewport, narrow stacking, and zero light/dark axe WCAG A/AA violations.
+- [ ] Verify the large stress PR and inline discussion in the continuous guide.
+- [ ] Package, install, and verify the native app while preserving notes/settings.

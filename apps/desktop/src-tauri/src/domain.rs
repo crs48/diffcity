@@ -220,43 +220,7 @@ pub fn rank(a: &Attention) -> u8 {
 }
 
 pub fn provisional(snapshot: &Snapshot) -> Guide {
-    let mut sections = Vec::new();
-    for file in &snapshot.files {
-        for hunk in &file.hunks {
-            let (attention, category, reason) = rule(hunk);
-            sections.push(GuideSection {
-                id: hunk.id.clone(),
-                title: file.path.clone(),
-                summary: "Review with Codex to get a guided explanation and code review.".into(),
-                attention,
-                category,
-                reason,
-                hunk_ids: vec![hunk.id.clone()],
-                unavailable_paths: vec![],
-                questions: vec![],
-                findings: vec![],
-                assessed: false,
-                foldable: false,
-            });
-        }
-        if let Some(reason) = &file.unavailable {
-            sections.push(GuideSection {
-                id: hash(&file.path),
-                title: file.path.clone(),
-                summary: reason.clone(),
-                attention: Attention::NeedsAssessment,
-                category: "Unavailable content".into(),
-                reason: "This content has not been assessed.".into(),
-                hunk_ids: vec![],
-                unavailable_paths: vec![file.path.clone()],
-                questions: vec![],
-                findings: vec![],
-                assessed: false,
-                foldable: false,
-            });
-        }
-    }
-    sections.sort_by_key(|s| rank(&s.attention));
+    let sections = crate::guide::provisional_sections(snapshot, &HashSet::new());
     Guide {
         snapshot_id: snapshot.id.clone(),
         summary: snapshot.pull.title.clone(),
@@ -358,13 +322,8 @@ pub fn validate_guide(
             foldable,
         });
     }
-    let fallback = provisional(snapshot);
-    sections.extend(
-        fallback
-            .sections
-            .into_iter()
-            .filter(|s| s.hunk_ids.iter().all(|id| !seen.contains(id))),
-    );
+    sections.extend(crate::guide::provisional_sections(snapshot, &seen));
+    let mut sections = crate::guide::compact_sections(sections);
     sections.sort_by_key(|s| rank(&s.attention));
     if sections.iter().all(|s| s.attention == Attention::Routine)
         && let Some(s) = sections.first_mut()

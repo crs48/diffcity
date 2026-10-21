@@ -110,9 +110,9 @@ export default function App() {
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
   const reviewScroll = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    // A new step starts at its explanation, even after a very long diff.
+    // The continuous guide restores its own chapter; other views start at the top.
     if (reviewScroll.current) reviewScroll.current.scrollTop = 0;
-  }, [mode, workspace?.snapshot.id, workspace?.progress.activeSection]);
+  }, [mode, workspace?.snapshot.id]);
   const [dialog, setDialog] = useState<
     "connections" | "finish" | "display" | "model" | null
   >(null);

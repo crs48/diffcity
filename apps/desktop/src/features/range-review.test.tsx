@@ -402,7 +402,9 @@ describe("multi-line review", () => {
         }),
       ).queryByText("The API must accommodate the migration rollout."),
     ).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Finish review" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Finish review" })[0],
+    );
     expect(
       within(screen.getByRole("dialog", { name: "Finish review" })).getByText(
         "No drafts selected. Private notes and Codex conversations are not included.",

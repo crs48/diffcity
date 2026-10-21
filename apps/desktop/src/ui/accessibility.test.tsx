@@ -45,6 +45,7 @@ beforeEach(() => {
     removeListener() {},
   }));
   Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.scrollTo = vi.fn();
   mockWindows("main");
   Object.assign(window, {
     __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener() {} },
@@ -159,7 +160,7 @@ describe("keyboard and assistive navigation", () => {
     expect(screen.getByRole("dialog", { name: "Test dialog" })).toBeTruthy();
   });
 
-  it("switches review tabs and guide steps with the keyboard", async () => {
+  it("switches review tabs and jumps between guide sections with the keyboard", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(
@@ -179,11 +180,11 @@ describe("keyboard and assistive navigation", () => {
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(5);
     await user.keyboard("{Home}{ArrowDown}{Enter}");
     await waitFor(() =>
-      expect(
+      expect(document.activeElement).toBe(
         screen.getByRole("heading", {
           name: "Keep invitations inside their team",
         }),
-      ).toBeTruthy(),
+      ),
     );
     expect(screen.queryByRole("menu")).toBeNull();
   });

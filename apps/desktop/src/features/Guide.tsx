@@ -1,37 +1,11 @@
 import { useTranslation } from "react-i18next";
 import "../i18n";
-import {
-  Button,
-  Menu,
-  MenuItem,
-  MenuTrigger,
-  Popover,
-} from "react-aria-components";
-import { useState } from "react";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  ChevronDown,
-  ChevronsUpDown,
-  Eye,
-  FileCode2,
-  Flag,
-  GitBranch,
-  ShieldAlert,
-  Sparkles,
-} from "lucide-react";
+import { Button } from "react-aria-components";
+import { useMemo, useState } from "react";
+import { FileCode2, GitBranch } from "lucide-react";
 import { Diff } from "./Diff";
-import { useConversation } from "./conversation";
-import { anchorKey } from "../lib/diffRows";
-import { labels, countProgress, sectionHasDiscussion } from "../lib/review";
-import type {
-  Anchor,
-  GuideSection,
-  ReviewProgress,
-  ReviewWorkspace,
-} from "../lib/api";
+import { GuideFlow } from "./GuideFlow";
+import type { Anchor, ReviewProgress, ReviewWorkspace } from "../lib/api";
 
 export function GuideView({
   workspace: w,
@@ -51,46 +25,35 @@ export function GuideView({
   mode: "guide" | "files" | "overview";
 }) {
   const { t } = useTranslation();
-  const conversation = useConversation();
-  const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const [split, setSplit] = useState(false);
   const [fileQuery, setFileQuery] = useState("");
-  const sections = w.guide.sections;
-  const index = Math.max(
-    0,
-    sections.findIndex((s) => s.id === w.progress.activeSection),
+  const hunks = useMemo(
+    () =>
+      new Map(
+        w.snapshot.files.flatMap((file) =>
+          file.hunks.map((hunk) => [hunk.id, { hunk, file }] as const),
+        ),
+      ),
+    [w.snapshot.files],
   );
-  const section = sections[index];
-  const allHunks = w.snapshot.files.flatMap((f) => f.hunks);
-  const counts = countProgress(w);
-  const navigate = (s: GuideSection) => {
-    onProgress({ ...w.progress, activeSection: s.id });
-  };
-  const mark = (
-    kind: "reviewed" | "acknowledged" | "deferred",
-    s: GuideSection,
-  ) => {
-    const next = {
-      ...w.progress,
-      [kind]: [...new Set([...w.progress[kind], ...s.hunkIds])],
-    };
-    if (kind === "reviewed")
-      next.deferred = next.deferred.filter((id) => !s.hunkIds.includes(id));
-    onProgress(next);
-  };
+  const comments = useMemo(
+    () => w.comments.filter((c) => c.commit === w.snapshot.pull.head),
+    [w.comments, w.snapshot.pull.head],
+  );
   const renderHunk = (id: string) => {
-    const hunk = allHunks.find((h) => h.id === id);
+    const entry = hunks.get(id);
+    const hunk = entry?.hunk;
     return (
       hunk && (
         <Diff
           key={id}
           hunk={hunk}
-          file={w.snapshot.files.find((f) => f.path === hunk.path)}
+          file={entry?.file}
           selection={selection}
           onSelect={onSelect}
           onDiscuss={onDiscuss}
           notes={w.notes}
-          comments={w.comments.filter((c) => c.commit === w.snapshot.pull.head)}
+          comments={comments}
           split={split}
           snapshotId={w.snapshot.id}
         />
@@ -175,300 +138,16 @@ export function GuideView({
           ))}
       </div>
     );
-  if (!section)
-    return (
-      <div className="empty">
-        <FileCode2 size={30} />
-        <h2>{t("No reviewable text changes")} </h2>
-        <p>
-          {t("Check the PR overview for details and capture limitations.")}{" "}
-        </p>
-      </div>
-    );
-  const expansionKey = `${section.id}/${conversation?.inline.focus ?? 0}/${selection ? anchorKey(selection) : ""}`;
-  const expanded =
-    collapsedAt !== expansionKey &&
-    (!section.foldable ||
-      w.progress.expanded.includes(section.id) ||
-      sectionHasDiscussion(section, w) ||
-      (!!selection && section.hunkIds.includes(selection.hunkId)));
-  const reviewed =
-    section.hunkIds.length > 0 &&
-    section.hunkIds.every((id) => w.progress.reviewed.includes(id));
   return (
-    <div className="guide-root">
-      <div className="guide-navigation">
-        <MenuTrigger>
-          <Button
-            className="outline-toggle"
-            aria-label={`Review outline, step ${index + 1} of ${sections.length}`}
-          >
-            <span className="step-number">{index + 1}</span>
-            <span>
-              {t("of")} {sections.length} {t("steps")}{" "}
-            </span>
-            <ChevronDown size={14} aria-hidden="true" />
-          </Button>
-          <Popover placement="bottom start" className="guide-outline">
-            <Menu
-              aria-label={t("Review steps")}
-              onAction={(id) => {
-                const next = sections.find((s) => s.id === id);
-                if (next) navigate(next);
-              }}
-            >
-              {sections.map((s, i) => (
-                <MenuItem
-                  id={s.id}
-                  key={s.id}
-                  textValue={`${i + 1}. ${s.title}`}
-                  className={i === index ? "selected" : ""}
-                >
-                  <span
-                    className={`attention-dot ${s.attention}`}
-                    aria-hidden="true"
-                  />
-                  <span className="outline-title">
-                    <strong>
-                      {i + 1}. {s.title}
-                    </strong>
-                    <small>
-                      {t(labels[s.attention])} · {s.hunkIds.length} {t("hunks")}{" "}
-                      {s.hunkIds.length > 0 &&
-                      s.hunkIds.every((id) => w.progress.reviewed.includes(id))
-                        ? " · reviewed"
-                        : ""}
-                    </small>
-                  </span>
-                </MenuItem>
-              ))}
-            </Menu>
-          </Popover>
-        </MenuTrigger>
-        <div className="step-track">
-          {sections.map((s, i) => (
-            <Button
-              key={s.id}
-              aria-label={`Go to step ${i + 1}: ${s.title}, ${t(labels[s.attention])}`}
-              aria-current={i === index ? "step" : undefined}
-              className={`${s.attention} ${i === index ? "current" : ""} ${s.hunkIds.length && s.hunkIds.every((id) => w.progress.reviewed.includes(id)) ? "done" : ""}`}
-              onPress={() => navigate(s)}
-            />
-          ))}
-        </div>
-        <Button
-          className="icon-button"
-          aria-label={t("Previous step")}
-          isDisabled={index === 0}
-          onPress={() => navigate(sections[index - 1])}
-        >
-          <ArrowLeft size={17} />
-        </Button>
-        <Button
-          className="icon-button"
-          aria-label={t("Next step")}
-          isDisabled={index === sections.length - 1}
-          onPress={() => navigate(sections[index + 1])}
-        >
-          <ArrowRight size={17} />
-        </Button>
-      </div>
-      <p className="sr-only" role="status">
-        {t("Step")} {index + 1} {t("of")} {sections.length}: {section.title}.{" "}
-        {t(labels[section.attention])}.
-      </p>
-      <div className="reading-area" key={section.id}>
-        <div className="section-meta">
-          <span className={`badge ${section.attention}`}>
-            {section.attention === "high" && <Flag size={12} />}{" "}
-            {t(labels[section.attention])}
-          </span>
-          <span>{section.category}</span>
-          <span className="meta-end">
-            {section.assessed
-              ? w.guide.source === "sample"
-                ? "Sample assessment"
-                : "Assessed by Codex"
-              : "Provisional"}
-          </span>
-        </div>
-        <h2 className="section-title">{section.title}</h2>
-
-        <p className="intro">{section.summary}</p>
-        <div
-          className={`callout ${section.attention === "high" ? "attention-callout" : ""}`}
-        >
-          <ShieldAlert size={18} />
-          <div>
-            <strong>
-              {section.attention === "high"
-                ? "Why this needs your attention"
-                : "Review context"}
-            </strong>
-            <p>{section.reason}</p>
-          </div>
-        </div>
-        {section.questions.length > 0 && (
-          <div className="review-questions">
-            <span className="eyebrow">{t("AS YOU REVIEW")} </span>
-            {section.questions.map((q) => (
-              <p key={q}>
-                <span>↳</span> {q}
-              </p>
-            ))}
-          </div>
-        )}
-        {!expanded ? (
-          <div className="fold-card">
-            <div className="fold-icon">
-              <ChevronsUpDown size={23} />
-            </div>
-            <h3>
-              {t(
-                section.foldable
-                  ? "Routine changes, kept together"
-                  : "Changes collapsed",
-              )}{" "}
-            </h3>
-            <p>
-              {section.hunkIds.length} {t("hunks ·")}{" "}
-              {
-                new Set(
-                  allHunks
-                    .filter((h) => section.hunkIds.includes(h.id))
-                    .map((h) => h.path),
-                ).size
-              }{" "}
-              {t("files")}{" "}
-            </p>
-            <p className="muted">
-              {t("Read the summary, or expand to inspect every line.")}{" "}
-            </p>
-            <Button
-              className="secondary"
-              onPress={() => {
-                setCollapsedAt(null);
-                onProgress({
-                  ...w.progress,
-                  expanded: [...new Set([...w.progress.expanded, section.id])],
-                });
-              }}
-            >
-              <Eye size={15} />
-              {t("Expand all changes")}{" "}
-            </Button>
-            <Button
-              className="text-button"
-              onPress={() => mark("acknowledged", section)}
-            >
-              {t("Acknowledge summary")}{" "}
-            </Button>
-          </div>
-        ) : (
-          <>
-            <div className="code-toolbar">
-              <span>
-                <FileCode2 size={14} />
-                {t("CODE CHANGES")}{" "}
-              </span>
-              <Button onPress={() => setSplit(!split)}>
-                {split ? t("Unified view") : t("Split view")}
-              </Button>
-              <Button onPress={() => setCollapsedAt(expansionKey)}>
-                {t("Collapse changes")}
-              </Button>
-              <span className="muted">
-                {t(
-                  "Drag line numbers · Shift-click or Shift + ↑/↓ for a range",
-                )}{" "}
-              </span>
-            </div>
-            {section.hunkIds.map(renderHunk)}
-          </>
-        )}
-        {section.findings.map((f, i) => (
-          <Button
-            className="finding"
-            key={i}
-            onPress={() => onDiscuss(f.anchor)}
-          >
-            <span className="badge high">
-              {f.severity}
-              {t("finding")}{" "}
-            </span>
-            <strong>{f.title}</strong>
-            <p>{f.body}</p>
-            <code>
-              {f.anchor.path}:{f.anchor.line}
-            </code>
-          </Button>
-        ))}
-        {section.unavailablePaths.map((path) => (
-          <div className="callout" key={path}>
-            <FileCode2 size={17} />
-            <div>
-              <strong>{path}</strong>
-              <p>
-                {w.snapshot.files.find((f) => f.path === path)?.unavailable}
-              </p>
-            </div>
-          </div>
-        ))}
-        <div className="section-actions">
-          <Button
-            className={reviewed ? "reviewed-button" : "primary"}
-            isDisabled={!section.hunkIds.length}
-            onPress={() => mark("reviewed", section)}
-          >
-            <Check size={16} />
-            {reviewed ? t("Code reviewed") : t("Mark code reviewed")}
-          </Button>
-          <Button
-            className="secondary"
-            onPress={() => mark("deferred", section)}
-          >
-            <ArrowDown size={15} />
-            {t("Defer")}{" "}
-          </Button>
-          <div className="spacer" />
-          {index < sections.length - 1 ? (
-            <Button
-              className="next-button"
-              onPress={() => navigate(sections[index + 1])}
-            >
-              {t("Next step")} <ArrowRight size={16} />
-            </Button>
-          ) : (
-            <Button className="next-button" onPress={onFinish}>
-              {t("Finish review")} <ArrowRight size={16} />
-            </Button>
-          )}
-        </div>
-        <div className="guide-footer">
-          <Sparkles size={14} />
-          <span>
-            {w.guide.source === "codex"
-              ? `Reviewed with ${w.guide.model}`
-              : w.guide.source === "sample"
-                ? "Sample guide · illustrative data"
-                : "Run Codex for a guided code review"}
-          </span>
-          <span>
-            {counts.reviewed}/{counts.total} {t("hunks reviewed ·")}{" "}
-            {counts.acknowledged} {t("summaries acknowledged")}{" "}
-          </span>
-        </div>
-        {w.guide.limitations.length > 0 && (
-          <details className="limitations">
-            <summary>
-              {t("Coverage and limitations (")} {w.guide.limitations.length})
-            </summary>
-            {w.guide.limitations.map((s, i) => (
-              <p key={i}>{s}</p>
-            ))}
-          </details>
-        )}
-      </div>
-    </div>
+    <GuideFlow
+      workspace={w}
+      selection={selection}
+      onDiscuss={onDiscuss}
+      onProgress={onProgress}
+      onFinish={onFinish}
+      renderHunk={renderHunk}
+      split={split}
+      onSplit={() => setSplit(!split)}
+    />
   );
 }

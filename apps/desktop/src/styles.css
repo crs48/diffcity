@@ -2314,7 +2314,8 @@
       flex-direction: column;
       overflow: auto;
     }
-    .review-body:has(.discussion) .review-panel {
+    .review-panel {
+      width: 100%;
       flex: none;
     }
     .discussion {
@@ -2413,4 +2414,184 @@
   font-size: 11px;
   max-width: 150px;
   text-align: right;
+}
+
+@layer components {
+  .guide-root {
+    --guide-inset: 72px;
+    container-type: inline-size;
+  }
+  .guide-navigation {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--surface);
+    padding: 10px 24px;
+    min-height: 54px;
+  }
+  .guide-current-title {
+    flex: 1;
+    min-width: 0;
+    color: var(--muted);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    margin: 0 16px;
+  }
+  .guide-chapter {
+    display: grid;
+    grid-template-columns: minmax(180px, 24%) minmax(0, 1fr);
+    align-items: start;
+    gap: 28px;
+    padding: 32px 24px 48px;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: var(--guide-inset);
+  }
+  .guide-annotation {
+    position: sticky;
+    top: var(--guide-inset);
+    min-width: 0;
+    align-self: start;
+    overflow-wrap: anywhere;
+  }
+  .guide-annotation[data-sticky="false"] {
+    position: static;
+  }
+  .chapter-number {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    letter-spacing: 0.04em;
+  }
+  .guide-annotation .section-meta {
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 14px;
+    font-size: 11px;
+  }
+  .guide-annotation .section-title {
+    font-size: 23px;
+    line-height: 1.25;
+    letter-spacing: -0.5px;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+  }
+  .annotation-summary,
+  .annotation-reason p {
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+    overflow: hidden;
+  }
+  .annotation-summary {
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .annotation-reason {
+    border-left: 2px solid var(--border);
+    padding-left: 12px;
+  }
+  .annotation-reason strong {
+    font-size: 11px;
+  }
+  .annotation-reason p {
+    -webkit-line-clamp: 3;
+    margin-top: 7px;
+    color: var(--muted);
+  }
+  .annotation-counts {
+    color: var(--muted);
+    font-size: 11px;
+    margin: 18px 0 8px;
+  }
+  .guide-annotation > .text-button {
+    padding-left: 0;
+    text-align: left;
+    min-height: 32px;
+  }
+  .guide-code {
+    min-width: 0;
+  }
+  .guide-code .code-toolbar {
+    flex-wrap: wrap;
+    margin-top: 0;
+  }
+  .guide-code .section-actions {
+    flex-wrap: wrap;
+  }
+  .chapter-context {
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--subtle);
+    margin-bottom: 24px;
+    overflow-wrap: anywhere;
+  }
+  .chapter-context p,
+  .chapter-context li {
+    font-size: 12px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    margin: 10px 0 18px;
+  }
+  .chapter-context h3,
+  .chapter-context strong {
+    font-size: 13px;
+  }
+  .chapter-context ul {
+    padding-left: 20px;
+  }
+  .guide-completion {
+    padding: 32px 24px;
+  }
+  .guide-completion .guide-footer {
+    flex-wrap: wrap;
+  }
+  .guide-root .inline-thread,
+  .guide-root .diff-line {
+    scroll-margin-top: var(--guide-inset);
+  }
+  @container (max-width: 760px) {
+    .guide-chapter {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+      padding: 24px 16px 36px;
+    }
+    .guide-annotation {
+      position: static;
+    }
+    .guide-annotation .section-title {
+      font-size: 24px;
+    }
+    .annotation-summary {
+      -webkit-line-clamp: 3;
+    }
+    .annotation-reason {
+      display: none;
+    }
+    .annotation-counts {
+      margin-top: 10px;
+    }
+    .guide-navigation {
+      padding: 8px 16px;
+    }
+    .guide-current-title {
+      margin: 0 8px;
+    }
+    .guide-completion {
+      padding: 24px 16px;
+    }
+  }
+  @container (max-width: 480px) {
+    .guide-current-title {
+      color: transparent;
+    }
+  }
 }

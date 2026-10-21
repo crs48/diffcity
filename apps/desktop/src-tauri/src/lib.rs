@@ -6,6 +6,7 @@ pub mod domain;
 pub mod fixtures;
 pub mod github;
 mod github_lists;
+pub mod guide;
 pub mod migrations;
 mod models;
 mod pins;
