@@ -102,7 +102,7 @@ flowchart LR
 
 The large-text fallback uses the PR merge base rather than the target branch tip, so unrelated changes on the target branch cannot enter the reconstructed diff. It reads through GitHub's authenticated contents endpoint without following redirects. Snapshot capture format version 2 keeps newly reconstructed code separate from earlier incomplete captures. [GitHub content media types](https://docs.github.com/en/rest/repos/contents) and the [similar diff library](https://docs.rs/similar/latest/similar/) document the underlying APIs.
 
-## Expanded corpus verification (October 20, 2026)
+## Expanded corpus verification (October 20–21, 2026)
 
 - [x] 36 Rust tests and 18 TypeScript/component tests pass, with types, ESLint, Clippy, formatting, and the production app build.
 - [x] [Implementation CI](https://github.com/crs48/diffcity/actions/runs/39540803966) passes on commit `f383c36`, including the unsigned native bundle.
@@ -113,4 +113,9 @@ The large-text fallback uses the PR merge base rather than the target branch tip
 - [x] Sampled light/Spanish history and dark guided-review states pass axe WCAG A/AA checks. This does not replace a complete assistive-technology audit.
 - [x] The installed production app upgrades the real schema 1 database to schema 3, preserving all eight private messages. Its consistent pre-upgrade backup also contains all eight messages and remains at schema 1.
 
-The current installed executable SHA-256 is `bef045cee7c82e013f9b8945ca8091c1c1fa7af8990f7a42c180b2107407f363`, matching the build from `f383c36`. Native UI and restart verification for this expansion is awaiting a manual macOS unlock; the computer-use tool reported the host locked. Two optional large-PR Codex follow-up attempts encountered GitHub connection timeouts before analysis, while the completed corpus capture and migration analysis above succeeded. No network or security settings were changed.
+The current installed executable SHA-256 is `bef045cee7c82e013f9b8945ca8091c1c1fa7af8990f7a42c180b2107407f363`, matching the build from `f383c36`. Native UI and restart verification completed on October 21 after the host was manually unlocked. Two earlier large-PR Codex attempts encountered GitHub connection timeouts before analysis; the installed app subsequently captured the PR and completed its Codex review. No network or security settings were changed.
+
+- [x] In the installed production app, **Save and reconnect** restores the existing GitHub and Codex connections after the locked-host timeouts. History loads closed PR #6 and renders its additions and deletions. Publication remains disabled with a nonempty review summary; no review is posted.
+- [x] Selecting Spanish translates the native interface. After quitting and relaunching, Spanish, closed PR #6, and both live connections return. SQLite remains at schema 3 with exactly three migration entries and all eight original private messages. English is restored after the check.
+- [x] The installed app captures all 16,868 changed lines in PR #3. Its 7,500-line generated-data hunk reaches RIGHT line 4,000 with 30 code rows in the accessibility tree.
+- [x] A fresh native Codex review creates an 18-section guide, placing the workspace migration and destructive cleanup first, followed by authorization changes and the API contract. Findings identify the missing migration backfill, deletion of every note, and missing required API path parameter. The bounded context supplies eight of 18 textual hunks; all ten omitted hunks remain visible as unassessed, alongside explicit binary and metadata limitations. Full capture does not imply full model coverage.
