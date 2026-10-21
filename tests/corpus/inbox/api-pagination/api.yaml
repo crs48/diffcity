@@ -1,0 +1,10 @@
+openapi: 3.1.0
+info:
+  title: Inbox history fixture
+  version: 0.0.0
+paths:
+  /reviews:
+    get:
+      responses:
+        '200':
+          description: A page of historical reviews
