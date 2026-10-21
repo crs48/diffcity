@@ -3,6 +3,7 @@ import { Button, Tooltip, TooltipTrigger } from "react-aria-components";
 import {
   BookOpen,
   Building2,
+  ChevronDown,
   FlaskConical,
   Plus,
   Settings2,
@@ -174,17 +175,20 @@ export function RepoFilter({
   return (
     <label className="repo-filter">
       <span>{t("Repo")}</span>
-      <select
-        value={repository ?? ""}
-        onChange={(event) => onChange(event.target.value || null)}
-      >
-        <option value="">{t("All tracked repos")}</option>
-        {repositories.map((repo) => (
-          <option key={repo} value={repo}>
-            {owner ? repo.split("/")[1] : repo}
-          </option>
-        ))}
-      </select>
+      <span className="repo-select">
+        <select
+          value={repository ?? ""}
+          onChange={(event) => onChange(event.target.value || null)}
+        >
+          <option value="">{t("All tracked repos")}</option>
+          {repositories.map((repo) => (
+            <option key={repo} value={repo}>
+              {owner ? repo.split("/")[1] : repo}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={14} aria-hidden="true" />
+      </span>
     </label>
   );
 }

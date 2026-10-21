@@ -319,15 +319,29 @@
     margin: 0 16px 12px;
     font-size: 12px;
   }
-  .repo-filter > span {
+  .repo-filter > span:first-child {
     color: var(--muted);
     flex-shrink: 0;
   }
+  .repo-select {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+  .repo-select svg {
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--muted);
+  }
   .repo-filter select {
+    appearance: none;
     width: 100%;
     min-height: 34px;
     min-width: 0;
-    padding: 7px 6px;
+    padding: 7px 28px 7px 9px;
     text-overflow: ellipsis;
     border: 1px solid var(--control-border);
     border-radius: 6px;
