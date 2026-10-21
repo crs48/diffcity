@@ -12,6 +12,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "3.14.21",
     "@tauri-apps/api": "2.12.4",
     "i18next": "^26.5.3",
     "lucide-react": "^0.577.0",

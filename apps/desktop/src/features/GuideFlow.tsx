@@ -1,4 +1,5 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -44,6 +45,16 @@ export function GuideFlow(props: Props) {
   const { workspace: w, onProgress, onFinish } = props;
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
+  const [navigationHost, setNavigationHost] = useState<HTMLElement | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    setNavigationHost(
+      root.current
+        ?.closest(".review-document")
+        ?.querySelector<HTMLElement>("#review-guide-navigation") ?? null,
+    );
+  }, []);
   const sections = w.guide.sections;
   const index = Math.max(
     0,
@@ -54,6 +65,7 @@ export function GuideFlow(props: Props) {
     sections.map((s) => s.id).join("/"),
     w.progress.activeSection,
     (id) => onProgress({ ...w.progress, activeSection: id }),
+    !!navigationHost,
   );
   const counts = countProgress(w);
   if (!sections.length)
@@ -64,79 +76,82 @@ export function GuideFlow(props: Props) {
         <p>{t("Check the PR overview for details and capture limitations.")}</p>
       </div>
     );
+  const navigation = (
+    <nav
+      className={`guide-navigation${navigationHost ? " docked" : ""}`}
+      aria-label={t("Guide navigation")}
+    >
+      <MenuTrigger>
+        <Button
+          className="outline-toggle"
+          aria-label={t("Review outline, section {{current}} of {{total}}", {
+            current: index + 1,
+            total: sections.length,
+          })}
+        >
+          <span className="step-number">{index + 1}</span>
+          <span>
+            {t("of")} {sections.length} {t("sections")}
+          </span>
+          <ChevronDown size={14} aria-hidden />
+        </Button>
+        <Popover placement="bottom start" className="guide-outline">
+          <Menu
+            aria-label={t("Review outline")}
+            onAction={(id) => {
+              // React Aria first restores the menu trigger; then focus the destination heading.
+              requestAnimationFrame(() => navigate(String(id)));
+            }}
+          >
+            {sections.map((s, i) => (
+              <MenuItem
+                id={s.id}
+                key={s.id}
+                textValue={`${i + 1}. ${s.title}`}
+                className={i === index ? "selected" : ""}
+              >
+                <span className={`attention-dot ${s.attention}`} aria-hidden />
+                <span className="outline-title">
+                  <strong>
+                    {i + 1}. {s.title}
+                  </strong>
+                  <small>
+                    {t(labels[s.attention])} · {s.hunkIds.length} {t("hunks")}
+                    {s.hunkIds.length > 0 &&
+                    s.hunkIds.every((id) => w.progress.reviewed.includes(id))
+                      ? ` · ${t("Code reviewed")}`
+                      : ""}
+                  </small>
+                </span>
+              </MenuItem>
+            ))}
+          </Menu>
+        </Popover>
+      </MenuTrigger>
+      <span className="guide-current-title" aria-hidden>
+        {sections[index].title}
+      </span>
+      <Button
+        className="icon-button"
+        aria-label={t("Previous section")}
+        isDisabled={index === 0}
+        onPress={() => navigate(sections[index - 1].id)}
+      >
+        <ArrowUp size={17} />
+      </Button>
+      <Button
+        className="icon-button"
+        aria-label={t("Next section")}
+        isDisabled={index === sections.length - 1}
+        onPress={() => navigate(sections[index + 1].id)}
+      >
+        <ArrowDown size={17} />
+      </Button>
+    </nav>
+  );
   return (
     <div className="guide-root" ref={root}>
-      <nav className="guide-navigation" aria-label={t("Guide navigation")}>
-        <MenuTrigger>
-          <Button
-            className="outline-toggle"
-            aria-label={t("Review outline, section {{current}} of {{total}}", {
-              current: index + 1,
-              total: sections.length,
-            })}
-          >
-            <span className="step-number">{index + 1}</span>
-            <span>
-              {t("of")} {sections.length} {t("sections")}
-            </span>
-            <ChevronDown size={14} aria-hidden />
-          </Button>
-          <Popover placement="bottom start" className="guide-outline">
-            <Menu
-              aria-label={t("Review outline")}
-              onAction={(id) => {
-                // React Aria first restores the menu trigger; then focus the destination heading.
-                requestAnimationFrame(() => navigate(String(id)));
-              }}
-            >
-              {sections.map((s, i) => (
-                <MenuItem
-                  id={s.id}
-                  key={s.id}
-                  textValue={`${i + 1}. ${s.title}`}
-                  className={i === index ? "selected" : ""}
-                >
-                  <span
-                    className={`attention-dot ${s.attention}`}
-                    aria-hidden
-                  />
-                  <span className="outline-title">
-                    <strong>
-                      {i + 1}. {s.title}
-                    </strong>
-                    <small>
-                      {t(labels[s.attention])} · {s.hunkIds.length} {t("hunks")}
-                      {s.hunkIds.length > 0 &&
-                      s.hunkIds.every((id) => w.progress.reviewed.includes(id))
-                        ? ` · ${t("Code reviewed")}`
-                        : ""}
-                    </small>
-                  </span>
-                </MenuItem>
-              ))}
-            </Menu>
-          </Popover>
-        </MenuTrigger>
-        <span className="guide-current-title" aria-hidden>
-          {sections[index].title}
-        </span>
-        <Button
-          className="icon-button"
-          aria-label={t("Previous section")}
-          isDisabled={index === 0}
-          onPress={() => navigate(sections[index - 1].id)}
-        >
-          <ArrowUp size={17} />
-        </Button>
-        <Button
-          className="icon-button"
-          aria-label={t("Next section")}
-          isDisabled={index === sections.length - 1}
-          onPress={() => navigate(sections[index + 1].id)}
-        >
-          <ArrowDown size={17} />
-        </Button>
-      </nav>
+      {navigationHost ? createPortal(navigation, navigationHost) : navigation}
       <section
         className="guide-introduction"
         aria-label={t("About this change")}

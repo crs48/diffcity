@@ -97,6 +97,36 @@ const mount = (initial?: ReviewWorkspace) => {
     .querySelectorAll<HTMLElement>("[data-guide-section]")
     .forEach((el, i) => (el.dataset.testChapter = String(i)));
 };
+it("docks navigation outside the code viewport and jumps without covering the destination", async () => {
+  const user = userEvent.setup();
+  render(
+    <div className="review-document">
+      <div id="review-guide-navigation" />
+      <Example />
+    </div>,
+  );
+  document
+    .querySelectorAll<HTMLElement>("[data-guide-section]")
+    .forEach((element, index) => {
+      element.dataset.testChapter = String(index);
+    });
+  const viewport = document.querySelector<HTMLElement>("[data-review-scroll]")!;
+  const navigation = screen.getByRole("navigation", {
+    name: "Guide navigation",
+  });
+  expect(viewport.contains(navigation)).toBe(false);
+  await user.click(screen.getByRole("button", { name: "Next section" }));
+  expect(viewport.scrollTop).toBe(984);
+  expect(document.activeElement?.textContent).toBe(
+    fixture.guide.sections[1].title,
+  );
+  fireEvent.wheel(viewport);
+  viewport.scrollTop = 2050;
+  fireEvent.scroll(viewport);
+  await screen.findByRole("button", { name: "Review outline, section 3 of 5" });
+  expect(viewport.scrollTop).toBe(2050);
+});
+
 it("keeps every chapter mounted while jumping and preserves independent reviewed/collapsed state", async () => {
   const user = userEvent.setup();
   mount();

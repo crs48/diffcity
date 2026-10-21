@@ -7,6 +7,7 @@ import { Diff } from "./Diff";
 import { GuideFlow } from "./GuideFlow";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import type { Anchor, ReviewProgress, ReviewWorkspace } from "../lib/api";
+import { ReviewCode } from "./ReviewCode";
 
 export function GuideView({
   workspace: w,
@@ -106,49 +107,63 @@ export function GuideView({
     );
   if (mode === "files")
     return (
-      <div className="reading-area">
-        <div className="file-tools">
-          <input
-            aria-label={t("Find a file")}
-            placeholder={t("Find a file…")}
-            value={fileQuery}
-            onChange={(e) => setFileQuery(e.target.value)}
-          />
-          <Button className="secondary" onPress={() => setSplit(!split)}>
-            {split ? t("Unified view") : t("Split view")}
-          </Button>
-        </div>
-        {w.snapshot.files
-          .filter((f) => f.path.toLowerCase().includes(fileQuery.toLowerCase()))
-          .map((f) => (
-            <div key={f.path} className="file-group">
-              {f.hunks.map((h) => renderHunk(h.id))}
-              {f.unavailable && (
-                <div className="callout">
-                  <FileCode2 size={16} />
-                  <div>
-                    <strong>
-                      {f.previousPath && <>{f.previousPath} → </>}
-                      {f.path} · {t(f.status)}
-                    </strong>
-                    <p>{f.unavailable}</p>
+      <ReviewCode
+        files={w.snapshot.files}
+        onSelect={onSelect}
+        onReveal={() => setFileQuery("")}
+      >
+        <div className="reading-area">
+          <div className="file-tools">
+            <input
+              aria-label={t("Find a file")}
+              placeholder={t("Find a file…")}
+              value={fileQuery}
+              onChange={(e) => setFileQuery(e.target.value)}
+            />
+            <Button className="secondary" onPress={() => setSplit(!split)}>
+              {split ? t("Unified view") : t("Split view")}
+            </Button>
+          </div>
+          {w.snapshot.files
+            .filter((f) =>
+              f.path.toLowerCase().includes(fileQuery.toLowerCase()),
+            )
+            .map((f) => (
+              <div key={f.path} className="file-group">
+                {f.hunks.map((h) => renderHunk(h.id))}
+                {f.unavailable && (
+                  <div className="callout">
+                    <FileCode2 size={16} />
+                    <div>
+                      <strong>
+                        {f.previousPath && <>{f.previousPath} → </>}
+                        {f.path} · {t(f.status)}
+                      </strong>
+                      <p>{f.unavailable}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
-      </div>
+                )}
+              </div>
+            ))}
+        </div>
+      </ReviewCode>
     );
   return (
-    <GuideFlow
-      workspace={w}
-      selection={selection}
-      onDiscuss={onDiscuss}
-      onProgress={onProgress}
-      onFinish={onFinish}
-      renderHunk={renderHunk}
-      split={split}
-      onSplit={() => setSplit(!split)}
-    />
+    <ReviewCode
+      files={w.snapshot.files}
+      onSelect={onSelect}
+      onReveal={() => setFileQuery("")}
+    >
+      <GuideFlow
+        workspace={w}
+        selection={selection}
+        onDiscuss={onDiscuss}
+        onProgress={onProgress}
+        onFinish={onFinish}
+        renderHunk={renderHunk}
+        split={split}
+        onSplit={() => setSplit(!split)}
+      />
+    </ReviewCode>
   );
 }

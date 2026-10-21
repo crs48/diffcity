@@ -457,3 +457,44 @@ The repeatable production WebKit stress check uses a 1600 × 1000 viewport, 19,8
 - [x] The installed app restores the real historical PR and its nine-section guide; native section navigation focuses the destination heading and scrolling retains the sticky explanation and compact header. All eight private notes, settings, and model preference remain byte-for-byte unchanged. Installed executable SHA-256: `7fa0df0d24c34253779d92a8f65599fa921f4bcd5796441cb1cbdf7235f1d3ba`.
 
 Initial rendering still mounts the complete expanded document and can be expensive at capture limits. The measured stress fixture is well below the maximum possible capture; exhaustive worst-case profiling remains open.
+
+## Adaptive code virtualization
+
+Reviews with at least 3,000 captured diff rows use TanStack Virtual to choose nearby 64-row blocks. Small reviews remain fully rendered. Lightweight block shells remain in normal document flow; measured heights replace estimates, retaining one review scrollbar and sticky chapter annotations. The shared document owns scroll adjustments so individual hunk windows cannot compete for the viewport. Native browser anchoring is disabled while virtual blocks are active. Explicit section/search jumps reconcile nearby height changes for a bounded eight frames and immediately yield to another user gesture.
+
+```mermaid
+flowchart LR
+  Snapshot[Captured diff data] --> Size{At least 3000 rows?}
+  Size -- No --> Full[Render all expanded code]
+  Size -- Yes --> Window[Nearby blocks and buffer]
+  Focus[Focus, selections, discussions] --> Keep[Keep active blocks mounted]
+  Keep --> Window
+  Window --> View[One review viewport]
+  Full --> View
+  Search[Search captured code] --> Reveal[Expand and reveal matching line]
+  Reveal --> Keep
+  Preference[Render all code preference] --> Full
+```
+
+Selected ranges, native text selections, adjacent keyboard targets, and discussion blocks stay mounted; draft text and thread collapse state survive distant scrolling. Hidden/covered panes retain pinned blocks and previous measurements. Rapid Shift-arrow input moves focus synchronously when its buffered neighbor exists. Context uses the same block renderer. A named offscreen-block control loads code on focus. **Render all code** persists in WebKit local storage for full-document assistive reading, while Cmd/Ctrl+A from code temporarily mounts the full document before native selection runs.
+
+**Find in code** searches the captured diff data rather than mounted DOM. Cmd/Ctrl+F focuses the field; Enter/Shift+Enter and previous/next controls cycle through matching lines with original old/new anchors. A result expands folded code and clears an incompatible file filter. Search covers captured diff lines, not unloaded surrounding file contents, prose, or chat. The guide navigation is docked above the code viewport to prevent partially obscured line-number targets; PR chat retains its independent pane.
+
+Production WebKit comparison on the same 19,890-line fixture at 1600 × 1000:
+
+| Measurement                                  |                Fully rendered |   Adaptive |
+| -------------------------------------------- | ----------------------------: | ---------: |
+| Open sample to mounted guide plus two frames |                      7,592 ms |     249 ms |
+| Initially mounted code rows                  |                        19,890 |        203 |
+| Initial DOM elements                         |                       201,111 |      4,247 |
+| Median scripted scroll-frame interval        | 25 ms (prior containment run) |      17 ms |
+| Adaptive p95 / maximum                       |                             — | 21 / 23 ms |
+| Adaptive frames over 50 ms                   |                             — |       0/90 |
+
+Opening excludes GitHub capture and Codex generation; these are local browser-fixture timings, not guaranteed native FPS. Captured review data remains in memory. Very large selections, many discussions, and explicit full-code rendering can still mount substantial DOM.
+
+- [x] 83 frontend tests, types, ESLint, formatting, and production web build pass. New regressions cover bounded mounting, pinned focus/selections, full-code mode persistence, data-backed search/line anchors, scroll-target reconciliation/cancellation, and docked navigation.
+- [x] Production WebKit visits all 20 section destinations and random positions throughout Files without blank visible blocks. The 3,012-row interaction fixture verifies offscreen search, multiline drafts and mirrored long replies, collapse state, native text selection, expanded context, and zero light/dark/narrow axe WCAG A/AA violations.
+- [x] Keyboard checks verify offscreen block loading, rapid split-view range extension, cross-block native selection, Select All including distant code, search into folded/filtered code, and Cmd+F. Independent-chat regressions pass, including narrow-panel return and accessibility checks.
+- [ ] Install the final production bundle and verify native large-PR navigation/search with private data preserved.
+- [ ] Confirm the implementation commit passes CI.

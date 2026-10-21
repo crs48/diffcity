@@ -137,13 +137,16 @@ export function useLineSelection(
     if (!next) return;
     commit(originFor(line, side, true), next.line, side);
     scrollToIndex(next.index);
-    requestAnimationFrame(() => {
-      scroll.current
-        ?.querySelector<HTMLButtonElement>(
-          `[data-side="${side}"][data-line="${next.line}"]`,
-        )
-        ?.focus({ preventScroll: true });
-    });
+    const focusNext = () => {
+      const target = scroll.current?.querySelector<HTMLButtonElement>(
+        `[data-side="${side}"][data-line="${next.line}"]`,
+      );
+      target?.focus({ preventScroll: true });
+      return !!target;
+    };
+    // Adjacent virtual blocks are buffered. Move focus synchronously when
+    // possible so rapid key repeats do not keep extending from a stale line.
+    if (!focusNext()) requestAnimationFrame(focusNext);
   };
   return {
     selected: preview ?? selection,

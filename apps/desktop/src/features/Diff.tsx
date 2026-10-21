@@ -146,7 +146,7 @@ const DiffContent = memo(function DiffContent({
       line && interaction.keyDown(event, line, side),
   });
   return (
-    <div className="diff-file">
+    <div className="diff-file" data-hunk-id={hunk.id}>
       <div className="file-bar">
         <Button
           className="icon-button"
@@ -244,6 +244,23 @@ const DiffContent = memo(function DiffContent({
               startsChunk={(item) =>
                 item.kind === "code" && item.codeIndex % DIFF_CHUNK_SIZE === 0
               }
+              keepItem={(item) =>
+                item.kind === "thread" ||
+                (item.kind === "code" &&
+                  (containsLine(
+                    selected,
+                    hunk,
+                    "LEFT",
+                    hunk.lines[item.codeIndex].old,
+                  ) ||
+                    containsLine(
+                      selected,
+                      hunk,
+                      "RIGHT",
+                      hunk.lines[item.codeIndex].new,
+                    )))
+              }
+              estimateItem={(item) => (item.kind === "thread" ? 160 : 25)}
               render={(item, index) => {
                 const wrapper = {
                   "data-index": index,

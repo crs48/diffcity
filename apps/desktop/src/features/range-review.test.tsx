@@ -122,11 +122,16 @@ describe("multi-line review", () => {
       vi.spyOn(region, "getBoundingClientRect").mockReturnValue(
         bounds(-100, 3400),
       );
-      Array.from(region.children).forEach((chunk, index) => {
-        vi.spyOn(chunk, "getBoundingClientRect").mockReturnValue(
-          bounds(index * 1600 - 100, Math.min((index + 1) * 1600, 3500) - 100),
-        );
-      });
+      Array.from(region.querySelectorAll(".diff-chunk")).forEach(
+        (chunk, index) => {
+          vi.spyOn(chunk, "getBoundingClientRect").mockReturnValue(
+            bounds(
+              index * 1600 - 100,
+              Math.min((index + 1) * 1600, 3500) - 100,
+            ),
+          );
+        },
+      );
       Array.from(region.querySelectorAll("[data-index]")).forEach(
         (row, index) => {
           vi.spyOn(row, "getBoundingClientRect").mockReturnValue(
@@ -222,7 +227,10 @@ describe("multi-line review", () => {
       top: 0,
       height: 150,
     } as DOMRect);
-    vi.spyOn(region.children[0], "getBoundingClientRect").mockReturnValue({
+    vi.spyOn(
+      region.querySelector(".diff-chunk")!,
+      "getBoundingClientRect",
+    ).mockReturnValue({
       top: 0,
       bottom: 150,
       height: 150,

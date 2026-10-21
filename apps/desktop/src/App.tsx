@@ -1170,55 +1170,58 @@ export default function App() {
               }}
             >
               <div className="review-body" data-chat-open={discussion}>
-                <div
-                  ref={reviewScroll}
-                  className="review-scroll"
-                  data-review-scroll
-                >
-                  <TabPanel id={mode} className="review-panel">
-                    {pull?.state !== "open" && (
-                      <div className="history-status">
-                        {t(
-                          "Historical review: code, private comments, and Codex are available. GitHub publication requires an open PR.",
-                        )}
-                      </div>
-                    )}
-                    {workspace.previousSnapshotId && (
-                      <div className="update-banner">
-                        <span>
+                <div className="review-document">
+                  <div id="review-guide-navigation" />
+                  <div
+                    ref={reviewScroll}
+                    className="review-scroll"
+                    data-review-scroll
+                  >
+                    <TabPanel id={mode} className="review-panel">
+                      {pull?.state !== "open" && (
+                        <div className="history-status">
                           {t(
-                            "Earlier notes and progress remain saved with their original code.",
+                            "Historical review: code, private comments, and Codex are available. GitHub publication requires an open PR.",
+                          )}
+                        </div>
+                      )}
+                      {workspace.previousSnapshotId && (
+                        <div className="update-banner">
+                          <span>
+                            {t(
+                              "Earlier notes and progress remain saved with their original code.",
+                            )}{" "}
+                          </span>
+                          <Button
+                            onPress={() =>
+                              void saved(workspace.previousSnapshotId!)
+                            }
+                          >
+                            {t("Open previous revision")}{" "}
+                          </Button>
+                        </div>
+                      )}
+                      {workspace.changedHunks.length > 0 && (
+                        <div className="update-banner">
+                          {workspace.changedHunks.length}
+                          {t(
+                            "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
                           )}{" "}
-                        </span>
-                        <Button
-                          onPress={() =>
-                            void saved(workspace.previousSnapshotId!)
-                          }
-                        >
-                          {t("Open previous revision")}{" "}
-                        </Button>
-                      </div>
-                    )}
-                    {workspace.changedHunks.length > 0 && (
-                      <div className="update-banner">
-                        {workspace.changedHunks.length}
-                        {t(
-                          "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
-                        )}{" "}
-                      </div>
-                    )}
+                        </div>
+                      )}
 
-                    <GuideView
-                      key={workspace.snapshot.id}
-                      workspace={workspace}
-                      selection={selection}
-                      onSelect={(a) => void select(a)}
-                      onDiscuss={(a) => void select(a, true)}
-                      onProgress={progress}
-                      onFinish={() => void finish()}
-                      mode={mode}
-                    />
-                  </TabPanel>
+                      <GuideView
+                        key={workspace.snapshot.id}
+                        workspace={workspace}
+                        selection={selection}
+                        onSelect={(a) => void select(a)}
+                        onDiscuss={(a) => void select(a, true)}
+                        onProgress={progress}
+                        onFinish={() => void finish()}
+                        mode={mode}
+                      />
+                    </TabPanel>
+                  </div>
                 </div>
                 {discussion && (
                   <Discussion

@@ -359,5 +359,13 @@
   "Show walkthrough": "Show walkthrough",
   "Walkthrough": "Walkthrough",
   "Why it matters": "Why it matters",
-  "What to verify": "What to verify"
+  "What to verify": "What to verify",
+  "Find in code": "Find in code",
+  "Find in code…": "Find in code…",
+  "{{current}} of {{total}} matching lines": "{{current}} of {{total}} matching lines",
+  "Previous code match": "Previous code match",
+  "Next code match": "Next code match",
+  "Render all code": "Render all code",
+  "Enable for full-document screen-reader navigation and text selection. Large reviews otherwise load code as you scroll. Find in code searches every captured diff line.": "Enable for full-document screen-reader navigation and text selection. Large reviews otherwise load code as you scroll. Find in code searches every captured diff line.",
+  "Load code block {{number}}": "Load code block {{number}}"
 }

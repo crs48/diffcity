@@ -905,12 +905,22 @@
     position: relative;
     align-items: stretch;
   }
+  .review-document {
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
   .review-scroll {
     min-width: 0;
     min-height: 0;
     flex: 1;
     overflow: auto;
     overscroll-behavior: contain;
+  }
+  .review-scroll:has(.diff-chunks[data-virtualized="true"]) {
+    overflow-anchor: none;
   }
   .guide-root {
     flex: 1;
@@ -927,6 +937,10 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+  }
+  .guide-navigation.docked {
+    position: relative;
+    top: auto;
   }
   .outline-toggle {
     font-size: 12px;
@@ -1267,7 +1281,74 @@
     background: var(--code);
   }
   .diff-chunk {
+    position: relative;
     contain: layout style paint;
+  }
+  .virtual-code-gap {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    color: var(--muted);
+    background: var(--code);
+    text-align: center;
+    font: inherit;
+    opacity: 0;
+  }
+  .virtual-code-gap:focus-visible {
+    opacity: 1;
+    outline-offset: -2px;
+  }
+  .review-code-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .review-code-tools input[type="search"] {
+    flex: 1;
+    min-width: 120px;
+    max-width: 280px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .review-code-tools :is(input, button, label) {
+    scroll-margin-block: 80px;
+  }
+  .code-search-count {
+    color: var(--muted);
+  }
+  .render-all-code {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    cursor: pointer;
+  }
+  .render-all-code .checkbox-indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--muted);
+    border-radius: 3px;
+  }
+  .render-all-code[data-selected] .checkbox-indicator {
+    background: var(--text);
+    box-shadow: inset 0 0 0 3px var(--bg);
+  }
+  .render-all-code[data-focus-visible] {
+    outline: 2px solid var(--text);
+    outline-offset: 3px;
+  }
+  .code-search-location {
+    padding: 5px 24px;
+    color: var(--muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
   }
   .diff-chunk .line-number:focus-visible,
   .diff-chunk .line-comment:focus-visible {
@@ -2359,7 +2440,7 @@
       border-left: 0;
       z-index: 2;
     }
-    .review-body[data-chat-open="true"] .review-scroll {
+    .review-body[data-chat-open="true"] .review-document {
       visibility: hidden;
     }
     .welcome {

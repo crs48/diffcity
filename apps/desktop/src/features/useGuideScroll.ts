@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, type RefObject } from "react";
+import { followScrollTarget } from "../lib/scrollTarget";
 
 /** One review viewport owns scrolling; chapter visibility never steals keyboard focus. */
 export function useGuideScroll(
@@ -6,6 +7,7 @@ export function useGuideScroll(
   sectionKey: string,
   activeId: string | null,
   onActive: (id: string) => void,
+  docked = false,
 ) {
   const latest = useRef({ activeId, onActive });
   latest.current = { activeId, onActive };
@@ -18,9 +20,16 @@ export function useGuideScroll(
     const chapters = [
       ...element.querySelectorAll<HTMLElement>("[data-guide-section]"),
     ];
-    const nav = element.querySelector<HTMLElement>(".guide-navigation");
+    const nav = docked
+      ? element
+          .closest(".review-document")
+          ?.querySelector<HTMLElement>(".guide-navigation")
+      : element.querySelector<HTMLElement>(".guide-navigation");
     let frame = 0;
-    const topInset = () => (nav?.getBoundingClientRect().height ?? 56) + 16;
+    let settling = false;
+    let stopJump = () => {};
+    const topInset = () =>
+      (docked ? 0 : (nav?.getBoundingClientRect().height ?? 56)) + 16;
     const measure = () => {
       const inset = topInset();
       element.style.setProperty("--guide-inset", `${inset}px`);
@@ -36,16 +45,11 @@ export function useGuideScroll(
     move.current = (id, focus) => {
       const chapter = chapters.find((c) => c.dataset.guideSection === id);
       if (!chapter) return;
+      stopJump();
+      settling = true;
       observed.current = id;
-      viewport.scrollTo({
-        top: Math.max(
-          0,
-          viewport.scrollTop +
-            chapter.getBoundingClientRect().top -
-            viewport.getBoundingClientRect().top -
-            topInset(),
-        ),
-        behavior: "auto",
+      stopJump = followScrollTarget(viewport, chapter, topInset, () => {
+        settling = false;
       });
       if (focus)
         chapter
@@ -54,7 +58,7 @@ export function useGuideScroll(
     };
     const update = () => {
       frame = 0;
-      if (!viewport.clientHeight) return; // No layout in nonvisual renderers.
+      if (!viewport.clientHeight || settling) return; // Explicit jumps settle before recording another chapter.
       const top = viewport.getBoundingClientRect().top + topInset() + 2;
       const atBottom =
         viewport.scrollHeight > viewport.clientHeight &&
@@ -95,11 +99,12 @@ export function useGuideScroll(
     return () => {
       cancelAnimationFrame(restore);
       cancelAnimationFrame(frame);
+      stopJump();
       viewport.removeEventListener("scroll", schedule);
       resize.disconnect();
       move.current = () => {};
     };
-  }, [root, sectionKey]);
+  }, [root, sectionKey, docked]);
   useLayoutEffect(() => {
     if (activeId && activeId !== observed.current)
       move.current(activeId, false);
