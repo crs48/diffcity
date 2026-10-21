@@ -497,4 +497,6 @@ Opening excludes GitHub capture and Codex generation; these are local browser-fi
 - [x] Production WebKit visits all 20 section destinations and random positions throughout Files without blank visible blocks. The 3,012-row interaction fixture verifies offscreen search, multiline drafts and mirrored long replies, collapse state, native text selection, expanded context, and zero light/dark/narrow axe WCAG A/AA violations.
 - [x] Keyboard checks verify offscreen block loading, rapid split-view range extension, cross-block native selection, Select All including distant code, search into folded/filtered code, and Cmd+F. Independent-chat regressions pass, including narrow-panel return and accessibility checks.
 - [ ] Install the final production bundle and verify native large-PR navigation/search with private data preserved.
-- [ ] Confirm the implementation commit passes CI.
+- [x] [CI passes on implementation commit 12a0b06](https://github.com/crs48/diffcity/actions/runs/39695349581): 76 Rust and 83 frontend tests, generated contracts, types, formatting, lint, Clippy, and production packaging.
+
+The final production bundle is ready for installation (executable SHA-256: `264d35ca1082fe85aafff616193f50ef1b37686b589e445a3ef89986d040bc54`). Native verification is pending manual Mac unlock. The pre-update SQLite backup contains 10 private notes; the installation check must preserve those notes and saved settings.
