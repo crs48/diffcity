@@ -28,6 +28,10 @@ async fn main() -> anyhow::Result<()> {
         "Codex: {}",
         bootstrap.codex.detail
     );
+    if std::env::var("DIFFCITY_CONNECT_ONLY").as_deref() == Ok("1") {
+        println!("PASS: live GitHub and Codex connection checks");
+        return Ok(());
+    }
     let inbox = service.inbox().await?;
     println!("GitHub inbox fetched: {} PRs", inbox.len());
     let (snapshot, _) = fixtures::sample()?;

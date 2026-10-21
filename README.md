@@ -22,6 +22,8 @@ open target/release/bundle/macos/diffcity.app
 
 The local build is unsigned for distribution. Signing, notarization, automatic updates, Apple Silicon validation, and a public release remain separate release work.
 
+If Connections reports a network timeout while `gh api user` succeeds, inspect any per-application network-filter prompt for the installed app. A CLI login succeeding does not establish that a newly built executable has network access. The full error appears in Connections; private drafts remain local.
+
 ## Review a PR
 
 1. Open **Connections** to confirm the local GitHub and Codex accounts. Executable paths and the model can be changed there.
@@ -62,6 +64,12 @@ The native end-to-end harness uses the actual packaged WKWebView and actual loca
 ```sh
 pnpm --filter @diffcity/desktop tauri build --debug --features e2e --bundles app
 node tests/e2e/native.mjs
+```
+
+For a connection check that does not invoke a model or publish feedback:
+
+```sh
+DIFFCITY_CONNECT_ONLY=1 cargo run -p diffcity --bin live-smoke
 ```
 
 The harness currently targets the synthetic draft PR in this repository. It consumes Codex model usage. GitHub publication is off by default and requires `DIFFCITY_TEST_PUBLISH=yes` after the operator explicitly authorizes posting the labeled test review. The `e2e` feature adds a local WebDriver server and must never be used for distributed builds. Normal `pnpm desktop:build` excludes it.

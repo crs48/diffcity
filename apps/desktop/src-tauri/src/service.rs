@@ -34,7 +34,7 @@ impl Service {
             connected: false,
             identity: String::new(),
             executable: String::new(),
-            detail: e.to_string(),
+            detail: format!("{e:#}"),
         };
         let github = match self.github.connect(&settings).await {
             Ok(c) => {
