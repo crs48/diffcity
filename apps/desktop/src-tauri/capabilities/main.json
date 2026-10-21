@@ -7,7 +7,7 @@
     "allow-bootstrap",
     "allow-refresh-inbox",
     "allow-list-pull-history",
-    "allow-list-repositories",
+    "allow-refresh-directory",
     "allow-save-settings",
     "allow-open-pull",
     "allow-open-saved-review",

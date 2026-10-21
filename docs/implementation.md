@@ -126,7 +126,7 @@ GitHub repositories are labeled **repos**. The Inbox groups each PR once: your o
 
 **Display settings** in the inbox header controls recently completed work: hidden, 24 hours, two days (default), one week, or 30 days. The preference is saved in SQLite with a backward-compatible default for older settings. Only your own completed PRs appear in the Inbox; **History** includes every author's closed and merged PRs independently of that preference.
 
-[GitHub's review fields](https://docs.github.com/en/graphql/reference/pulls) supply the signed-in user's latest submitted review and the aggregate review decision in batches of 25 PRs. Pending or dismissed reviews do not count as completed reviews. Current REST reviewer requests determine re-request priority. Recent completions use the paginated closed-PR list, stopping when the page falls outside the update window and filtering by actual `closed_at`; an old PR with a new comment cannot masquerade as recently completed. This avoids search-index lag. Pagination-budget failures retain the previous inbox and report an error instead of silently reporting complete results.
+[GitHub's review fields](https://docs.github.com/en/graphql/reference/pulls) supply the signed-in user's latest submitted review, current review requests, and aggregate review decision. Pending or dismissed reviews do not count as completed reviews. The automatic inbox queries five repos per batch, paginating 30 open PRs per repo, with smaller retries for failed batches. Recent completions come directly from the viewer's paginated closed/merged PR connection. Paging stops outside the update window, then filters by actual `closedAt`; an old PR with a new comment cannot masquerade as recently completed. This avoids search-index lag and scanning closed history in every repo. Pagination and access failures retain saved results for affected repos and report an explicit partial-sync error.
 
 ```mermaid
 flowchart TD
@@ -158,11 +158,11 @@ The installed bundle matches the build from `ef57f00`; its executable SHA-256 is
 
 ## Compact account navigation
 
-A 64-pixel rail selects **All accounts**, a GitHub organization, or a personal account. Accounts are derived from tracked repo owners and use monochrome GitHub avatars with initials as an offline fallback. The selected account name remains visible in the inbox header. A labeled **Repo** selector narrows its tracked repos; under All accounts, options include the owner to distinguish same-name repos. The standard PR list is 300 pixels wide, leaving 111 more pixels for the review than the former 205 + 270 pixel layout.
+A 64-pixel rail selects **All accounts**, a GitHub organization, or a personal account. Accounts combine GitHub organization memberships, accessible repo owners, and the signed-in personal account and use monochrome GitHub avatars with initials as an offline fallback. The selected account name remains visible in the inbox header. A labeled **Repo** selector narrows its accessible repos; under All accounts, options include the owner to distinguish same-name repos. The standard PR list is 300 pixels wide, leaving 111 more pixels for the review than the former 205 + 270 pixel layout.
 
 ```mermaid
 flowchart LR
-  Rail[All accounts or one account] --> Repos[All tracked repos or one repo]
+  Rail[All accounts or one account] --> Repos[All accessible repos or one repo]
   Repos --> Scope{Inbox or History}
   Scope -->|Inbox| Priority[Existing priority groups]
   Scope -->|History| Pages[Closed and merged PR pages]
@@ -170,9 +170,9 @@ flowchart LR
   Pages --> Review
 ```
 
-Account changes reset the repo filter and preserve search and the Inbox/History choice. Removing a tracked repo falls back to its account; removing the last repo for an account falls back to All accounts. Both local filtering and history requests honor the account. Rust validates the selected account/repo against tracked repos before making requests, and cached history pages retain the exact repo set as their key. In-flight responses from an old account are discarded; changing tracked repos reloads history.
+Account changes reset the repo filter and preserve search and the Inbox/History choice. Losing repo access falls back to its account; organizations remain selectable even with no accessible repos. Both local filtering and history requests honor the account. Rust validates the selected account/repo against the discovered directory before making requests, and cached history pages retain the exact repo set as their key. In-flight responses from an old account are discarded; changes to the accessible repo set reload history.
 
-The rail has 44-pixel circular buttons, named controls, React Aria hover/focus tooltips, and a selected outline/edge marker. The native repo selector supports keyboard navigation and type-ahead. The account list scrolls independently when many accounts are tracked. Connections and the two sample entry points remain available at the bottom. Avatar image loading is limited by CSP to GitHub and its avatar host; no GitHub tokens enter the webview. The narrow-window search focus target now works independently of the selected language.
+The rail has 44-pixel circular buttons, named controls, React Aria hover/focus tooltips, and a selected outline/edge marker. The native repo selector supports keyboard navigation and type-ahead. The account list scrolls independently when many accounts are available. Connections and the two sample entry points remain available at the bottom. Avatar image loading is limited by CSP to GitHub and its avatar host; no GitHub tokens enter the webview. The narrow-window search focus target now works independently of the selected language.
 
 ### Compact navigation verification (October 21, 2026)
 
@@ -183,3 +183,32 @@ The rail has 44-pixel circular buttons, named controls, React Aria hover/focus t
 - [x] The installed native app loads the real `crs48` avatar, scoped repo menu, 12 open PRs, and three historical PRs. Selecting `diffcity` preserves the account scope; opening closed PR #15 renders its code. A transient GitHub TLS handshake failure on the first launch recovered through the existing Save and reconnect action. The final build restarts with a live inbox and restores PR #15 without the connection error. All eight private notes remain at schema 3.
 
 The installed executable matches the bundle built from `d44bd6e`, SHA-256 `5144f59116bdc2fb6fe55c2fe72b4404e8dc79bb4126b29a216d0f42e6b244d8`. WebKit's native select appearance initially ignored the desired control height; an explicit chevron now preserves native select semantics while allowing a verified 34-pixel target. [Navigation CI](https://github.com/crs48/diffcity/actions/runs/39624993187) passes on `d10c7d8`; the final select styling also passes all local checks and the production bundle.
+
+
+## Automatic GitHub discovery
+
+The application discovers organization memberships through `/user/orgs` and all repos available to the local credential through `/user/repos`, including owned, collaborator, and organization-member repos. Both REST lists paginate. Connecting or launching the app discovers the directory and starts the inbox sync; no Add repos step is required. Legacy selected-repo settings only seed the directory cache on an older installation's first launch.
+
+```mermaid
+flowchart LR
+  Login[Local GitHub login] --> Directory[Organizations and accessible repos]
+  Directory --> Rail[Account rail and repo filter]
+  Directory --> Batches[Small paginated open PR queries]
+  Login --> Completed[Your recent completions]
+  Batches --> Inbox[Incremental cached inbox]
+  Completed --> Inbox
+  Rail --> History[Scoped closed and merged PR pagination]
+```
+
+Discovery runs every 15 minutes while visible, with a manual refresh action in the rail. Inbox sync runs every 90 seconds and publishes progress after each repo batch. The selected PR's polling can run between background requests. Recent completions and history use lighter queries without open-review metadata. History retains per-repo cursors, so a large repo cannot be truncated by an aggregate page limit. Org-only memberships with no accessible repos show an empty filter instead of disappearing.
+
+A failed discovery retains the last successful directory with an error. A failed repo query retains that repo's cached PRs while successful batches update normally. Errors and sync progress are visible in the UI; a partial sync never receives a new successful-sync timestamp. Repo source contents are fetched only when a PR is opened; directory discovery and inbox sync do not start Codex or publish GitHub feedback.
+
+
+### Discovery verification (October 21, 2026)
+
+- [x] 50 Rust tests and 31 TypeScript/component tests pass. Tests cover cached discovery on failure, repositories losing access, empty organization history, pagination cursors, complete review metadata, automatic account/repo filters, incremental PR delivery, and partial-sync visibility. Type checking, ESLint, Clippy, formatting, and contract generation pass.
+- [x] The read-only live check discovers 16 organization memberships and 179 accessible repos, then loads 243 open PRs and five recent completions with no sync errors. An organization with 19 repos loads 137 open PRs and two distinct history pages containing 315 and 170 PRs. These counts are a point-in-time capture; subsequent independent checks confirmed that differences reflected PRs merged or created during testing.
+- [x] Production WebKit replay displays all 179 repos and 20 account/owner buttons, verifies account/repo narrowing and history scope, and keeps cached PRs visible after partial failure. The account rail scrolls independently. Light and dark states pass axe WCAG A/AA; keyboard tooltips/selection and a 1000-pixel layout pass.
+
+The live check exposed GitHub 502 responses when requesting diff statistics for many large PRs. Inbox/history queries now omit those unused statistics; opening a PR still retrieves complete metadata. No GitHub feedback or model inference occurs during this verification.

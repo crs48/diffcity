@@ -4,6 +4,7 @@ pub mod contracts;
 pub mod domain;
 pub mod fixtures;
 pub mod github;
+mod github_lists;
 pub mod migrations;
 pub mod service;
 pub mod text_diff;
@@ -25,7 +26,7 @@ pub fn run() {
             commands::bootstrap,
             commands::refresh_inbox,
             commands::list_pull_history,
-            commands::list_repositories,
+            commands::refresh_directory,
             commands::save_settings,
             commands::open_pull,
             commands::open_saved_review,

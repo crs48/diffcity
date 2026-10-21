@@ -50,6 +50,30 @@ pub struct Bootstrap {
     pub pulls: Vec<PullRequest>,
     pub data_directory: String,
     pub schema_version: u32,
+    pub directory: RepositoryDirectory,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct RepositoryDirectory {
+    pub repositories: Vec<Repository>,
+    pub organizations: Vec<String>,
+    pub sync_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxResult {
+    pub pulls: Vec<PullRequest>,
+    pub sync_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxSync {
+    pub completed: usize,
+    pub total: usize,
+    pub pulls: Vec<PullRequest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

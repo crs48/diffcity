@@ -6,6 +6,7 @@ import {
   reviewLabel,
   visiblePulls,
   repositoryOwners,
+  accountOwners,
   repositoriesForOwner,
   resolveScope,
 } from "./inbox";
@@ -167,4 +168,20 @@ it("deduplicates account names and falls back when a tracked repo or account is 
   expect(
     resolveScope({ owner: "acme", repository: "me/personal" }, repos),
   ).toEqual({ owner: "acme", repository: null });
+});
+
+it("keeps discovered organizations selectable even without repos and puts your account first", () => {
+  const owners = accountOwners(
+    ["Acme/api", "outside/repo"],
+    ["acme", "empty-org"],
+    "me",
+  );
+  expect(owners).toEqual(["me", "Acme", "empty-org", "outside"]);
+  expect(
+    resolveScope(
+      { owner: "empty-org", repository: null },
+      ["Acme/api"],
+      owners,
+    ),
+  ).toEqual({ owner: "empty-org", repository: null });
 });

@@ -27,7 +27,7 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 ## Review a PR
 
 1. Open **Connections** to confirm the local GitHub and Codex accounts. Executable paths and the model can be changed there.
-2. Choose repositories with **Add project**, or open a GitHub PR URL directly. Your PRs appear first, followed by requested reviews, assigned PRs, and other open PRs.
+2. Your organizations and accessible repos appear automatically. Use the account rail and **Repo** filter to narrow the inbox, or open a GitHub PR URL directly. Your open PRs (including drafts) appear first, followed by requested reviews, assigned work, and other open PRs. **History** shows closed and merged PRs.
 3. Click **Review with Codex**. Open the completed guide when ready; it does not move your reading position while generation runs.
 4. Work through actual code in the guide. Migration, authorization, API-contract, and localization-contract signals set attention floors. Findings have separate severity labels. Expand routine groups whenever you want; acknowledged summaries and deferred code are counted separately from reviewed code.
 5. Drag across line numbers, click then Shift-click, or use Shift + Up/Down from a focused line number to select a range. Choose **Comment on lines** to leave a private note or **Ask Codex**. Saved comments also have **Ask Codex about this comment**. Comments and streamed Codex replies appear directly beneath the selected code. **PR chat** shows the same messages, with code references that jump back to their inline threads. Ask broader questions there, or choose **Continue in PR chat** to retain a thread’s code context. Selection stays within one diff hunk and one side; drafts survive guide navigation. Choose **Prepare GitHub draft** for feedback you want to publish; you can edit that draft.
@@ -49,7 +49,7 @@ Tailwind CSS supplies the styling foundation, and React Aria supplies buttons, t
 - Codex runs through its local app-server using the existing login. Starting analysis sends the PR description and bounded diff context to the selected Codex model/provider. Asking a question sends the exact selected lines, nearby diff context (up to five rows before/after, plus opposite-side rows inside the range), guide summary, question, and recent private discussion across the current PR revision (up to 24 messages, 2,000 characters each). PR chat includes bounded supporting diff context, prioritizing high-attention changes. These conversations are reconstructed from saved messages on each request; earlier revisions remain separate. Oversized selections are rejected before inference. Source code is not guaranteed to remain on the device during model inference.
 - Codex has no shell, edit, browser, GitHub publication, or MCP-tool access from this review workflow. Findings are suggestions; only you mark code reviewed and choose publication.
 - SQLite holds snapshots, guides, notes, settings, review progress, and publication state in `~/Library/Application Support/city.diff.desktop/`. WebKit local storage holds the last opened PR and unfinished review summaries. **Connections** shows the resolved database directory. `DIFFCITY_DATA_DIR` overrides the database directory for isolated testing.
-- Active PR metadata, comments, reviews, and checks refresh every 30 seconds while the app is visible; the inbox refreshes every 90 seconds. GitHub reads use conditional requests, pagination, serialization, and rate-limit backoff. Model reviews run only on demand.
+- Active PR metadata, comments, reviews, and checks refresh every 30 seconds while the app is visible; the inbox refreshes every 90 seconds, and organization/repo discovery refreshes every 15 minutes. **Refresh repos and accounts** refreshes both on demand. Open PR metadata loads in small paginated batches, with visible progress and saved results retained on failures. GitHub reads use conditional REST requests, pagination, serialization, and rate-limit backoff. Model reviews run only on demand.
 - To remove local content, quit the app and remove its application-support directory and the WebKit storage for `city.diff.desktop`. GitHub comments already published remain on GitHub. There is no telemetry or diagnostic upload in this alpha.
 
 ## Development and validation
@@ -77,6 +77,14 @@ For a connection check that does not invoke a model or publish feedback:
 ```sh
 DIFFCITY_CONNECT_ONLY=1 cargo run -p diffcity --bin live-smoke
 ```
+
+To verify automatic organization/repo discovery, the complete open inbox, and two pages of an account's history without invoking a model or publishing feedback:
+
+```sh
+cargo run -p diffcity --bin directory-smoke -- ACCOUNT_OR_ORGANIZATION
+```
+
+This read-only check stores metadata in the ignored `.local/directory-smoke/` directory. Omit the account argument to check your personal account's history.
 
 The harness currently targets the synthetic draft PR in this repository. It consumes Codex model usage. GitHub publication is off by default and requires `DIFFCITY_TEST_PUBLISH=yes` after the operator explicitly authorizes posting the labeled test review. The `e2e` feature adds a local WebDriver server and must never be used for distributed builds. Normal `pnpm desktop:build` excludes it.
 

@@ -69,6 +69,16 @@ beforeEach(() => {
           },
           models: [],
           pulls: [],
+          directory: {
+            repositories: settings.repositories.map((fullName) => ({
+              id: fullName,
+              fullName,
+              private: true,
+              description: "",
+            })),
+            organizations: [],
+            syncError: null,
+          },
           schemaVersion: 3,
           dataDirectory: "test-data",
         } satisfies Bootstrap;
@@ -78,7 +88,7 @@ beforeEach(() => {
         return settings;
       }
       if (command === "save_progress") return payload!.progress;
-      if (command === "refresh_inbox") return [];
+      if (command === "refresh_inbox") return { pulls: [], syncError: null };
       throw new Error(`Unexpected command in accessibility test: ${command}`);
     },
     { shouldMockEvents: true },

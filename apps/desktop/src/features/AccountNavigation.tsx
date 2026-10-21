@@ -5,7 +5,7 @@ import {
   Building2,
   ChevronDown,
   FlaskConical,
-  Plus,
+  RefreshCw,
   Settings2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -65,7 +65,7 @@ export function AccountNavigation({
   samples,
   data,
   onOwner,
-  onRepos,
+  onRefresh,
   onSamples,
   onExample,
   onConnections,
@@ -75,7 +75,7 @@ export function AccountNavigation({
   samples: boolean;
   data: Bootstrap | null;
   onOwner: (owner: string | null) => void;
-  onRepos: () => void;
+  onRefresh: () => void;
   onSamples: () => void;
   onExample: () => void;
   onConnections: () => void;
@@ -107,7 +107,7 @@ export function AccountNavigation({
       </div>
       <RailButton
         label={t("All accounts")}
-        detail={t("Pull requests across your tracked repos")}
+        detail={t("Pull requests across all accessible repos")}
         selected={!owner && !samples}
         onPress={() => onOwner(null)}
       >
@@ -121,7 +121,7 @@ export function AccountNavigation({
           <RailButton
             key={name}
             label={name}
-            detail={t("View tracked repos")}
+            detail={t("View all repos")}
             selected={owner === name && !samples}
             onPress={() => onOwner(name)}
           >
@@ -129,8 +129,8 @@ export function AccountNavigation({
           </RailButton>
         ))}
       </nav>
-      <RailButton label={t("Add repos")} onPress={onRepos}>
-        <Plus size={19} aria-hidden="true" />
+      <RailButton label={t("Refresh repos and accounts")} onPress={onRefresh}>
+        <RefreshCw size={19} aria-hidden="true" />
       </RailButton>
       <div className="rail-bottom">
         <RailButton
@@ -180,7 +180,7 @@ export function RepoFilter({
           value={repository ?? ""}
           onChange={(event) => onChange(event.target.value || null)}
         >
-          <option value="">{t("All tracked repos")}</option>
+          <option value="">{t("All repos")}</option>
           {repositories.map((repo) => (
             <option key={repo} value={repo}>
               {owner ? repo.split("/")[1] : repo}

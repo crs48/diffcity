@@ -172,10 +172,12 @@ impl GitHub {
                 .map(|(_, v)| v.clone())
                 .ok_or_else(|| anyhow::anyhow!("GitHub cache unavailable; refresh again"));
         }
-        let value: Value = response
-            .json()
-            .await
-            .context("GitHub returned an unreadable response")?;
+        let value: Value = response.json().await.with_context(|| {
+            format!(
+                "GitHub returned an unreadable response (HTTP {})",
+                status.as_u16()
+            )
+        })?;
         if !status.is_success() {
             let message = value["message"].as_str().unwrap_or("Request failed");
             if status == StatusCode::TOO_MANY_REQUESTS
@@ -708,7 +710,7 @@ fn recent_page_complete(items: &[Value], cutoff: &chrono::DateTime<chrono::Utc>)
             .is_some_and(|date| date < *cutoff)
 }
 
-fn apply_review_metadata(pull: &mut PullRequest, node: &Value) -> Result<()> {
+pub(crate) fn apply_review_metadata(pull: &mut PullRequest, node: &Value) -> Result<()> {
     if !node.is_object() || !node["reviews"]["nodes"].is_array() {
         bail!(
             "GitHub review status unavailable for {}#{}",

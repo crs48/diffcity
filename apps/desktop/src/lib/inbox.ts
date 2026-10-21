@@ -123,20 +123,37 @@ export const repositoriesForOwner = (
   owner: string | null,
 ) =>
   repositories.filter((repo) => !owner || sameLogin(repo.split("/")[0], owner));
-// Removing a tracked repo/account returns to the nearest available scope.
+// Losing access to a repo/account returns to the nearest available scope.
 export function resolveScope(
   scope: InboxScope,
   repositories: string[],
+  owners = repositoryOwners(repositories),
 ): InboxScope {
   if (scope.repository === SAMPLE_REPO)
     return { owner: null, repository: SAMPLE_REPO };
   const owner =
-    repositoryOwners(repositories).find((name) =>
-      sameLogin(name, scope.owner || ""),
-    ) ?? null;
+    owners.find((name) => sameLogin(name, scope.owner || "")) ?? null;
   const repository =
     repositoriesForOwner(repositories, owner).find((repo) =>
       sameLogin(repo, scope.repository || ""),
     ) ?? null;
   return { owner, repository };
 }
+
+export const accountOwners = (
+  repositories: string[],
+  organizations: string[],
+  login: string,
+) => {
+  const names = [
+    ...new Map(
+      [...organizations, ...repositoryOwners(repositories)].map((name) => [
+        name.toLowerCase(),
+        name,
+      ]),
+    ).values(),
+  ]
+    .filter((name) => !sameLogin(name, login))
+    .sort((a, b) => a.localeCompare(b));
+  return login ? [login, ...names] : names;
+};

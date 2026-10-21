@@ -37,13 +37,14 @@ import {
   type ReviewProgress,
   type ReviewWorkspace,
   type RunEvent,
+  type InboxSync,
 } from "./lib/api";
 import { newNote, parsePullUrl } from "./lib/review";
 import { GuideView } from "./features/Guide";
 import { Discussion } from "./features/Discussion";
 import { ConversationContext } from "./features/conversation";
 import { useNoteComposer } from "./features/useNoteComposer";
-import { Connections, Finish, Repos } from "./features/Dialogs";
+import { Connections, Finish } from "./features/Dialogs";
 import { DisplaySettings } from "./features/DisplaySettings";
 import { AccountNavigation, RepoFilter } from "./features/AccountNavigation";
 import { PullList } from "./features/PullList";
@@ -53,7 +54,7 @@ import {
   sameLogin,
   requestedFrom,
   visiblePulls,
-  repositoryOwners,
+  accountOwners,
   repositoriesForOwner,
   resolveScope,
   type InboxScope,
@@ -69,12 +70,18 @@ export default function App() {
     owner: null,
     repository: null,
   });
-  const repositories = data?.settings.repositories ?? [];
-  const { owner, repository: repo } = resolveScope(scope, repositories);
+  const repositories =
+    data?.directory.repositories.map((repo) => repo.fullName) ?? [];
+  const owners = accountOwners(
+    repositories,
+    data?.directory.organizations ?? [],
+    data?.github.identity ?? "",
+  );
+  const { owner, repository: repo } = resolveScope(scope, repositories, owners);
   const scopedRepositories = repositoriesForOwner(repositories, owner);
   const history = usePullHistory(
     repo,
-    inboxView === "history" && repo !== SAMPLE_REPO,
+    inboxView === "history" && repo !== SAMPLE_REPO && !!data,
     owner,
     scopedRepositories.join(","),
   );
@@ -86,7 +93,7 @@ export default function App() {
   const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
   const [dialog, setDialog] = useState<
-    "connections" | "repos" | "finish" | "display" | null
+    "connections" | "finish" | "display" | null
   >(null);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting your workspace…");
@@ -100,6 +107,11 @@ export default function App() {
   const [stream, setStream] = useState("");
   const [pendingGuide, setPendingGuide] = useState<Guide | null>(null);
   const [newRevision, setNewRevision] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const syncBusy = useRef(false);
+  const [syncProgress, setSyncProgress] = useState<InboxSync | null>(null);
+  const [syncError, setSyncError] = useState("");
+  const [directoryLoading, setDirectoryLoading] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const setInboxOpen = (open: boolean) => {
     setInboxVisible(open);
@@ -167,22 +179,70 @@ export default function App() {
     preference.addEventListener("change", apply);
     return () => preference.removeEventListener("change", apply);
   }, [data?.settings.theme]);
-  const refresh = useCallback(async () => {
-    const p = await api.inbox();
-    setPulls(p);
-    setLastSync(
-      new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    );
+  useEffect(() => {
+    const subscription = listen<InboxSync>("inbox-sync", (event) => {
+      setSyncProgress(event.payload);
+      setPulls(event.payload.pulls);
+    });
+    return () => {
+      void subscription.then((unlisten) => unlisten());
+    };
   }, []);
+  const refresh = useCallback(async () => {
+    if (syncBusy.current) return;
+    syncBusy.current = true;
+    setSyncing(true);
+    setSyncProgress(null);
+    try {
+      const result = await api.inbox();
+      setPulls(result.pulls);
+      setSyncError(result.syncError ?? "");
+      if (!result.syncError)
+        setLastSync(
+          new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        );
+    } finally {
+      syncBusy.current = false;
+      setSyncing(false);
+    }
+  }, []);
+  const discover = useCallback(async () => {
+    setDirectoryLoading(true);
+    try {
+      const directory = await api.directory();
+      setData((current) => (current ? { ...current, directory } : current));
+    } finally {
+      setDirectoryLoading(false);
+    }
+  }, []);
+  const refreshWorkspace = async () => {
+    if (!data?.github.connected) {
+      setDialog("connections");
+      return;
+    }
+    if (directoryLoading || syncing) return;
+    try {
+      await discover();
+      await refresh();
+    } catch (e) {
+      onError(e);
+    }
+  };
   const boot = useCallback(async () => {
     const result = await api.bootstrap();
     setData(result);
     await i18n.changeLanguage(result.settings.locale || "en");
     setPulls(result.pulls);
     setStatus("");
-    if (result.github.connected) await refresh().catch(onError);
+    if (result.github.connected) {
+      await discover().catch(onError);
+      void refresh().catch(onError);
+    }
     return result;
-  }, [refresh, onError]);
+  }, [discover, refresh, onError]);
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
@@ -233,7 +293,8 @@ export default function App() {
       if (document.hidden || polling.current) return;
       polling.current = true;
       try {
-        if (++tick % 3 === 0) await refresh();
+        if (++tick % 30 === 0) await discover();
+        if (tick % 3 === 0) void refresh().catch(onError);
         const w = current.current;
         if (
           w &&
@@ -273,7 +334,7 @@ export default function App() {
       }
     }, 30_000);
     return () => clearInterval(timer);
-  }, [data?.github.connected, refresh]);
+  }, [data?.github.connected, discover, refresh, onError]);
   const open = async (repository: string, number: number, force = true) => {
     const request = ++opening.current;
     setLoading(true);
@@ -493,7 +554,7 @@ export default function App() {
         {t("Skip to review")}{" "}
       </a>
       <AccountNavigation
-        owners={repositoryOwners(repositories)}
+        owners={owners}
         owner={owner}
         samples={samples}
         data={data}
@@ -501,7 +562,7 @@ export default function App() {
           setScope({ owner, repository: null });
           setInboxOpen(true);
         }}
-        onRepos={() => setDialog("repos")}
+        onRefresh={() => void refreshWorkspace()}
         onSamples={() => void exploreInbox()}
         onExample={() => void sample()}
         onConnections={() => setDialog("connections")}
@@ -530,7 +591,9 @@ export default function App() {
             <Button
               className="icon-button"
               aria-label={t("Refresh inbox")}
-              isDisabled={loading || (!samples && !data?.github.connected)}
+              isDisabled={
+                loading || syncing || (!samples && !data?.github.connected)
+              }
               onPress={() =>
                 samples
                   ? void exploreInbox()
@@ -560,6 +623,22 @@ export default function App() {
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+          {!samples && data?.directory.syncError && (
+            <div className="history-status" role="alert">
+              {data.directory.syncError}
+              <Button
+                className="text-button"
+                onPress={() => void refreshWorkspace()}
+              >
+                {t("Retry")}
+              </Button>
+            </div>
+          )}
+          {!samples && syncError && (
+            <div className="history-status" role="alert">
+              {syncError}
+            </div>
+          )}
           <div
             className="inbox-scope"
             role="group"
@@ -616,6 +695,9 @@ export default function App() {
                 <GitPullRequest size={25} />
                 <p>
                   {status ||
+                    (syncing || directoryLoading
+                      ? t("Loading your GitHub workspace…")
+                      : "") ||
                     (query
                       ? t("No matching pull requests")
                       : inboxView === "history"
@@ -624,9 +706,9 @@ export default function App() {
                 </p>
                 <Button
                   className="text-button"
-                  onPress={() => setDialog("repos")}
+                  onPress={() => void refreshWorkspace()}
                 >
-                  {t("Choose repos")} <ArrowRight size={13} />
+                  {t("Refresh GitHub")} <ArrowRight size={13} />
                 </Button>
               </div>
             )}
@@ -671,11 +753,22 @@ export default function App() {
               </Button>
             </form>
           )}
-          <div className="sync-label">
+          <div className="sync-label" role="status">
             <span className="status-dot online" />
-            {lastSync
-              ? t("Synced {{time}}", { time: lastSync })
-              : t("Local workspace")}
+            {directoryLoading
+              ? t("Discovering your repos…")
+              : syncing
+                ? syncProgress
+                  ? t("Syncing repos {{completed}} / {{total}}", syncProgress)
+                  : t("Loading pull requests…")
+                : syncError
+                  ? t("Some results may be out of date")
+                  : lastSync
+                    ? t("Synced {{time}} · {{count}} repos", {
+                        time: lastSync,
+                        count: repositories.length,
+                      })
+                    : t("Local workspace")}
           </div>
         </aside>
       )}
@@ -1024,9 +1117,12 @@ export default function App() {
               {t("A guided path from pull request to confident feedback.")}{" "}
             </p>
             <div className="welcome-actions">
-              <Button className="primary" onPress={() => setDialog("repos")}>
+              <Button
+                className="primary"
+                onPress={() => void refreshWorkspace()}
+              >
                 <FolderGit2 size={16} />
-                {t("Choose your repos")}{" "}
+                {t("Refresh GitHub")}{" "}
               </Button>
               <Button className="secondary" onPress={() => void sample()}>
                 {t("Try a guided review")} <ArrowRight size={16} />
@@ -1078,20 +1174,6 @@ export default function App() {
           onSave={async (settings) => {
             await api.settings(settings);
             await boot();
-          }}
-        />
-      )}
-      {dialog === "repos" && data && (
-        <Repos
-          selected={data.settings.repositories}
-          onClose={() => setDialog(null)}
-          onChange={async (repositories) => {
-            const settings = await api.settings({
-              ...data.settings,
-              repositories,
-            });
-            setData({ ...data, settings });
-            await refresh();
           }}
         />
       )}

@@ -3,6 +3,7 @@ use crate::{
     contracts::*,
     domain, fixtures,
     github::{self, GitHub},
+    github_lists::{BATCH_SIZE, PullCursor},
     storage::Store,
 };
 use anyhow::{Context, Result, bail};
@@ -14,6 +15,7 @@ use tokio::sync::{Mutex, watch};
 pub struct Service {
     pub store: Store,
     pub github: GitHub,
+    inbox_sync: Mutex<()>,
     analysis: Mutex<()>,
     publication: Mutex<()>,
     cancellation: Mutex<Option<watch::Sender<bool>>>,
@@ -23,6 +25,7 @@ impl Service {
         Ok(Self {
             store: Store::open(directory)?,
             github: GitHub::new()?,
+            inbox_sync: Mutex::new(()),
             analysis: Mutex::new(()),
             publication: Mutex::new(()),
             cancellation: Mutex::new(None),
@@ -76,21 +79,152 @@ impl Service {
             pulls,
             data_directory: self.store.directory.to_string_lossy().into(),
             schema_version: crate::migrations::VERSION,
+            directory: self.cached_directory()?,
         })
     }
-    pub async fn inbox(&self) -> Result<Vec<PullRequest>> {
-        let settings = self.store.settings()?;
-        let mut pulls = vec![];
-        for repo in &settings.repositories {
-            pulls.extend(self.github.pulls(repo).await?);
+    pub fn cached_directory(&self) -> Result<RepositoryDirectory> {
+        Ok(self
+            .store
+            .get("cache", "directory")?
+            .unwrap_or_else(|| RepositoryDirectory {
+                repositories: self
+                    .store
+                    .settings()
+                    .map(|s| {
+                        s.repositories
+                            .into_iter()
+                            .map(|full_name| Repository {
+                                id: full_name.clone(),
+                                full_name,
+                                private: true,
+                                description: String::new(),
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                ..RepositoryDirectory::default()
+            }))
+    }
+    pub async fn directory(&self) -> Result<RepositoryDirectory> {
+        let mut directory = self.cached_directory()?;
+        let mut errors = vec![];
+        match self.github.organizations().await {
+            Ok(organizations) => directory.organizations = organizations,
+            Err(error) => errors.push(format!("Organizations: {error:#}")),
         }
-        pulls.extend(
-            self.github
-                .recently_completed(&settings.repositories, settings.completed_days)
-                .await?,
-        );
+        match self.github.repositories().await {
+            Ok(repositories) => directory.repositories = repositories,
+            Err(error) => errors.push(format!("Repositories: {error:#}")),
+        }
+        directory.sync_error = sync_errors(&errors);
+        self.store.put("cache", "directory", &directory)?;
+        Ok(directory)
+    }
+    async fn available_directory(&self) -> Result<RepositoryDirectory> {
+        match self.store.get("cache", "directory")? {
+            Some(directory) => Ok(directory),
+            None => self.directory().await,
+        }
+    }
+    pub async fn inbox(&self) -> Result<Vec<PullRequest>> {
+        Ok(self.sync_inbox(&|_| {}).await?.pulls)
+    }
+    pub async fn sync_inbox(
+        &self,
+        emit: &(dyn Fn(InboxSync) + Send + Sync),
+    ) -> Result<InboxResult> {
+        let _guard = self.inbox_sync.lock().await;
+        let directory = self.available_directory().await?;
+        let repositories: Vec<_> = directory
+            .repositories
+            .iter()
+            .map(|r| r.full_name.clone())
+            .collect();
+        let settings = self.store.settings()?;
+        let saved: Vec<PullRequest> = self.store.get("cache", "inbox")?.unwrap_or_default();
+        let mut pulls = vec![];
+        let mut errors = vec![];
+        if let Some(error) = directory.sync_error {
+            errors.push(error);
+        }
+        emit(InboxSync {
+            completed: 0,
+            total: repositories.len(),
+            pulls: saved
+                .iter()
+                .filter(|p| repositories.contains(&p.repository))
+                .cloned()
+                .collect(),
+        });
+        let recent = match self
+            .github
+            .recent_completions(settings.completed_days)
+            .await
+        {
+            Ok(pulls) => pulls,
+            Err(error) => {
+                errors.push(format!("Recent completions: {error:#}"));
+                saved
+                    .iter()
+                    .filter(|p| p.state != "open")
+                    .cloned()
+                    .collect()
+            }
+        };
+        for (index, batch) in repositories.chunks(BATCH_SIZE).enumerate() {
+            let fetched = self.github.inbox_batch(batch).await;
+            for repo in batch {
+                let result = fetched
+                    .get(repo)
+                    .cloned()
+                    .unwrap_or_else(|| Err("Missing repository result".into()));
+                match result {
+                    Ok(mut items) => {
+                        items.extend(recent.iter().filter(|p| &p.repository == repo).cloned());
+                        self.store
+                            .put("cache", &format!("auto-inbox-{repo}"), &items)?;
+                        pulls.extend(items);
+                    }
+                    Err(error) => {
+                        errors.push(format!("{repo}: {error}"));
+                        let cached = self
+                            .store
+                            .get::<Vec<PullRequest>>("cache", &format!("auto-inbox-{repo}"))?
+                            .unwrap_or_else(|| {
+                                saved
+                                    .iter()
+                                    .filter(|p| &p.repository == repo)
+                                    .cloned()
+                                    .collect()
+                            });
+                        pulls.extend(cached);
+                    }
+                }
+            }
+            let completed = ((index + 1) * BATCH_SIZE).min(repositories.len());
+            let remaining = &repositories[completed..];
+            let progress_pulls = pulls
+                .iter()
+                .cloned()
+                .chain(
+                    saved
+                        .iter()
+                        .filter(|p| remaining.contains(&p.repository))
+                        .cloned(),
+                )
+                .collect::<Vec<_>>();
+            self.store.put("cache", "inbox", &progress_pulls)?;
+            emit(InboxSync {
+                completed,
+                total: repositories.len(),
+                pulls: progress_pulls,
+            });
+        }
         self.store.put("cache", "inbox", &pulls)?;
-        Ok(pulls)
+        Ok(InboxResult {
+            pulls,
+            sync_error: sync_errors(&errors),
+        })
     }
     pub async fn history(
         &self,
@@ -119,33 +253,91 @@ impl Service {
         if page == 0 || page > 1000 {
             bail!("Invalid history page");
         }
-        let settings = self.store.settings()?;
-        let repositories = history_repositories(&settings.repositories, repository, owner)?;
-        let cache_key = format!(
-            "history-{}-{page}",
-            domain::hash(&serde_json::to_string(&repositories)?)
-        );
+        let directory = self.available_directory().await?;
+        let available: Vec<_> = directory
+            .repositories
+            .iter()
+            .map(|r| r.full_name.clone())
+            .collect();
+        let repositories = if owner.is_some_and(|owner| {
+            directory
+                .organizations
+                .iter()
+                .any(|org| org.eq_ignore_ascii_case(owner))
+        }) && repository.is_none()
+        {
+            available
+                .iter()
+                .filter(|repo| {
+                    repo.split('/')
+                        .next()
+                        .is_some_and(|name| name.eq_ignore_ascii_case(owner.unwrap()))
+                })
+                .cloned()
+                .collect()
+        } else {
+            history_repositories(&available, repository, owner)?
+        };
+        let scope = domain::hash(&serde_json::to_string(&repositories)?);
+        let cache_key = format!("auto-history-{scope}-{page}");
+        let pending: Vec<PullCursor> = if page == 1 {
+            repositories
+                .iter()
+                .map(|repo| PullCursor {
+                    repository: repo.clone(),
+                    after: None,
+                })
+                .collect()
+        } else {
+            self.store
+                .get("cache", &format!("history-cursors-{scope}-{page}"))?
+                .context("Reload history before loading more pages")?
+        };
         let mut result = PullPage {
             pulls: vec![],
             next_page: None,
             sync_error: None,
         };
-        for repo in repositories {
-            match self.github.history(&repo, page).await {
-                Ok(batch) => {
-                    result.pulls.extend(batch.pulls);
-                    result.next_page = result.next_page.or(batch.next_page);
-                    result.sync_error = result.sync_error.or(batch.sync_error);
-                }
-                Err(error) => {
-                    if let Some(mut cached) = self.store.get::<PullPage>("cache", &cache_key)? {
-                        cached.sync_error = Some(format!("Showing saved history: {error}"));
-                        return Ok(cached);
+        let mut next = vec![];
+        let mut errors = vec![];
+        if let Some(error) = directory.sync_error {
+            errors.push(error);
+        }
+        for batch in pending.chunks(BATCH_SIZE) {
+            for (repo, value) in self.github.resilient_pull_pages(batch, true).await {
+                match value {
+                    Ok(value) => {
+                        result.pulls.extend(value.pulls);
+                        if let Some(cursor) = value.next {
+                            next.push(cursor);
+                        }
                     }
-                    return Err(error);
+                    Err(error) => errors.push(format!("{repo}: {error}")),
                 }
             }
         }
+        if !errors.is_empty()
+            && let Some(mut cached) = self.store.get::<PullPage>("cache", &cache_key)?
+        {
+            cached.sync_error = sync_errors(&errors);
+            return Ok(cached);
+        }
+        if !next.is_empty() {
+            if page < 1000 {
+                self.store.put(
+                    "cache",
+                    &format!("history-cursors-{scope}-{}", page + 1),
+                    &next,
+                )?;
+                result.next_page = Some(page + 1);
+            } else {
+                errors.push(
+                    "History pagination limit reached. Older PRs can still be opened by URL."
+                        .into(),
+                );
+            }
+        }
+        result.sync_error = sync_errors(&errors);
         result.pulls.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         self.store.put("cache", &cache_key, &result)?;
         Ok(result)
@@ -622,6 +814,10 @@ struct Operation {
     result: PublishResult,
 }
 
+fn sync_errors(errors: &[String]) -> Option<String> {
+    (!errors.is_empty()).then(|| format!("Some GitHub data could not be refreshed; saved results are retained where available. {}{}", errors.iter().take(3).cloned().collect::<Vec<_>>().join("; "), if errors.len()>3 {format!("; and {} more errors",errors.len()-3)} else {String::new()}))
+}
+
 fn history_repositories(
     tracked: &[String],
     repository: Option<&str>,
@@ -639,14 +835,14 @@ fn history_repositories(
         .cloned()
         .collect();
     if owner.is_some() && scoped.is_empty() {
-        bail!("Choose an account with tracked repositories to browse its history");
+        bail!("Choose an account with accessible repositories to browse its history");
     }
     match repository {
         Some(repo) => scoped
             .into_iter()
             .find(|name| name.eq_ignore_ascii_case(repo))
             .map(|name| vec![name])
-            .context("Choose a tracked repository in this account to browse its history"),
+            .context("Choose an accessible repository in this account to browse its history"),
         None => Ok(scoped),
     }
 }
@@ -896,5 +1092,78 @@ mod navigation_tests {
         assert!(history_repositories(&tracked, None, Some("unknown")).is_err());
         assert!(history_repositories(&tracked, Some("acme/untracked"), None).is_err());
         assert!(history_repositories(&[], None, None).unwrap().is_empty());
+    }
+}
+
+#[cfg(test)]
+mod discovery_tests {
+    use super::*;
+    fn repo(name: &str) -> Repository {
+        Repository {
+            id: name.into(),
+            full_name: name.into(),
+            private: true,
+            description: String::new(),
+        }
+    }
+    #[tokio::test]
+    async fn offline_discovery_preserves_cached_orgs_and_repos_with_an_explicit_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = Service::new(dir.path()).unwrap();
+        let directory = RepositoryDirectory {
+            repositories: vec![repo("team/app")],
+            organizations: vec!["team".into(), "empty-org".into()],
+            sync_error: None,
+        };
+        service.store.put("cache", "directory", &directory).unwrap();
+        let result = service.directory().await.unwrap();
+        assert_eq!(result.repositories[0].full_name, "team/app");
+        assert_eq!(result.organizations.len(), 2);
+        assert!(result.sync_error.is_some());
+    }
+    #[tokio::test]
+    async fn failed_sync_retains_saved_prs_but_removes_repos_no_longer_in_the_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = Service::new(dir.path()).unwrap();
+        let directory = RepositoryDirectory {
+            repositories: vec![repo("team/app")],
+            organizations: vec!["team".into()],
+            sync_error: None,
+        };
+        service.store.put("cache", "directory", &directory).unwrap();
+        let (sample, _) = fixtures::sample().unwrap();
+        let mut p = sample.pull;
+        p.repository = "team/app".into();
+        let mut removed = p.clone();
+        removed.repository = "lost/access".into();
+        service
+            .store
+            .put("cache", "inbox", &vec![p, removed])
+            .unwrap();
+        let result = service.sync_inbox(&|_| {}).await.unwrap();
+        assert_eq!(result.pulls.len(), 1);
+        assert_eq!(result.pulls[0].repository, "team/app");
+        assert!(result.sync_error.is_some());
+    }
+    #[tokio::test]
+    async fn an_org_without_accessible_repos_has_empty_history_without_an_api_call() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = Service::new(dir.path()).unwrap();
+        service
+            .store
+            .put(
+                "cache",
+                "directory",
+                &RepositoryDirectory {
+                    repositories: vec![],
+                    organizations: vec!["empty-org".into()],
+                    sync_error: None,
+                },
+            )
+            .unwrap();
+        let result = service.history(None, 1, Some("EMPTY-ORG")).await.unwrap();
+        assert!(result.pulls.is_empty());
+        assert!(result.sync_error.is_none());
+        assert!(result.next_page.is_none());
     }
 }

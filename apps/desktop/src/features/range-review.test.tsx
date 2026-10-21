@@ -182,6 +182,7 @@ describe("multi-line review", () => {
               detail: "",
               executable: "",
             },
+            directory: { repositories: [], organizations: [], syncError: null },
             models: [],
             pulls: [],
             dataDirectory: "test-data",
@@ -203,7 +204,7 @@ describe("multi-line review", () => {
               },
             ],
           };
-        if (command === "refresh_inbox") return [];
+        if (command === "refresh_inbox") return { pulls: [], syncError: null };
         if (command === "save_progress") return payload.progress;
         if (command === "save_note") {
           const note = payload.note as Note;

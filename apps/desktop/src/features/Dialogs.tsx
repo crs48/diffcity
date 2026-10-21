@@ -8,7 +8,6 @@ import {
   ExternalLink,
   Github,
   LoaderCircle,
-  Search,
   Settings2,
   Sparkles,
   X,
@@ -17,7 +16,6 @@ import {
   api,
   type Bootstrap,
   type Note,
-  type Repository,
   type ReviewWorkspace,
   type Settings,
   type PublishResult,
@@ -186,134 +184,6 @@ export function Connections({
             <Check size={15} />
           )}{" "}
           {t("Save and reconnect")}{" "}
-        </button>
-      </footer>
-    </AppDialog>
-  );
-}
-
-export function Repos({
-  selected,
-  onChange,
-  onClose,
-}: {
-  selected: string[];
-  onChange: (repos: string[]) => Promise<void>;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const [repos, setRepos] = useState<Repository[]>([]);
-  const [query, setQuery] = useState("");
-  const [chosen, setChosen] = useState(selected);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const load = async () => {
-    setBusy(true);
-    try {
-      setRepos(await api.repositories());
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  const toggle = (name: string) =>
-    setChosen((current) =>
-      current.includes(name)
-        ? current.filter((r) => r !== name)
-        : [...current, name],
-    );
-  return (
-    <AppDialog label={t("Choose repos")} onClose={onClose} busy={busy}>
-      <header>
-        <Github size={18} />
-        <h2>{t("Your repos")} </h2>
-        <button
-          className="icon-button"
-          aria-label={t("Close repos")}
-          disabled={busy}
-          onClick={onClose}
-        >
-          <X size={18} />
-        </button>
-      </header>
-      <div className="modal-content">
-        <p>{t("Choose the repositories you want in your review inbox.")} </p>
-        <div className="search-box">
-          <Search size={15} />
-          <input
-            aria-label={t("Search repositories")}
-            placeholder={t("Search or enter owner/repository")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        {query.includes("/") && !repos.some((r) => r.fullName === query) && (
-          <button
-            className="secondary"
-            onClick={() => {
-              toggle(query.trim());
-              setQuery("");
-            }}
-          >
-            {t("Add")} {query.trim()}
-          </button>
-        )}
-        <div className="repo-options">
-          {[...new Set([...chosen, ...repos.map((r) => r.fullName)])]
-            .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
-            .map((name) => (
-              <label key={name}>
-                <input
-                  type="checkbox"
-                  checked={chosen.includes(name)}
-                  onChange={() => toggle(name)}
-                />
-                <span>{name}</span>
-                <small>
-                  {repos.find((r) => r.fullName === name)?.private
-                    ? "Private"
-                    : ""}
-                </small>
-              </label>
-            ))}
-        </div>
-        <button
-          className="text-button"
-          disabled={busy}
-          onClick={() => void load()}
-        >
-          {busy ? (
-            <LoaderCircle size={14} className="spin" />
-          ) : (
-            <Github size={14} />
-          )}{" "}
-          {t("Load repositories from GitHub")}{" "}
-        </button>
-        {error && (
-          <p className="error-text" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
-      <footer>
-        <button
-          className="primary"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              await onChange(chosen);
-              onClose();
-            } catch (e) {
-              setError(String(e));
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          {t("Save")} {chosen.length}
-          {t("repos")}{" "}
         </button>
       </footer>
     </AppDialog>

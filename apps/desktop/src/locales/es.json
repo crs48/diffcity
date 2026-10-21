@@ -248,5 +248,16 @@
   "View tracked repos": "Ver repos seguidos",
   "GitHub connected as {{login}}": "GitHub conectado como {{login}}",
   "Repo": "Repo",
-  "All tracked repos": "Todos los repos seguidos"
+  "All tracked repos": "Todos los repos seguidos",
+  "Pull requests across all accessible repos": "Pull requests de todos los repos accesibles",
+  "View all repos": "Ver todos los repos",
+  "Refresh repos and accounts": "Actualizar repos y cuentas",
+  "All repos": "Todos los repos",
+  "Refresh GitHub": "Actualizar GitHub",
+  "Loading your GitHub workspace…": "Cargando tu espacio de GitHub…",
+  "Discovering your repos…": "Buscando tus repos…",
+  "Syncing repos {{completed}} / {{total}}": "Sincronizando repos {{completed}} / {{total}}",
+  "Loading pull requests…": "Cargando pull requests…",
+  "Some results may be out of date": "Algunos resultados pueden estar desactualizados",
+  "Synced {{time}} · {{count}} repos": "Sincronizado {{time}} · {{count}} repos"
 }

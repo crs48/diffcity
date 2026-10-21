@@ -16,8 +16,16 @@ pub async fn bootstrap(service: State<'_, Arc<Service>>) -> Output<Bootstrap> {
     service.bootstrap().await.map_err(error)
 }
 #[tauri::command]
-pub async fn refresh_inbox(service: State<'_, Arc<Service>>) -> Output<Vec<PullRequest>> {
-    service.inbox().await.map_err(error)
+pub async fn refresh_inbox(
+    app: tauri::AppHandle,
+    service: State<'_, Arc<Service>>,
+) -> Output<InboxResult> {
+    service
+        .sync_inbox(&|progress| {
+            let _ = app.emit("inbox-sync", progress);
+        })
+        .await
+        .map_err(error)
 }
 #[tauri::command]
 pub async fn list_pull_history(
@@ -32,8 +40,8 @@ pub async fn list_pull_history(
         .map_err(error)
 }
 #[tauri::command]
-pub async fn list_repositories(service: State<'_, Arc<Service>>) -> Output<Vec<Repository>> {
-    service.github.repositories().await.map_err(error)
+pub async fn refresh_directory(service: State<'_, Arc<Service>>) -> Output<RepositoryDirectory> {
+    service.directory().await.map_err(error)
 }
 #[tauri::command]
 pub fn save_settings(service: State<'_, Arc<Service>>, settings: Settings) -> Output<Settings> {

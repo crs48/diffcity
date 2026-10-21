@@ -4,7 +4,7 @@ fn main() {
             "bootstrap",
             "refresh_inbox",
             "list_pull_history",
-            "list_repositories",
+            "refresh_directory",
             "save_settings",
             "open_pull",
             "open_saved_review",

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -10,6 +11,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { clearMocks, mockIPC, mockWindows } from "@tauri-apps/api/mocks";
+import { emit } from "@tauri-apps/api/event";
+import { api } from "../lib/api";
 import App from "../App";
 import { SAMPLE_REPO } from "../lib/inbox";
 import type {
@@ -17,11 +20,16 @@ import type {
   PullRequest,
   ReviewWorkspace,
   Settings,
+  RepositoryDirectory,
+  InboxResult,
 } from "../lib/api";
 import fixture from "../../../../tests/fixtures/review-workspace.json";
 const workspace = fixture as ReviewWorkspace;
 let settings: Settings;
 let livePulls: PullRequest[];
+let connected: boolean;
+let discovered: RepositoryDirectory;
+const discoveryRequest = vi.fn();
 const historyRequest = vi.fn();
 const ago = (days: number) =>
   new Date(Date.now() - days * 86_400_000).toISOString();
@@ -67,6 +75,9 @@ const samples: PullRequest[] = [
 beforeEach(() => {
   localStorage.clear();
   livePulls = [];
+  connected = false;
+  discovered = { repositories: [], organizations: [], syncError: null };
+  discoveryRequest.mockReset();
   historyRequest.mockReset();
   settings = {
     repositories: ["owner/repo"],
@@ -102,7 +113,7 @@ beforeEach(() => {
         return {
           settings,
           github: {
-            connected: false,
+            connected,
             identity: "me",
             executable: "",
             detail: "Fixture",
@@ -114,13 +125,27 @@ beforeEach(() => {
             detail: "Fixture",
           },
           models: [],
-          pulls: livePulls,
+          pulls: connected ? [] : livePulls,
+          directory: {
+            repositories: settings.repositories.map((fullName) => ({
+              id: fullName,
+              fullName,
+              private: true,
+              description: "",
+            })),
+            organizations: [],
+            syncError: null,
+          },
           schemaVersion: 3,
           dataDirectory: "fixture",
         } satisfies Bootstrap;
       if (command === "list_pull_history") {
         historyRequest(payload);
         return { pulls: [], nextPage: null, syncError: null };
+      }
+      if (command === "refresh_directory") {
+        discoveryRequest();
+        return discovered;
       }
       if (command === "sample_inbox") return structuredClone(samples);
       if (command === "open_pull")
@@ -137,7 +162,8 @@ beforeEach(() => {
         return settings;
       }
       if (command === "save_progress") return payload.progress;
-      if (command === "refresh_inbox") return [];
+      if (command === "refresh_inbox")
+        return { pulls: livePulls, syncError: null };
       throw Error(`Unexpected command: ${command}`);
     },
     { shouldMockEvents: true },
@@ -148,6 +174,7 @@ afterEach(async () => {
   await Promise.resolve();
   clearMocks();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 it("moves a sample review down and back up without publishing or changing real inbox data", async () => {
   const user = userEvent.setup();
@@ -238,7 +265,7 @@ it("filters all accounts to an account then a repo, preserving search and histor
   expect(screen.getByRole("button", { name: /Update acme\/api/ })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Update me\/api/ })).toBeNull();
   expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
-    "All tracked repos",
+    "All repos",
     "api",
     "web",
   ]);
@@ -298,4 +325,96 @@ it("filters all accounts to an account then a repo, preserving search and histor
       page: 1,
     }),
   );
+});
+
+it("discovers orgs, repos and PRs automatically without adding or saving repositories", async () => {
+  connected = true;
+  discovered = {
+    organizations: ["example-org", "empty-org"],
+    syncError: null,
+    repositories: ["example-org/sample-repo", "example-org/ui", "me/personal"].map(
+      (fullName) => ({
+        id: fullName,
+        fullName,
+        private: true,
+        description: "",
+      }),
+    ),
+  };
+  livePulls = discovered.repositories.map((repo, index) => ({
+    ...workspace.snapshot.pull,
+    repository: repo.fullName,
+    number: index + 1,
+    title: `Automatic ${repo.fullName}`,
+  }));
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(await screen.findByRole("button", { name: "example-org" }));
+  await screen.findByRole("button", { name: /Automatic example-org\/sample-repo/ });
+  expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+    "All repos",
+    "sample-repo",
+    "ui",
+  ]);
+  expect(screen.queryByRole("button", { name: "Add repos" })).toBeNull();
+  expect(settings.repositories).toEqual(["owner/repo"]);
+  expect(discoveryRequest).toHaveBeenCalledTimes(1);
+  await user.click(screen.getByRole("button", { name: "empty-org" }));
+  expect(
+    screen
+      .getByRole("button", { name: "empty-org" })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "All accounts" }));
+  await screen.findByRole("button", { name: /Automatic me\/personal/ });
+  expect(screen.getAllByRole("option")).toHaveLength(4);
+});
+
+it("shows incremental PR batches and preserves them when a sync is partial", async () => {
+  connected = true;
+  discovered = {
+    repositories: ["owner/repo", "owner/other"].map((fullName) => ({
+      id: fullName,
+      fullName,
+      private: true,
+      description: "",
+    })),
+    organizations: ["owner"],
+    syncError: null,
+  };
+  const pull = {
+    ...workspace.snapshot.pull,
+    repository: "owner/repo",
+    title: "First discovered PR",
+  };
+  let finish!: (value: InboxResult) => void;
+  vi.spyOn(api, "inbox").mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<App />);
+  await waitFor(() => expect(api.inbox).toHaveBeenCalled());
+  await act(async () => {
+    await emit("inbox-sync", { completed: 1, total: 2, pulls: [pull] });
+  });
+  expect(
+    await screen.findByRole("button", { name: /First discovered PR/ }),
+  ).toBeTruthy();
+  expect(screen.getByText("Syncing repos 1 / 2")).toBeTruthy();
+  await act(async () => {
+    finish({
+      pulls: [pull],
+      syncError: "One repo unavailable; saved results retained",
+    });
+  });
+  expect(
+    await screen.findByText("One repo unavailable; saved results retained"),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: /First discovered PR/ }),
+  ).toBeTruthy();
+  expect(screen.queryByText(/^Synced /)).toBeNull();
 });

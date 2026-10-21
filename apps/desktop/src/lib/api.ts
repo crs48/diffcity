@@ -2,7 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   Bootstrap,
   Settings,
-  Repository,
+  RepositoryDirectory,
+  InboxResult,
   PullRequest,
   PullPage,
   ReviewWorkspace,
@@ -15,10 +16,10 @@ import type {
 export type * from "../../../../packages/contracts/src";
 export const api = {
   bootstrap: () => invoke<Bootstrap>("bootstrap"),
-  inbox: () => invoke<PullRequest[]>("refresh_inbox"),
+  inbox: () => invoke<InboxResult>("refresh_inbox"),
   history: (repository: string | null, page = 1, owner: string | null = null) =>
     invoke<PullPage>("list_pull_history", { repository, page, owner }),
-  repositories: () => invoke<Repository[]>("list_repositories"),
+  directory: () => invoke<RepositoryDirectory>("refresh_directory"),
   settings: (settings: Settings) =>
     invoke<Settings>("save_settings", { settings }),
   open: (repository: string, number: number, refresh = true) =>
