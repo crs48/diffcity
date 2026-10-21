@@ -250,7 +250,7 @@ const PULL_SUMMARY: &str = r#"
 fragment PullSummary on PullRequest {
   number title url isDraft state author { login }
   headRefOid baseRefOid headRefName baseRefName updatedAt closedAt mergedAt
-  reviewDecision
+  reviewDecision mergeable mergeStateStatus statusCheckRollup { state }
   assignees(first:100) { nodes { login } pageInfo { hasNextPage } }
   reviewRequests(first:100) { nodes { requestedReviewer { ... on User { login } } } pageInfo { hasNextPage } }
   reviews(last:1,author:$viewer,states:[APPROVED,CHANGES_REQUESTED,COMMENTED,DISMISSED]) { nodes { state submittedAt } }
@@ -322,6 +322,7 @@ fn parse_summary(repository: &str, node: &Value) -> Result<PullRequest> {
         viewer_review: None,
         review_decision: None,
         review_metadata_available: false,
+        status: crate::github::parse_pull_status(node),
         assigned: list("assignees")?
             .iter()
             .map(|v| string(v, "login"))
@@ -364,6 +365,39 @@ mod tests {
         assert_eq!(p.viewer_review.unwrap().state, "APPROVED");
         assert!(p.closed_at.is_some());
         assert!(p.merged_at.is_some());
+    }
+    #[test]
+    fn status_rollups_preserve_conflicts_and_distinguish_absent_checks_from_no_checks() {
+        let mut n = node();
+        n["state"] = json!("OPEN");
+        n["mergeable"] = json!("CONFLICTING");
+        n["mergeStateStatus"] = json!("DIRTY");
+        n["statusCheckRollup"] = json!({"state":"FAILURE"});
+        let p = parse_summary("org/repo", &n).unwrap();
+        let status = p.status.unwrap();
+        assert_eq!(status.mergeable.as_deref(), Some("CONFLICTING"));
+        assert_eq!(status.merge_state.as_deref(), Some("DIRTY"));
+        assert_eq!(status.checks.as_deref(), Some("FAILURE"));
+        n["statusCheckRollup"] = Value::Null;
+        assert_eq!(
+            parse_summary("org/repo", &n)
+                .unwrap()
+                .status
+                .unwrap()
+                .checks
+                .as_deref(),
+            Some("NONE")
+        );
+        n.as_object_mut().unwrap().remove("statusCheckRollup");
+        assert!(
+            parse_summary("org/repo", &n)
+                .unwrap()
+                .status
+                .unwrap()
+                .checks
+                .is_none()
+        );
+        assert!(parse_summary("org/repo", &node()).unwrap().status.is_none());
     }
     #[test]
     fn incomplete_pages_and_nested_metadata_are_not_silently_accepted() {

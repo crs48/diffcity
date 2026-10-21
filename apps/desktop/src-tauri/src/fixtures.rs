@@ -113,6 +113,7 @@ pub fn inbox(login: &str) -> Result<Vec<PullRequest>> {
         pull.assigned = if s["assigned"] == true { vec![login.into()] } else { vec![] };
         pull.review_metadata_available = true;
         pull.review_decision = s["decision"].as_str().map(str::to_owned);
+        pull.status = s.get("status").map(|status| serde_json::from_value(status.clone())).transpose()?;
         pull.viewer_review = s["review"].as_str().map(|state| SubmittedReview { state: state.into(), submitted_at: ago(24.0) });
         Ok(pull)
     }).collect()

@@ -34,13 +34,15 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 6. **Finish review** shows coverage and the exact selected drafts. Publish a comment, approval, or change request as supported by GitHub; your own PR only permits a comment.
 7. New code appears as an update banner. Loading it preserves review marks only for uniquely matching unchanged hunks. Earlier notes stay attached to their original code and can be reopened with **Open previous revision**.
 
+**Scan PR status:** Cards use green open, gray draft, purple merged, and red closed icons. Status overlays and labeled badges distinguish reviews, approvals, changes requested, checks, conflicts, blocked merges, and branches behind their base. Repo, author, source/target branch, and update age stay visible; diff counts appear when available. The sample inbox includes varied status combinations.
+
 **Pin repos and PRs:** Select a repo and use its pin button to add a shortcut and move it to the top of the repo selector. Each PR card and the review toolbar also has a pin button. Pinned PRs appear above the usual priority groups and remain in the inbox after closing or merging until unpinned. Account, repo, and search filters still apply. Pins save locally and survive restarts.
 
 **Explore a sample** works without a GitHub PR and demonstrates migrations, authorization, tests, documentation, and localization. It contains deliberate issues and cannot publish feedback.
 
 ## Appearance and accessibility
 
-Use the appearance menu in the toolbar to choose **Light**, **Dark**, or **System**. The interface uses neutral black, white, and gray surfaces; diff additions/deletions, primary actions, and attention warnings retain semantic color. Appearance saves immediately without reconnecting accounts.
+Use the appearance menu in the toolbar to choose **Light**, **Dark**, or **System**. The interface uses neutral black, white, and gray surfaces; PR status, diff additions/deletions, primary actions, and attention warnings retain semantic color. Appearance saves immediately without reconnecting accounts.
 
 Tailwind CSS supplies the styling foundation, and React Aria supplies buttons, tabs, menus, and dialog behavior. Keyboard users can skip to the review, switch tabs with arrow keys, navigate the guide outline, and dismiss dialogs with Escape. Focus returns to the opener. **All lines for assistive reading** renders the complete hunk instead of only the visible virtualized rows. Added and removed lines also have textual labels. See [accessibility checks and remaining work](docs/accessibility.md).
 

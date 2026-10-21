@@ -252,3 +252,24 @@ Pin buttons use React Aria, named tooltips, pressed state, visible keyboard focu
 
 - [x] The installed production app pins a repo and closed PR #15 through their native controls, restores both after quitting and relaunching, opens the repo through its pinned shortcut, and removes both test pins successfully. All eight original private notes remain byte-for-byte unchanged at schema 3.
 - [x] [Pinning CI](https://github.com/crs48/diffcity/actions/runs/39640448422) passes on `9563326`. The installed executable matches the packaged build, SHA-256 `03460445c681b286dedb6c3e80d9551f10be144f84d0dbc4997fa64807987bd6`.
+
+
+## Rich PR status cards
+
+PR cards keep the monochrome surfaces and add semantic color to lifecycle icons, status overlays, and labeled badges. Green identifies open/approved/passing states, purple merged and reviewed states, red closure/conflicts/failure/change requests, blue personal review work, amber pending/blocked/behind-base states, and gray drafts or unavailable information. The lifecycle icon remains visible beneath a small overlay; conflicts and failures take precedence over requests, pending work, and positive signals.
+
+```mermaid
+flowchart LR
+  GitHub[GitHub PR summary] --> Facts[Lifecycle, reviews, checks, merge state]
+  Facts --> Icon[Lifecycle icon and priority overlay]
+  Facts --> Badges[Independent labeled status badges]
+  Facts --> Context[Repo, author, branches, update age]
+```
+
+Open inbox queries request `mergeable`, `mergeStateStatus`, and `statusCheckRollup.state` in the existing batched GraphQL call. These are [GitHub PR fields](https://docs.github.com/en/graphql/reference/pulls); no additional per-PR request or diff-statistics query is needed. The optional status contract preserves older saved snapshots. An explicit null rollup becomes “No checks”; missing metadata stays unavailable. Unknown checks, an approval, and conflict-free code are not inferred to mean readiness to merge. The mergeable badge requires GitHub's CLEAN merge state. Completed cards suppress stale review and CI warnings.
+
+Cards show the full repo identity, author, source/target branch, and localized relative age with an absolute timestamp tooltip. Diff counts render only when file statistics are available, avoiding fabricated zero-change summaries. Names and branches truncate visually while remaining in the accessible name. Pin controls remain siblings of card buttons.
+
+- [x] 56 Rust tests and 47 frontend tests pass, with types, ESLint, Clippy, formatting, generated contracts, and production build checked. Tests cover conflicting signals, unknown states, completed-state precedence, review re-requests, and independent pin/open behavior.
+- [x] Live read-only sync discovers 179 repos and retrieves status metadata for all 239 open PRs, including passing/pending/failing checks and clean/blocked/conflicting/behind-base merges. History still paginates; counts are a point-in-time capture.
+- [x] Production WebKit verifies all six color families, merged/closed icons, keyboard pinning and restored focus, search, narrow layout, and light/dark axe WCAG A/AA checks. The 23 local inbox samples now include varied status combinations.

@@ -272,5 +272,22 @@
   "Unpinned {{name}}": "Unpinned {{name}}",
   "Show inactive accounts ({{count}})": "Show inactive accounts ({{count}})",
   "Hide inactive accounts ({{count}})": "Hide inactive accounts ({{count}})",
-  "No known updates in the last 30 days": "No known updates in the last 30 days"
+  "No known updates in the last 30 days": "No known updates in the last 30 days",
+  "Checks passed": "Checks passed",
+  "Checks failed": "Checks failed",
+  "Checks pending": "Checks pending",
+  "Checks expected": "Checks expected",
+  "No checks": "No checks",
+  "Checks unavailable": "Checks unavailable",
+  "Merge conflicts": "Merge conflicts",
+  "Behind base": "Behind base",
+  "Merge blocked": "Merge blocked",
+  "Mergeable": "Mergeable",
+  "Merge hooks": "Merge hooks",
+  "Checks not passing": "Checks not passing",
+  "into branch": "into branch",
+  "Updated {{time}}": "Updated {{time}}",
+  "Merged {{time}}": "Merged {{time}}",
+  "Closed {{time}}": "Closed {{time}}",
+  "{{added}} additions and {{removed}} deletions": "{{added}} additions and {{removed}} deletions"
 }

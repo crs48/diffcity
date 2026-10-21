@@ -257,7 +257,7 @@ impl GitHub {
         // Batch review metadata: one request per 25 PRs, not one request per PR.
         for batch in pulls.chunks_mut(25) {
             let fields = batch.iter().map(|p| format!(
-                "p{}: pullRequest(number:{}) {{ reviewDecision reviews(last:1, author:$viewer, states:[APPROVED,CHANGES_REQUESTED,COMMENTED,DISMISSED]) {{ nodes {{ state submittedAt }} }} }}", p.number, p.number
+                "p{}: pullRequest(number:{}) {{ reviewDecision mergeable mergeStateStatus statusCheckRollup {{ state }} reviews(last:1, author:$viewer, states:[APPROVED,CHANGES_REQUESTED,COMMENTED,DISMISSED]) {{ nodes {{ state submittedAt }} }} }}", p.number, p.number
             )).collect::<Vec<_>>().join(" ");
             let query = format!(
                 "query($owner:String!,$name:String!,$viewer:String!) {{ repository(owner:$owner,name:$name) {{ {fields} }} }}"
@@ -269,6 +269,7 @@ impl GitHub {
             for pull in batch {
                 let node = &value["data"]["repository"][format!("p{}", pull.number)];
                 apply_review_metadata(pull, node)?;
+                pull.status = parse_pull_status(node);
             }
         }
         Ok(pulls)
@@ -696,12 +697,35 @@ pub fn parse_pull(repo: &str, v: &Value) -> PullRequest {
         viewer_review: None,
         review_decision: None,
         review_metadata_available: false,
+        status: (v.get("mergeable").is_some() || v.get("mergeable_state").is_some()).then(|| {
+            PullStatus {
+                mergeable: v["mergeable"]
+                    .as_bool()
+                    .map(|clean| if clean { "MERGEABLE" } else { "CONFLICTING" }.into()),
+                merge_state: v["mergeable_state"].as_str().map(str::to_uppercase),
+                checks: None,
+            }
+        }),
         requested: users("requested_reviewers"),
         assigned: users("assignees"),
         additions: integer(v, "additions"),
         deletions: integer(v, "deletions"),
         changed_files: integer(v, "changed_files"),
     }
+}
+pub(crate) fn parse_pull_status(node: &Value) -> Option<PullStatus> {
+    (node.get("mergeable").is_some()
+        || node.get("mergeStateStatus").is_some()
+        || node.get("statusCheckRollup").is_some())
+    .then(|| PullStatus {
+        mergeable: node["mergeable"].as_str().map(str::to_owned),
+        merge_state: node["mergeStateStatus"].as_str().map(str::to_owned),
+        checks: match node.get("statusCheckRollup") {
+            Some(Value::Null) => Some("NONE".into()),
+            Some(rollup) => rollup["state"].as_str().map(str::to_owned),
+            None => None,
+        },
+    })
 }
 fn recent_page_complete(items: &[Value], cutoff: &chrono::DateTime<chrono::Utc>) -> bool {
     items.len() < 100

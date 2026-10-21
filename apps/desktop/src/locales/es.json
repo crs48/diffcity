@@ -272,5 +272,22 @@
   "Unpinned {{name}}": "Se desfijó {{name}}",
   "Show inactive accounts ({{count}})": "Mostrar cuentas inactivas ({{count}})",
   "Hide inactive accounts ({{count}})": "Ocultar cuentas inactivas ({{count}})",
-  "No known updates in the last 30 days": "Sin actualizaciones conocidas en los últimos 30 días"
+  "No known updates in the last 30 days": "Sin actualizaciones conocidas en los últimos 30 días",
+  "Checks passed": "Comprobaciones superadas",
+  "Checks failed": "Comprobaciones fallidas",
+  "Checks pending": "Comprobaciones pendientes",
+  "Checks expected": "Se esperan comprobaciones",
+  "No checks": "Sin comprobaciones",
+  "Checks unavailable": "Comprobaciones no disponibles",
+  "Merge conflicts": "Conflictos de fusión",
+  "Behind base": "Rama base adelantada",
+  "Merge blocked": "Fusión bloqueada",
+  "Mergeable": "Se puede fusionar",
+  "Merge hooks": "Hooks de fusión",
+  "Checks not passing": "Comprobaciones sin superar",
+  "into branch": "en la rama",
+  "Updated {{time}}": "Actualizada {{time}}",
+  "Merged {{time}}": "Fusionada {{time}}",
+  "Closed {{time}}": "Cerrada {{time}}",
+  "{{added}} additions and {{removed}} deletions": "{{added}} adiciones y {{removed}} eliminaciones"
 }

@@ -123,11 +123,23 @@ pub struct PullRequest {
     pub review_decision: Option<String>,
     #[serde(default)]
     pub review_metadata_available: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub status: Option<PullStatus>,
     pub requested: Vec<String>,
     pub assigned: Vec<String>,
     pub additions: u32,
     pub deletions: u32,
     pub changed_files: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PullStatus {
+    pub mergeable: Option<String>,
+    pub merge_state: Option<String>,
+    // NONE means GitHub explicitly returned no rollup; null means unavailable.
+    pub checks: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

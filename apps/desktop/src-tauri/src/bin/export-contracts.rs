@@ -15,6 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         InboxResult,
         InboxSync,
         PullRequest,
+        PullStatus,
         SubmittedReview,
         PullPage,
         LineKind,
