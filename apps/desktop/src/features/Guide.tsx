@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import "../i18n";
 import {
   Button,
   Menu,
@@ -46,6 +48,7 @@ export function GuideView({
   onFinish: () => void;
   mode: "guide" | "files" | "overview";
 }) {
+  const { t } = useTranslation();
   const [readingMode, setReadingMode] = useState(false);
   const [split, setSplit] = useState(false);
   const [fileQuery, setFileQuery] = useState("");
@@ -79,6 +82,7 @@ export function GuideView({
         <Diff
           key={id}
           hunk={hunk}
+          file={w.snapshot.files.find((f) => f.path === hunk.path)}
           selection={selection}
           onSelect={onSelect}
           onDiscuss={onDiscuss}
@@ -93,7 +97,7 @@ export function GuideView({
   if (mode === "overview")
     return (
       <div className="reading-area overview">
-        <div className="eyebrow">PULL REQUEST</div>
+        <div className="eyebrow">{t("PULL REQUEST")} </div>
         <h2>{w.snapshot.pull.title}</h2>
         <p className="intro">
           {w.snapshot.pull.body || "No description provided."}
@@ -101,7 +105,7 @@ export function GuideView({
         <div className="overview-grid">
           <div>
             <GitBranch size={18} />
-            <h3>Revision</h3>
+            <h3>{t("Revision")} </h3>
             <p>
               {w.snapshot.pull.headRef} → {w.snapshot.pull.baseRef}
             </p>
@@ -109,13 +113,13 @@ export function GuideView({
           </div>
           <div>
             <FileCode2 size={18} />
-            <h3>Changes</h3>
-            <p>{w.snapshot.files.length} files</p>
+            <h3>{t("Changes")} </h3>
+            <p>{t("{{count}} files", { count: w.snapshot.files.length })}</p>
             <span className="added">+{w.snapshot.pull.additions}</span>{" "}
             <span className="removed">−{w.snapshot.pull.deletions}</span>
           </div>
         </div>
-        <h3>GitHub discussion</h3>
+        <h3>{t("GitHub discussion")} </h3>
         {w.comments.length ? (
           w.comments.map((c) => (
             <article className="remote-comment" key={c.id}>
@@ -129,7 +133,7 @@ export function GuideView({
             </article>
           ))
         ) : (
-          <p className="muted">No GitHub comments yet.</p>
+          <p className="muted">{t("No GitHub comments yet.")} </p>
         )}
       </div>
     );
@@ -143,18 +147,18 @@ export function GuideView({
               checked={readingMode}
               onChange={(e) => setReadingMode(e.target.checked)}
             />{" "}
-            All lines for assistive reading
+            {t("All lines for assistive reading")}{" "}
           </label>
         </div>
         <div className="file-tools">
           <input
-            aria-label="Find a file"
-            placeholder="Find a file…"
+            aria-label={t("Find a file")}
+            placeholder={t("Find a file…")}
             value={fileQuery}
             onChange={(e) => setFileQuery(e.target.value)}
           />
           <Button className="secondary" onPress={() => setSplit(!split)}>
-            {split ? "Unified" : "Split"} view
+            {split ? t("Unified view") : t("Split view")}
           </Button>
         </div>
         {w.snapshot.files
@@ -166,7 +170,10 @@ export function GuideView({
                 <div className="callout">
                   <FileCode2 size={16} />
                   <div>
-                    <strong>{f.path}</strong>
+                    <strong>
+                      {f.previousPath && <>{f.previousPath} → </>}
+                      {f.path} · {t(f.status)}
+                    </strong>
                     <p>{f.unavailable}</p>
                   </div>
                 </div>
@@ -179,8 +186,10 @@ export function GuideView({
     return (
       <div className="empty">
         <FileCode2 size={30} />
-        <h2>No reviewable text changes</h2>
-        <p>Check the PR overview for details and capture limitations.</p>
+        <h2>{t("No reviewable text changes")} </h2>
+        <p>
+          {t("Check the PR overview for details and capture limitations.")}{" "}
+        </p>
       </div>
     );
   const expanded =
@@ -200,12 +209,14 @@ export function GuideView({
             aria-label={`Review outline, step ${index + 1} of ${sections.length}`}
           >
             <span className="step-number">{index + 1}</span>
-            <span>of {sections.length} steps</span>
+            <span>
+              {t("of")} {sections.length} {t("steps")}{" "}
+            </span>
             <ChevronDown size={14} aria-hidden="true" />
           </Button>
           <Popover placement="bottom start" className="guide-outline">
             <Menu
-              aria-label="Review steps"
+              aria-label={t("Review steps")}
               onAction={(id) => {
                 const next = sections.find((s) => s.id === id);
                 if (next) navigate(next);
@@ -227,7 +238,7 @@ export function GuideView({
                       {i + 1}. {s.title}
                     </strong>
                     <small>
-                      {labels[s.attention]} · {s.hunkIds.length} hunks
+                      {t(labels[s.attention])} · {s.hunkIds.length} {t("hunks")}{" "}
                       {s.hunkIds.length > 0 &&
                       s.hunkIds.every((id) => w.progress.reviewed.includes(id))
                         ? " · reviewed"
@@ -243,7 +254,7 @@ export function GuideView({
           {sections.map((s, i) => (
             <Button
               key={s.id}
-              aria-label={`Go to step ${i + 1}: ${s.title}, ${labels[s.attention]}`}
+              aria-label={`Go to step ${i + 1}: ${s.title}, ${t(labels[s.attention])}`}
               aria-current={i === index ? "step" : undefined}
               className={`${s.attention} ${i === index ? "current" : ""} ${s.hunkIds.length && s.hunkIds.every((id) => w.progress.reviewed.includes(id)) ? "done" : ""}`}
               onPress={() => navigate(s)}
@@ -252,7 +263,7 @@ export function GuideView({
         </div>
         <Button
           className="icon-button"
-          aria-label="Previous step"
+          aria-label={t("Previous step")}
           isDisabled={index === 0}
           onPress={() => navigate(sections[index - 1])}
         >
@@ -260,7 +271,7 @@ export function GuideView({
         </Button>
         <Button
           className="icon-button"
-          aria-label="Next step"
+          aria-label={t("Next step")}
           isDisabled={index === sections.length - 1}
           onPress={() => navigate(sections[index + 1])}
         >
@@ -268,14 +279,14 @@ export function GuideView({
         </Button>
       </div>
       <p className="sr-only" role="status">
-        Step {index + 1} of {sections.length}: {section.title}.{" "}
-        {labels[section.attention]}.
+        {t("Step")} {index + 1} {t("of")} {sections.length}: {section.title}.{" "}
+        {t(labels[section.attention])}.
       </p>
       <div className="reading-area" key={section.id}>
         <div className="section-meta">
           <span className={`badge ${section.attention}`}>
             {section.attention === "high" && <Flag size={12} />}{" "}
-            {labels[section.attention]}
+            {t(labels[section.attention])}
           </span>
           <span>{section.category}</span>
           <span className="meta-end">
@@ -304,7 +315,7 @@ export function GuideView({
         </div>
         {section.questions.length > 0 && (
           <div className="review-questions">
-            <span className="eyebrow">AS YOU REVIEW</span>
+            <span className="eyebrow">{t("AS YOU REVIEW")} </span>
             {section.questions.map((q) => (
               <p key={q}>
                 <span>↳</span> {q}
@@ -317,9 +328,9 @@ export function GuideView({
             <div className="fold-icon">
               <ChevronsUpDown size={23} />
             </div>
-            <h3>Routine changes, kept together</h3>
+            <h3>{t("Routine changes, kept together")} </h3>
             <p>
-              {section.hunkIds.length} hunks ·{" "}
+              {section.hunkIds.length} {t("hunks ·")}{" "}
               {
                 new Set(
                   allHunks
@@ -327,10 +338,10 @@ export function GuideView({
                     .map((h) => h.path),
                 ).size
               }{" "}
-              files
+              {t("files")}{" "}
             </p>
             <p className="muted">
-              Read the summary, or expand to inspect every line.
+              {t("Read the summary, or expand to inspect every line.")}{" "}
             </p>
             <Button
               className="secondary"
@@ -341,13 +352,14 @@ export function GuideView({
                 })
               }
             >
-              <Eye size={15} /> Expand all changes
+              <Eye size={15} />
+              {t("Expand all changes")}{" "}
             </Button>
             <Button
               className="text-button"
               onPress={() => mark("acknowledged", section)}
             >
-              Acknowledge summary
+              {t("Acknowledge summary")}{" "}
             </Button>
           </div>
         ) : (
@@ -359,18 +371,21 @@ export function GuideView({
                   checked={readingMode}
                   onChange={(e) => setReadingMode(e.target.checked)}
                 />{" "}
-                All lines for assistive reading
+                {t("All lines for assistive reading")}{" "}
               </label>
             </div>
             <div className="code-toolbar">
               <span>
-                <FileCode2 size={14} /> CODE CHANGES
+                <FileCode2 size={14} />
+                {t("CODE CHANGES")}{" "}
               </span>
               <Button onPress={() => setSplit(!split)}>
-                {split ? "Unified view" : "Split view"}
+                {split ? t("Unified view") : t("Split view")}
               </Button>
               <span className="muted">
-                Drag line numbers · Shift-click or Shift + ↑/↓ for a range
+                {t(
+                  "Drag line numbers · Shift-click or Shift + ↑/↓ for a range",
+                )}{" "}
               </span>
             </div>
             {section.hunkIds.map(renderHunk)}
@@ -382,7 +397,10 @@ export function GuideView({
             key={i}
             onPress={() => onDiscuss(f.anchor)}
           >
-            <span className="badge high">{f.severity} finding</span>
+            <span className="badge high">
+              {f.severity}
+              {t("finding")}{" "}
+            </span>
             <strong>{f.title}</strong>
             <p>{f.body}</p>
             <code>
@@ -408,13 +426,14 @@ export function GuideView({
             onPress={() => mark("reviewed", section)}
           >
             <Check size={16} />
-            {reviewed ? "Code reviewed" : "Mark code reviewed"}
+            {reviewed ? t("Code reviewed") : t("Mark code reviewed")}
           </Button>
           <Button
             className="secondary"
             onPress={() => mark("deferred", section)}
           >
-            <ArrowDown size={15} /> Defer
+            <ArrowDown size={15} />
+            {t("Defer")}{" "}
           </Button>
           <div className="spacer" />
           {index < sections.length - 1 ? (
@@ -422,11 +441,11 @@ export function GuideView({
               className="next-button"
               onPress={() => navigate(sections[index + 1])}
             >
-              Next step <ArrowRight size={16} />
+              {t("Next step")} <ArrowRight size={16} />
             </Button>
           ) : (
             <Button className="next-button" onPress={onFinish}>
-              Finish review <ArrowRight size={16} />
+              {t("Finish review")} <ArrowRight size={16} />
             </Button>
           )}
         </div>
@@ -440,14 +459,14 @@ export function GuideView({
                 : "Run Codex for a guided code review"}
           </span>
           <span>
-            {counts.reviewed}/{counts.total} hunks reviewed ·{" "}
-            {counts.acknowledged} summaries acknowledged
+            {counts.reviewed}/{counts.total} {t("hunks reviewed ·")}{" "}
+            {counts.acknowledged} {t("summaries acknowledged")}{" "}
           </span>
         </div>
         {w.guide.limitations.length > 0 && (
           <details className="limitations">
             <summary>
-              Coverage and limitations ({w.guide.limitations.length})
+              {t("Coverage and limitations (")} {w.guide.limitations.length})
             </summary>
             {w.guide.limitations.map((s, i) => (
               <p key={i}>{s}</p>

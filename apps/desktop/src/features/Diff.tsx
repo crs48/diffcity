@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import "../i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import { FileCode2, MessageSquare } from "lucide-react";
@@ -11,6 +13,7 @@ import { useConversation } from "./conversation";
 
 export function Diff({
   hunk,
+  file,
   selection,
   onSelect,
   onDiscuss = onSelect,
@@ -20,6 +23,7 @@ export function Diff({
   readingMode = false,
 }: {
   hunk: Hunk;
+  file?: { status: string; previousPath: string | null };
   selection: Anchor | null;
   onSelect: (anchor: Anchor) => void;
   onDiscuss?: (anchor: Anchor) => void;
@@ -28,6 +32,7 @@ export function Diff({
   split: boolean;
   readingMode?: boolean;
 }) {
+  const { t } = useTranslation();
   const scroll = useRef<HTMLDivElement>(null);
   const conversation = useConversation();
   const hasConversation = !!conversation;
@@ -134,7 +139,11 @@ export function Diff({
     <div className="diff-file">
       <div className="file-bar">
         <FileCode2 size={14} />
-        <span>{hunk.path}</span>
+        <span>
+          {file?.previousPath && <>{file.previousPath} → </>}
+          {hunk.path}
+        </span>
+        {file && <small className="file-status">{t(file.status)}</small>}
         <span className="muted mono">
           {hunk.lines.filter((l) => l.kind === "addition").length > 0 &&
             `+${hunk.lines.filter((l) => l.kind === "addition").length}`}
@@ -149,7 +158,8 @@ export function Diff({
         </span>
         {activeRange && !interaction.dragging && (
           <Button className="secondary" onPress={() => onDiscuss(activeRange)}>
-            <MessageSquare size={13} /> Comment on {lineRange(activeRange)}
+            <MessageSquare size={13} />
+            {t("Comment on")} {lineRange(activeRange)}
           </Button>
         )}
       </div>

@@ -4,6 +4,7 @@ pub mod contracts;
 pub mod domain;
 pub mod fixtures;
 pub mod github;
+pub mod migrations;
 pub mod service;
 
 use std::sync::Arc;
@@ -22,6 +23,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::bootstrap,
             commands::refresh_inbox,
+            commands::list_pull_history,
             commands::list_repositories,
             commands::save_settings,
             commands::open_pull,

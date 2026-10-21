@@ -2116,3 +2116,31 @@
     }
   }
 }
+
+@layer components {
+  .inbox-scope {
+    display: flex;
+    gap: 4px;
+    padding: 8px 14px;
+  }
+  .scope-button {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+  }
+  .scope-button[aria-pressed="true"] {
+    background: var(--text);
+    color: var(--bg);
+  }
+  .history-status {
+    padding: 10px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .history-more {
+    margin: 8px 14px;
+  }
+}

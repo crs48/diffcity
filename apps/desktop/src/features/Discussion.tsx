@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import "../i18n";
 import { Button } from "react-aria-components";
 import { Sparkles, X } from "lucide-react";
 import { lineRange } from "../lib/selection";
@@ -7,6 +9,7 @@ import { ReviewMessages } from "./ReviewMessages";
 import { useConversationScroll } from "./useConversationScroll";
 
 export function Discussion({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const c = useConversation();
   const messages = useConversationScroll(
     (c?.workspace.notes.length ?? 0) + (c?.workspace.comments.length ?? 0),
@@ -15,20 +18,20 @@ export function Discussion({ onClose }: { onClose: () => void }) {
   if (!c) return null;
   const anchor = c.chat.draft?.anchor;
   return (
-    <aside className="discussion" aria-label="PR chat">
+    <aside className="discussion" aria-label={t("PR chat")}>
       <header>
         <Sparkles size={16} />
-        <strong>PR chat</strong>
+        <strong>{t("PR chat")} </strong>
         <Button
           className="icon-button"
-          aria-label="Close PR chat"
+          aria-label={t("Close PR chat")}
           onPress={onClose}
         >
           <X size={17} />
         </Button>
       </header>
       <div className="discussion-context">
-        <span>One conversation with Codex across this review.</span>
+        <span>{t("One conversation with Codex across this review.")} </span>
         {anchor ? (
           <>
             <code>
@@ -36,21 +39,24 @@ export function Discussion({ onClose }: { onClose: () => void }) {
               {lineRange(anchor)}
             </code>
             <Button className="text-button" onPress={() => c.openChat(null)}>
-              Remove code context
+              {t("Remove code context")}{" "}
             </Button>
           </>
         ) : (
-          <span>Ask about the PR, or continue any inline discussion.</span>
+          <span>
+            {t("Ask about the PR, or continue any inline discussion.")}{" "}
+          </span>
         )}
       </div>
       <div className="messages" {...messages}>
         {!c.workspace.notes.length && (
           <div className="discussion-empty">
             <Sparkles size={22} />
-            <h3>Review together.</h3>
+            <h3>{t("Review together.")} </h3>
             <p>
-              Inline comments and replies also appear here. Click a code
-              reference to return to its thread.
+              {t(
+                "Inline comments and replies also appear here. Click a code reference to return to its thread.",
+              )}{" "}
             </p>
           </div>
         )}

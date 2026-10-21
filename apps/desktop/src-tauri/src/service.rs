@@ -69,6 +69,7 @@ impl Service {
             models,
             pulls,
             data_directory: self.store.directory.to_string_lossy().into(),
+            schema_version: crate::migrations::VERSION,
         })
     }
     pub async fn inbox(&self) -> Result<Vec<PullRequest>> {
@@ -80,12 +81,54 @@ impl Service {
         self.store.put("cache", "inbox", &pulls)?;
         Ok(pulls)
     }
+    pub async fn history(&self, repository: Option<&str>, page: u32) -> Result<PullPage> {
+        if page == 0 || page > 1000 {
+            bail!("Invalid history page");
+        }
+        let settings = self.store.settings()?;
+        let repositories = match repository {
+            Some(repo) if settings.repositories.iter().any(|r| r == repo) => vec![repo.to_string()],
+            Some(_) => bail!("Choose a tracked repository to browse its history"),
+            None => settings.repositories,
+        };
+        let cache_key = format!(
+            "history-{}-{page}",
+            domain::hash(&serde_json::to_string(&repositories)?)
+        );
+        let mut result = PullPage {
+            pulls: vec![],
+            next_page: None,
+            sync_error: None,
+        };
+        for repo in repositories {
+            match self.github.history(&repo, page).await {
+                Ok(batch) => {
+                    result.pulls.extend(batch.pulls);
+                    result.next_page = result.next_page.or(batch.next_page);
+                    result.sync_error = result.sync_error.or(batch.sync_error);
+                }
+                Err(error) => {
+                    if let Some(mut cached) = self.store.get::<PullPage>("cache", &cache_key)? {
+                        cached.sync_error = Some(format!("Showing saved history: {error}"));
+                        return Ok(cached);
+                    }
+                    return Err(error);
+                }
+            }
+        }
+        result.pulls.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        self.store.put("cache", &cache_key, &result)?;
+        Ok(result)
+    }
     pub fn settings(&self, settings: Settings) -> Result<Settings> {
         if settings.repositories.len() > 30 {
             bail!("Choose up to 30 repositories for this local inbox");
         }
         if settings.repositories.iter().any(|r| !domain::valid_repo(r)) {
             bail!("Repository names must use owner/repository");
+        }
+        if !["en", "es"].contains(&settings.locale.as_str()) {
+            bail!("Unsupported display language");
         }
         self.store.put("settings", "main", &settings)?;
         Ok(settings)
@@ -129,7 +172,7 @@ impl Service {
         let key = format!("{repo}#{number}");
         let old_id: Option<String> = self.store.get("latest", &key)?;
         let old = old_id.as_deref().map(|id| self.snapshot(id)).transpose()?;
-        let (snapshot, sync_error) = if !refresh && old.is_some() {
+        let (mut snapshot, mut sync_error) = if !refresh && old.is_some() {
             (old.clone().unwrap(), None)
         } else {
             match self.github.snapshot(repo, number).await {
@@ -140,6 +183,13 @@ impl Service {
                 },
             }
         };
+        if !refresh {
+            match self.github.pull(repo, number).await {
+                Ok(latest) if latest.head == snapshot.pull.head && latest.base == snapshot.pull.base => snapshot.pull = latest,
+                Ok(_) => sync_error = Some("A newer revision is available. Load the latest revision to review its changes.".into()),
+                Err(error) => sync_error = Some(error.to_string()),
+            }
+        }
         self.store.put("snapshot", &snapshot.id, &snapshot)?;
         self.store.put("latest", &key, &snapshot.id)?;
         let previous_snapshot_id = old_id
@@ -444,6 +494,9 @@ impl Service {
             .github
             .pull(&snapshot.pull.repository, snapshot.pull.number)
             .await?;
+        if current.state != "open" {
+            bail!("This PR is closed; GitHub reviews require an open PR");
+        }
         if current.head != snapshot.pull.head || current.base != snapshot.pull.base {
             bail!(
                 "The PR changed. Load the new revision and inspect your draft anchors before publishing."

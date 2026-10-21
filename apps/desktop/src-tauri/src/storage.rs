@@ -20,10 +20,22 @@ impl Store {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(directory, std::fs::Permissions::from_mode(0o700))?;
         }
-        let connection = Connection::open(directory.join("diffcity.sqlite"))?;
-        connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;
-          CREATE TABLE IF NOT EXISTS documents (kind TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, updated TEXT NOT NULL, PRIMARY KEY(kind,key));
-          PRAGMA user_version=1;")?;
+        let mut connection = Connection::open(directory.join("diffcity.sqlite"))?;
+        connection.busy_timeout(std::time::Duration::from_secs(5))?;
+        connection.execute_batch(
+            "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;",
+        )?;
+        let version = crate::migrations::version(&connection)?;
+        if version > 0 && version < crate::migrations::VERSION {
+            let backup = directory.join(format!(
+                "before-schema-{version}-{}.sqlite",
+                chrono::Utc::now().timestamp_millis()
+            ));
+            connection
+                .execute("VACUUM INTO ?1", [backup.to_string_lossy().as_ref()])
+                .context("Could not back up the database before its schema upgrade")?;
+        }
+        crate::migrations::migrate(&mut connection)?;
         Ok(Self {
             connection: Mutex::new(connection),
             directory: directory.to_path_buf(),
@@ -90,15 +102,21 @@ impl Store {
         Ok(self.get("settings", "main")?.unwrap_or(Settings {
             repositories: vec!["crs48/diffcity".into()],
             theme: "system".into(),
+            locale: "en".into(),
             ..Settings::default()
         }))
     }
     pub fn notes(&self, snapshot: &str) -> Result<Vec<Note>> {
-        Ok(self
-            .list::<Note>("note")?
-            .into_iter()
-            .filter(|n| n.snapshot_id == snapshot)
-            .collect())
+        Ok({
+            let db = self
+                .connection
+                .lock()
+                .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+            let mut stmt = db.prepare("SELECT value FROM documents WHERE kind='note' AND json_extract(value,'$.snapshotId')=?1 ORDER BY updated")?;
+            stmt.query_map([snapshot], |r| r.get::<_, String>(0))?
+                .map(|value| Ok(serde_json::from_str(&value?)?))
+                .collect::<Result<Vec<Note>>>()?
+        })
     }
 }
 

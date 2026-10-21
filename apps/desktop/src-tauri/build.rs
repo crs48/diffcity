@@ -3,6 +3,7 @@ fn main() {
         tauri_build::AppManifest::new().commands(&[
             "bootstrap",
             "refresh_inbox",
+            "list_pull_history",
             "list_repositories",
             "save_settings",
             "open_pull",

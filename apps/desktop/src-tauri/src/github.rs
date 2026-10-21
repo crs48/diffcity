@@ -245,6 +245,14 @@ impl GitHub {
             .map(|v| parse_pull(repo, v))
             .collect())
     }
+    pub async fn history(&self, repo: &str, page: u32) -> Result<PullPage> {
+        if !domain::valid_repo(repo) || page == 0 || page > 1000 {
+            bail!("Invalid repository or history page");
+        }
+        let value = self.request(Method::GET, &format!("/repos/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=30&page={page}"), None, true).await?;
+        let values = value.as_array().context("Expected a GitHub history list")?;
+        Ok(PullPage { pulls: values.iter().map(|v| parse_pull(repo,v)).collect(), next_page: (values.len()==30 && page<1000).then_some(page+1), sync_error: (values.len()==30 && page==1000).then(|| "History is limited to 30,000 PRs per repository; older PRs can still be opened by URL.".into()) })
+    }
     pub async fn pull(&self, repo: &str, number: u32) -> Result<PullRequest> {
         if !domain::valid_repo(repo) || number == 0 {
             bail!("Invalid pull request");
@@ -459,7 +467,11 @@ pub fn parse_pull(repo: &str, v: &Value) -> PullRequest {
         author: string(&v["user"], "login"),
         url: string(v, "html_url"),
         draft: v["draft"].as_bool().unwrap_or(false),
-        state: string(v, "state"),
+        state: if v["merged_at"].as_str().is_some() || v["merged"].as_bool() == Some(true) {
+            "merged".into()
+        } else {
+            string(v, "state")
+        },
         head: string(&v["head"], "sha"),
         base: string(&v["base"], "sha"),
         head_ref: string(&v["head"], "ref"),
@@ -478,6 +490,11 @@ pub fn payload(
     notes: &[Note],
     login: &str,
 ) -> Result<Value> {
+    if snapshot.pull.state != "open" {
+        bail!(
+            "This PR is closed. Private notes and Codex discussion remain available; GitHub reviews require an open PR."
+        );
+    }
     if !["COMMENT", "APPROVE", "REQUEST_CHANGES"].contains(&request.event.as_str()) {
         bail!("Invalid review action");
     }

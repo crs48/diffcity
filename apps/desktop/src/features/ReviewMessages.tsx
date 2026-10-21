@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import "../i18n";
 import { Button } from "react-aria-components";
 import { Github, MessageSquare, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -18,6 +20,7 @@ export function ReviewMessages({
   inline?: boolean;
   streaming?: boolean;
 }) {
+  const { t } = useTranslation();
   const ordered = [
     ...notes.map((note) => ({ kind: "local" as const, message: note })),
     ...remote
@@ -41,11 +44,13 @@ export function ReviewMessages({
                 ) : (
                   <MessageSquare size={12} />
                 )}
-                {n.role === "assistant" ? "Codex" : "You"}
+                {n.role === "assistant" ? "Codex" : t("You")}
                 {n.githubDraft && (
-                  <span className="draft-tag">GitHub draft</span>
+                  <span className="draft-tag">{t("GitHub draft")} </span>
                 )}
-                {n.publishedUrl && <span className="draft-tag">Published</span>}
+                {n.publishedUrl && (
+                  <span className="draft-tag">{t("Published")} </span>
+                )}
               </div>
               {!inline && n.anchor && (
                 <Button
@@ -57,7 +62,7 @@ export function ReviewMessages({
                 </Button>
               )}
               {!inline && !n.anchor && (
-                <span className="message-scope">PR discussion</span>
+                <span className="message-scope">{t("PR discussion")} </span>
               )}
               <ReactMarkdown
                 components={{
@@ -74,7 +79,8 @@ export function ReviewMessages({
                     isDisabled={c.busy}
                     onPress={() => void c.ask(n).catch(c.onError)}
                   >
-                    <Sparkles size={12} /> Ask Codex about this comment
+                    <Sparkles size={12} />
+                    {t("Ask Codex about this comment")}{" "}
                   </Button>
                 )}
                 {n.githubDraft && !n.publishedUrl && (
@@ -82,7 +88,7 @@ export function ReviewMessages({
                     className="text-button"
                     onPress={() => void c.edit(n, inline).catch(c.onError)}
                   >
-                    Edit draft
+                    {t("Edit draft")}{" "}
                   </Button>
                 )}
                 {!n.githubDraft && !n.publishedUrl && (
@@ -95,7 +101,8 @@ export function ReviewMessages({
                     )}
                     onPress={() => void c.prepare(n).catch(c.onError)}
                   >
-                    <Github size={12} /> Prepare GitHub draft
+                    <Github size={12} />
+                    {t("Prepare GitHub draft")}{" "}
                   </Button>
                 )}
               </div>
@@ -115,7 +122,7 @@ export function ReviewMessages({
               </code>
             )}
             {r.commit && r.commit !== c.workspace.snapshot.pull.head && (
-              <span className="draft-tag">Earlier revision</span>
+              <span className="draft-tag">{t("Earlier revision")} </span>
             )}
             <p>{r.body}</p>
           </article>
@@ -124,22 +131,22 @@ export function ReviewMessages({
       {streaming && (
         <article
           className="message assistant streaming"
-          aria-label="Codex response in progress"
+          aria-label={t("Codex response in progress")}
         >
           <div className="message-label">
             <Sparkles size={12} /> Codex{" "}
-            <span className="muted">Responding…</span>
+            <span className="muted">{t("Responding…")} </span>
           </div>
           {c.stream ? (
             <p>{c.stream}</p>
           ) : (
-            <p className="muted">Thinking about your comment…</p>
+            <p className="muted">{t("Thinking about your comment…")} </p>
           )}
         </article>
       )}
       <span className="sr-only" role="status">
         {streaming
-          ? "Codex is responding."
+          ? t("Codex is responding.")
           : `${notes.filter((n) => n.role === "assistant").length} Codex replies in this conversation.`}
       </span>
     </>

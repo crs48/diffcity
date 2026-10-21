@@ -4,6 +4,7 @@ import type {
   Settings,
   Repository,
   PullRequest,
+  PullPage,
   ReviewWorkspace,
   Note,
   Guide,
@@ -15,6 +16,8 @@ export type * from "../../../../packages/contracts/src";
 export const api = {
   bootstrap: () => invoke<Bootstrap>("bootstrap"),
   inbox: () => invoke<PullRequest[]>("refresh_inbox"),
+  history: (repository: string | null, page = 1) =>
+    invoke<PullPage>("list_pull_history", { repository, page }),
   repositories: () => invoke<Repository[]>("list_repositories"),
   settings: (settings: Settings) =>
     invoke<Settings>("save_settings", { settings }),

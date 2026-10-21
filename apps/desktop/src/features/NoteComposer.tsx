@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import "../i18n";
 import { useEffect, useRef } from "react";
 import { Button } from "react-aria-components";
 import { Check, Send } from "lucide-react";
@@ -17,6 +19,7 @@ export function NoteComposer({
   onAsk: (note: Note) => Promise<void>;
   onError: (error: unknown) => void;
 }) {
+  const { t } = useTranslation();
   const input = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (state.focus) input.current?.focus();
@@ -29,13 +32,13 @@ export function NoteComposer({
         ref={input}
         aria-label={
           inline
-            ? "Inline comment or Codex question"
-            : "Message to Codex about this PR"
+            ? t("Inline comment or Codex question")
+            : t("Message to Codex about this PR")
         }
         placeholder={
           inline
-            ? "Comment on this code or ask Codex…"
-            : "Discuss this PR with Codex…"
+            ? t("Comment on this code or ask Codex…")
+            : t("Discuss this PR with Codex…")
         }
         value={state.draft.body}
         onChange={(e) => state.change(e.target.value)}
@@ -43,12 +46,13 @@ export function NoteComposer({
       <div className="composer-status" role="status">
         {state.saved ? (
           <>
-            <Check size={12} /> Saved locally
+            <Check size={12} />
+            {t("Saved locally")}{" "}
           </>
         ) : editing ? (
-          "GitHub draft · not published"
+          t("GitHub draft · not published")
         ) : (
-          "Private · shared with this PR’s Codex conversation"
+          t("Private · shared with this PR’s Codex conversation")
         )}
       </div>
       <div className="composer-actions">
@@ -57,14 +61,15 @@ export function NoteComposer({
           isDisabled={!state.draft.body.trim()}
           onPress={() => void state.submit().catch(onError)}
         >
-          {editing ? "Save draft" : "Save comment"}
+          {editing ? t("Save draft") : t("Save comment")}
         </Button>
         <Button
           className="primary"
           isDisabled={busy || editing || !state.draft.body.trim()}
           onPress={() => void state.submit(onAsk).catch(onError)}
         >
-          <Send size={13} /> Ask Codex
+          <Send size={13} />
+          {t("Ask Codex")}{" "}
         </Button>
       </div>
     </div>

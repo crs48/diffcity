@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import "../i18n";
 import { Button } from "react-aria-components";
 import { MessageSquare, PanelRightOpen, X } from "lucide-react";
 import type { InlineThread } from "../lib/diffRows";
@@ -8,6 +10,7 @@ import { ReviewMessages } from "./ReviewMessages";
 import { useConversationScroll } from "./useConversationScroll";
 
 export function InlineDiscussion({ thread }: { thread: InlineThread }) {
+  const { t } = useTranslation();
   const c = useConversation();
   const messages = useConversationScroll(
     thread.notes.length + thread.remote.length,
@@ -33,12 +36,13 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
           className="text-button"
           onPress={() => c.openChat(thread.anchor)}
         >
-          <PanelRightOpen size={13} /> Continue in PR chat
+          <PanelRightOpen size={13} />
+          {t("Continue in PR chat")}{" "}
         </Button>
         {active && (
           <Button
             className="icon-button"
-            aria-label="Close inline composer"
+            aria-label={t("Close inline composer")}
             onPress={() => void c.inline.close().catch(c.onError)}
           >
             <X size={15} />
@@ -69,7 +73,7 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
           className="text-button inline-reply"
           onPress={() => c.openInline(thread.anchor)}
         >
-          Reply or ask Codex
+          {t("Reply or ask Codex")}{" "}
         </Button>
       )}
     </section>

@@ -20,6 +20,17 @@ pub async fn refresh_inbox(service: State<'_, Arc<Service>>) -> Output<Vec<PullR
     service.inbox().await.map_err(error)
 }
 #[tauri::command]
+pub async fn list_pull_history(
+    service: State<'_, Arc<Service>>,
+    repository: Option<String>,
+    page: u32,
+) -> Output<PullPage> {
+    service
+        .history(repository.as_deref(), page)
+        .await
+        .map_err(error)
+}
+#[tauri::command]
 pub async fn list_repositories(service: State<'_, Arc<Service>>) -> Output<Vec<Repository>> {
     service.github.repositories().await.map_err(error)
 }

@@ -1,3 +1,6 @@
+import { useTranslation } from "react-i18next";
+import i18n from "./i18n";
+import { usePullHistory } from "./features/usePullHistory";
 import { Button, Tabs, TabList, Tab, TabPanel } from "react-aria-components";
 import { ThemeSwitcher } from "./ui/ThemeSwitcher";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -45,9 +48,12 @@ import { Connections, Finish, Projects } from "./features/Dialogs";
 import "./styles.css";
 
 export default function App() {
+  const { t } = useTranslation();
+  const [inboxView, setInboxView] = useState<"open" | "history">("open");
   const [data, setData] = useState<Bootstrap | null>(null);
   const [pulls, setPulls] = useState<PullRequest[]>([]);
   const [project, setProject] = useState<string | null>(null);
+  const history = usePullHistory(project, inboxView === "history");
   const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
   const [selection, setSelection] = useState<Anchor | null>(null);
   const [discussion, setDiscussion] = useState(false);
@@ -148,6 +154,7 @@ export default function App() {
   const boot = useCallback(async () => {
     const result = await api.bootstrap();
     setData(result);
+    await i18n.changeLanguage(result.settings.locale || "en");
     setPulls(result.pulls);
     setStatus("");
     if (result.github.connected) await refresh().catch(onError);
@@ -205,7 +212,11 @@ export default function App() {
       try {
         if (++tick % 3 === 0) await refresh();
         const w = current.current;
-        if (w && w.snapshot.pull.repository !== "diffcity/demo") {
+        if (
+          w &&
+          w.snapshot.pull.state === "open" &&
+          w.snapshot.pull.repository !== "diffcity/demo"
+        ) {
           const p = w.snapshot.pull;
           const latest = await api.check(p.repository, p.number);
           if (
@@ -218,6 +229,7 @@ export default function App() {
             current?.snapshot.id === fresh.snapshot.id
               ? {
                   ...current,
+                  snapshot: { ...current.snapshot, pull: fresh.snapshot.pull },
                   comments: fresh.comments,
                   checks: fresh.checks,
                   syncError: fresh.syncError,
@@ -398,10 +410,10 @@ export default function App() {
       setActiveQuestion(null);
     }
   };
-  const visible = pulls.filter(
+  const visible = (inboxView === "open" ? pulls : history.pulls).filter(
     (p) =>
       (!project || p.repository === project) &&
-      `${p.title} ${p.number} ${p.author}`
+      `${p.title} ${p.number} ${p.author} ${p.repository} ${p.state}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
@@ -419,9 +431,12 @@ export default function App() {
         href="#review-workspace"
         onClick={() => setInboxOpen(false)}
       >
-        Skip to review
+        {t("Skip to review")}{" "}
       </a>
-      <aside className="project-rail" aria-label="Projects and connections">
+      <aside
+        className="project-rail"
+        aria-label={t("Projects and connections")}
+      >
         <div className="traffic-spacer" data-tauri-drag-region />
         <div className="brand">
           <div className="brand-mark">
@@ -432,7 +447,7 @@ export default function App() {
           <strong>diffcity</strong>
           <span>alpha</span>
         </div>
-        <div className="workspace-label">YOUR WORKSPACE</div>
+        <div className="workspace-label">{t("YOUR WORKSPACE")} </div>
         <Button
           className={`rail-item ${!project ? "active" : ""}`}
           aria-pressed={!project}
@@ -442,20 +457,20 @@ export default function App() {
           }}
         >
           <Inbox size={17} />
-          <span>All pull requests</span>
+          <span>{t("All pull requests")} </span>
           <small>{pulls.length}</small>
         </Button>
         <div className="rail-heading">
-          PROJECTS
+          {t("PROJECTS")}{" "}
           <Button
             className="icon-button"
-            aria-label="Add projects"
+            aria-label={t("Add projects")}
             onPress={() => setDialog("projects")}
           >
             <Plus size={15} />
           </Button>
         </div>
-        <nav aria-label="Projects">
+        <nav aria-label={t("Projects")}>
           {data?.settings.repositories.map((repo) => (
             <Button
               className={`rail-item ${project === repo ? "active" : ""}`}
@@ -478,19 +493,19 @@ export default function App() {
           onPress={() => setDialog("projects")}
         >
           <Plus size={15} />
-          <span>Add project</span>
+          <span>{t("Add project")} </span>
         </Button>
         <div className="rail-bottom">
           <Button className="rail-item" onPress={() => void sample()}>
             <BookOpen size={16} />
-            <span>Explore a sample</span>
+            <span>{t("Explore a sample")} </span>
           </Button>
           <Button
             className="rail-item"
             onPress={() => setDialog("connections")}
           >
             <Settings2 size={16} />
-            <span>Connections</span>
+            <span>{t("Connections")} </span>
           </Button>
           <div className="connection-summary">
             <span
@@ -504,28 +519,34 @@ export default function App() {
               className={`status-dot ${data?.codex.connected ? "online" : ""}`}
             />
             <span>
-              {data?.codex.connected ? "Codex connected" : "Codex disconnected"}
+              {data?.codex.connected
+                ? t("Codex connected")
+                : t("Codex disconnected")}
             </span>
             <Sparkles size={13} />
           </div>
         </div>
       </aside>
       {inboxVisible && (
-        <aside className="inbox-pane" aria-label="Pull request inbox">
+        <aside className="inbox-pane" aria-label={t("Pull request inbox")}>
           <header data-tauri-drag-region>
             <span>{project?.split("/")[1] || "Pull requests"}</span>
             <Button
               className="icon-button close-inbox"
-              aria-label="Close pull request list"
+              aria-label={t("Close pull request list")}
               onPress={() => setInboxOpen(false)}
             >
               <X size={16} />
             </Button>
             <Button
               className="icon-button"
-              aria-label="Refresh inbox"
+              aria-label={t("Refresh inbox")}
               isDisabled={loading || !data?.github.connected}
-              onPress={() => void refresh().catch(onError)}
+              onPress={() =>
+                inboxView === "history"
+                  ? void history.load()
+                  : void refresh().catch(onError)
+              }
             >
               <RefreshCw size={15} />
             </Button>
@@ -533,12 +554,50 @@ export default function App() {
           <div className="search-box inbox-search">
             <Search size={14} />
             <input
-              aria-label="Search pull requests"
-              placeholder="Search pull requests"
+              aria-label={t("Search pull requests")}
+              placeholder={t("Search pull requests")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+          <div
+            className="inbox-scope"
+            role="group"
+            aria-label={t("Pull request scope")}
+          >
+            <Button
+              className="scope-button"
+              aria-pressed={inboxView === "open"}
+              onPress={() => setInboxView("open")}
+            >
+              {t("Open")}
+            </Button>
+            <Button
+              className="scope-button"
+              aria-pressed={inboxView === "history"}
+              onPress={() => setInboxView("history")}
+            >
+              {t("History")}
+            </Button>
+          </div>
+          {inboxView === "history" && (
+            <div className="history-status" role="status">
+              {t("Closed and merged pull requests")}
+              {history.loading && ` · ${t("Loading…")}`}
+            </div>
+          )}
+          {inboxView === "history" && history.error && (
+            <div className="history-status" role="alert">
+              {history.error}
+              <Button
+                className="text-button"
+                onPress={() => void history.load()}
+                isDisabled={history.loading}
+              >
+                {t("Retry")}
+              </Button>
+            </div>
+          )}
           <div className="pull-list">
             {groups.map((group) => {
               const items = visible.filter(
@@ -547,7 +606,7 @@ export default function App() {
               return items.length ? (
                 <section key={group}>
                   <h2>
-                    {group}
+                    {t(group)}
                     <span>{items.length}</span>
                   </h2>
                   {items.map((p) => (
@@ -559,7 +618,13 @@ export default function App() {
                       <div>
                         <GitPullRequest size={15} />
                         <span>#{p.number}</span>
-                        {p.draft && <small>Draft</small>}
+                        {p.state !== "open" ? (
+                          <small>
+                            {p.state === "merged" ? t("Merged") : t("Closed")}
+                          </small>
+                        ) : (
+                          p.draft && <small>{t("Draft")}</small>
+                        )}
                       </div>
                       <strong>{p.title}</strong>
                       <footer>
@@ -578,23 +643,35 @@ export default function App() {
                 <p>
                   {status ||
                     (query
-                      ? "No matching pull requests"
-                      : "No open pull requests in these projects.")}
+                      ? t("No matching pull requests")
+                      : inboxView === "history"
+                        ? t("No closed or merged pull requests loaded.")
+                        : t("No open pull requests in these projects."))}
                 </p>
                 <Button
                   className="text-button"
                   onPress={() => setDialog("projects")}
                 >
-                  Choose projects <ArrowRight size={13} />
+                  {t("Choose projects")} <ArrowRight size={13} />
                 </Button>
               </div>
             )}
           </div>
+          {inboxView === "history" && history.nextPage && (
+            <Button
+              className="secondary history-more"
+              isDisabled={history.loading}
+              onPress={() => void history.load(history.nextPage!)}
+            >
+              {t("Load older pull requests")}
+            </Button>
+          )}
           <Button
             className="open-pr-button"
             onPress={() => setShowLink(!showLink)}
           >
-            <Plus size={14} /> Open a PR by URL
+            <Plus size={14} />
+            {t("Open a PR by URL")}{" "}
           </Button>
           {showLink && (
             <form
@@ -609,20 +686,22 @@ export default function App() {
               }}
             >
               <input
-                aria-label="GitHub pull request URL"
+                aria-label={t("GitHub pull request URL")}
                 autoFocus
                 placeholder="https://github.com/…/pull/…"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
               />
               <Button className="primary" type="submit">
-                Open
+                {t("Open")}{" "}
               </Button>
             </form>
           )}
           <div className="sync-label">
             <span className="status-dot online" />
-            {lastSync ? `Synced ${lastSync}` : "Local workspace"}
+            {lastSync
+              ? t("Synced {{time}}", { time: lastSync })
+              : t("Local workspace")}
           </div>
         </aside>
       )}
@@ -630,7 +709,7 @@ export default function App() {
         <header className="workspace-topbar" data-tauri-drag-region>
           <Button
             className="icon-button"
-            aria-label="Toggle pull request list"
+            aria-label={t("Toggle pull request list")}
             aria-expanded={inboxVisible}
             onPress={() => setInboxOpen(!inboxVisible)}
           >
@@ -642,10 +721,16 @@ export default function App() {
                 <span>{pull.repository}</span>
                 <ChevronRight size={13} />
                 <strong>#{pull.number}</strong>
-                {pull.draft && <span className="badge">Draft</span>}
+                {pull.state !== "open" ? (
+                  <span className="badge">
+                    {pull.state === "merged" ? t("Merged") : t("Closed")}
+                  </span>
+                ) : (
+                  pull.draft && <span className="badge">{t("Draft")}</span>
+                )}
               </>
             ) : (
-              <span>Your review workspace</span>
+              <span>{t("Your review workspace")} </span>
             )}
           </div>
           <div className="spacer" />
@@ -668,7 +753,7 @@ export default function App() {
             <>
               <Button
                 className="icon-button"
-                aria-label="Open in GitHub"
+                aria-label={t("Open in GitHub")}
                 onPress={() => void api.external(pull.url)}
               >
                 <ExternalLink size={16} />
@@ -684,7 +769,8 @@ export default function App() {
                   }
                 }}
               >
-                <Check size={14} /> Finish review
+                <Check size={14} />
+                {t("Finish review")}{" "}
               </Button>
             </>
           )}
@@ -694,7 +780,7 @@ export default function App() {
             <span>{error}</span>
             <Button
               className="icon-button"
-              aria-label="Dismiss error"
+              aria-label={t("Dismiss error")}
               onPress={() => setError("")}
             >
               <X size={14} />
@@ -704,7 +790,7 @@ export default function App() {
         {loading && (
           <div className="loading-banner" role="status">
             <LoaderCircle size={15} className="spin" />
-            Loading review…
+            {t("Loading review…")}{" "}
           </div>
         )}
         {workspace && pull ? (
@@ -721,12 +807,16 @@ export default function App() {
                 </div>
                 <h1>{pull.title}</h1>
                 <div className="pr-meta">
-                  <span>{workspace.snapshot.files.length} files</span>
+                  <span>
+                    {t("{{count}} files", {
+                      count: workspace.snapshot.files.length,
+                    })}
+                  </span>
                   <span className="added">+{pull.additions}</span>
                   <span className="removed">−{pull.deletions}</span>
                   <span className="mono">{pull.head.slice(0, 8)}</span>
                   {workspace.guide.source === "sample" && (
-                    <span className="badge">Sample</span>
+                    <span className="badge">{t("Sample")} </span>
                   )}
                 </div>
               </div>
@@ -737,12 +827,19 @@ export default function App() {
               >
                 <Sparkles size={15} />
                 {workspace.guide.source === "codex"
-                  ? "Review again"
-                  : "Review with Codex"}
+                  ? t("Review again")
+                  : t("Review with Codex")}
               </Button>
             </div>
+            {pull?.state !== "open" && (
+              <div className="history-status">
+                {t(
+                  "Historical review: code, private comments, and Codex are available. GitHub publication requires an open PR.",
+                )}
+              </div>
+            )}
             <div className="workspace-tabs">
-              <TabList aria-label="Review views">
+              <TabList aria-label={t("Review views")}>
                 {(["guide", "files", "overview"] as const).map((tab) => (
                   <Tab id={tab} key={tab}>
                     {tab === "guide" ? (
@@ -753,10 +850,10 @@ export default function App() {
                       <CircleDot size={14} />
                     )}{" "}
                     {tab === "guide"
-                      ? "Guide"
+                      ? t("Guide")
                       : tab === "files"
-                        ? "Files"
-                        : "Overview"}
+                        ? t("Files")
+                        : t("Overview")}
                   </Tab>
                 ))}
               </TabList>
@@ -775,8 +872,8 @@ export default function App() {
                   }
                 }}
               >
-                <MessageSquare size={14} /> PR chat{" "}
-                <span>{workspace.notes.length}</span>
+                <MessageSquare size={14} />
+                {t("PR chat")} <span>{workspace.notes.length}</span>
               </Button>
             </div>
             {run && (
@@ -787,14 +884,14 @@ export default function App() {
                   className="text-button"
                   onPress={() => void api.cancel()}
                 >
-                  Cancel
+                  {t("Cancel")}{" "}
                 </Button>
               </div>
             )}
             {pendingGuide?.snapshotId === workspace.snapshot.id && (
               <div className="update-banner">
                 <Sparkles size={15} />
-                <span>Your guided review is ready.</span>
+                <span>{t("Your guided review is ready.")} </span>
                 <Button
                   onPress={() => {
                     const currentSection =
@@ -818,7 +915,7 @@ export default function App() {
                     setPendingGuide(null);
                   }}
                 >
-                  Open updated guide <ArrowRight size={13} />
+                  {t("Open updated guide")} <ArrowRight size={13} />
                 </Button>
               </div>
             )}
@@ -826,35 +923,40 @@ export default function App() {
               <div className="update-banner">
                 <GitPullRequest size={15} />
                 <span>
-                  New code is available. Your current review is preserved.
+                  {t(
+                    "New code is available. Your current review is preserved.",
+                  )}{" "}
                 </span>
                 <Button onPress={() => void open(pull.repository, pull.number)}>
-                  Load new revision <ArrowRight size={13} />
+                  {t("Load new revision")} <ArrowRight size={13} />
                 </Button>
               </div>
             )}
             {workspace.previousSnapshotId && (
               <div className="update-banner">
                 <span>
-                  Earlier notes and progress remain saved with their original
-                  code.
+                  {t(
+                    "Earlier notes and progress remain saved with their original code.",
+                  )}{" "}
                 </span>
                 <Button
                   onPress={() => void saved(workspace.previousSnapshotId!)}
                 >
-                  Open previous revision
+                  {t("Open previous revision")}{" "}
                 </Button>
               </div>
             )}
             {workspace.syncError && (
               <div className="sync-warning">
-                Showing saved content · {workspace.syncError}
+                {t("Showing saved content ·")} {workspace.syncError}
               </div>
             )}
             {workspace.changedHunks.length > 0 && (
               <div className="update-banner">
-                {workspace.changedHunks.length} hunks changed since your
-                previous revision. Unchanged reviewed code was preserved.
+                {workspace.changedHunks.length}
+                {t(
+                  "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
+                )}{" "}
               </div>
             )}
             <ConversationContext.Provider
@@ -911,22 +1013,24 @@ export default function App() {
               </div>
               <div className="city-ground" />
             </div>
-            <div className="eyebrow">LESS SCROLLING. MORE UNDERSTANDING.</div>
+            <div className="eyebrow">
+              {t("LESS SCROLLING. MORE UNDERSTANDING.")}{" "}
+            </div>
             <h1>
-              Find the story
-              <br />
-              inside the diff.
+              {t("Find the story")} <br />
+              {t("inside the diff.")}{" "}
             </h1>
             <p>
-              Review the changes that matter first.
-              <br />A guided path from pull request to confident feedback.
+              {t("Review the changes that matter first.")} <br />
+              {t("A guided path from pull request to confident feedback.")}{" "}
             </p>
             <div className="welcome-actions">
               <Button className="primary" onPress={() => setDialog("projects")}>
-                <FolderGit2 size={16} /> Choose your projects
+                <FolderGit2 size={16} />
+                {t("Choose your projects")}{" "}
               </Button>
               <Button className="secondary" onPress={() => void sample()}>
-                Try a guided review <ArrowRight size={16} />
+                {t("Try a guided review")} <ArrowRight size={16} />
               </Button>
             </div>
             {status && (
@@ -937,13 +1041,16 @@ export default function App() {
             )}
             <div className="welcome-details">
               <span>
-                <ShieldIcon /> Consequential code first
+                <ShieldIcon />
+                {t("Consequential code first")}{" "}
               </span>
               <span>
-                <MessageSquare size={14} /> Think alongside Codex
+                <MessageSquare size={14} />
+                {t("Think alongside Codex")}{" "}
               </span>
               <span>
-                <Github size={14} /> Stay in sync with GitHub
+                <Github size={14} />
+                {t("Stay in sync with GitHub")}{" "}
               </span>
             </div>
           </div>

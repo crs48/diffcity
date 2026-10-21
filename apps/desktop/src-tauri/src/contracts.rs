@@ -9,6 +9,12 @@ pub struct Settings {
     pub gh_path: Option<String>,
     pub model: Option<String>,
     pub theme: String,
+    #[serde(default = "default_locale")]
+    pub locale: String,
+}
+
+pub fn default_locale() -> String {
+    "en".into()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -37,6 +43,7 @@ pub struct Bootstrap {
     pub models: Vec<Model>,
     pub pulls: Vec<PullRequest>,
     pub data_directory: String,
+    pub schema_version: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -262,4 +269,12 @@ pub struct PublishResult {
     pub state: String,
     pub url: String,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PullPage {
+    pub pulls: Vec<PullRequest>,
+    pub next_page: Option<u32>,
+    pub sync_error: Option<String>,
 }

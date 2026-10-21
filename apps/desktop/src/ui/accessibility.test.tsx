@@ -26,6 +26,7 @@ beforeEach(() => {
     codexPath: null,
     model: null,
     theme: "system",
+    locale: "en",
   };
   vi.stubGlobal(
     "ResizeObserver",
@@ -67,6 +68,7 @@ beforeEach(() => {
           },
           models: [],
           pulls: [],
+          schemaVersion: 3,
           dataDirectory: "test-data",
         } satisfies Bootstrap;
       if (command === "sample_review") return structuredClone(workspace);

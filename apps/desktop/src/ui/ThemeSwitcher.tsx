@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import "../i18n";
 import {
   Button,
   Menu,
@@ -22,11 +24,12 @@ export function ThemeSwitcher({
   onChange: (value: string) => void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   const Icon = themes.find((theme) => theme.id === value)?.icon || Monitor;
   return (
     <MenuTrigger>
       <Button
-        aria-label={`Appearance: ${value}`}
+        aria-label={t("Appearance: {{theme}}", { theme: t(value) })}
         isDisabled={disabled}
         className="icon-button"
       >
@@ -37,7 +40,7 @@ export function ThemeSwitcher({
         className="z-50 rounded-lg border border-line bg-surface p-1 text-ink shadow-xl"
       >
         <Menu
-          aria-label="Appearance"
+          aria-label={t("Appearance")}
           selectionMode="single"
           selectedKeys={[value]}
           onAction={(key) => onChange(String(key))}
@@ -47,11 +50,11 @@ export function ThemeSwitcher({
             <MenuItem
               id={id}
               key={id}
-              textValue={label}
+              textValue={t(label)}
               className="flex cursor-default items-center gap-3 rounded px-3 py-2 text-sm outline-none data-focused:bg-subtle data-focus-visible:ring-2 data-focus-visible:ring-inset data-focus-visible:ring-ink"
             >
               <ThemeIcon size={16} aria-hidden="true" />
-              <span className="flex-1">{label}</span>
+              <span className="flex-1">{t(label)}</span>
               {id === value && <Check size={14} aria-hidden="true" />}
             </MenuItem>
           ))}

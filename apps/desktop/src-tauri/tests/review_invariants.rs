@@ -325,3 +325,22 @@ fn earlier_revision_notes_can_be_reopened_without_changing_latest() {
         Some(second.id)
     );
 }
+
+#[test]
+fn historical_prs_distinguish_closed_from_merged_and_block_publication() {
+    use diffcity_lib::github;
+    let closed = serde_json::json!({"number":3,"state":"closed","merged_at":null});
+    let merged =
+        serde_json::json!({"number":4,"state":"closed","merged_at":"2026-10-20T12:00:00Z"});
+    assert_eq!(github::parse_pull("owner/repo", &closed).state, "closed");
+    assert_eq!(github::parse_pull("owner/repo", &merged).state, "merged");
+    let (mut snapshot, _) = diffcity_lib::fixtures::sample().unwrap();
+    snapshot.pull.state = "merged".into();
+    let request = diffcity_lib::contracts::PublishRequest {
+        snapshot_id: snapshot.id.clone(),
+        note_ids: vec![],
+        body: "private historical note".into(),
+        event: "COMMENT".into(),
+    };
+    assert!(github::payload(&snapshot, &request, &[], "reviewer").is_err());
+}

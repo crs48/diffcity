@@ -78,3 +78,24 @@ The personal alpha uses an existing GitHub CLI login. GitHub App onboarding and 
 Large or unavailable GitHub patches are reported as incomplete; there is no Git-object download fallback yet. The model receives a bounded 180,000-character hunk context. Diff rows are virtualized, but the full large-PR benchmark and curated comparative guide-quality study have not been completed. No claim that this guide outperforms Linear or Diffity has been established.
 
 The local macOS bundle is not a signed/notarized release, and other OS/architecture combinations are not yet validated. Auto-update, public downloads, the diff.city website, dependency-license audit, and clean-machine distribution gates remain on the release roadmap. Repository visibility stays private until the owner chooses a public launch.
+
+## Historical reviews, languages, and schema upgrades
+
+Open PRs remain the default inbox. **History** pages through closed and merged PRs for the selected projects, retaining cached pages during connection failures. PR URLs work independently of state. A historical snapshot supports the guided flow, private discussions, and Codex; GitHub publication requires an open PR and is checked again immediately before posting. Reopening a cached snapshot refreshes its PR metadata without changing its code anchors.
+
+The interface uses i18next and react-i18next, with English and Spanish catalogs in `apps/desktop/src/locales/`. **Connections → Language** persists the selection in SQLite and updates the document language. Catalog tests check matching keys, interpolation variables, plurals, and English fallback. Repository content and generated review prose retain their original language. Add a new locale by registering its catalog in `src/i18n.ts` and the supported settings values in Rust.
+
+SQLite upgrades run numbered SQL files from `apps/desktop/src-tauri/migrations/`, registered in order in `src/migrations.rs`. Version 1 is the original document store; version 2 adds snapshot/update indexes; version 3 supplies the language preference. Before upgrading an existing database, the app creates a consistent `before-schema-<version>-<timestamp>.sqlite` backup beside it. All pending migrations run in one immediate transaction. A failed step rolls everything back. Recorded checksums prevent edits to already-applied migrations, and a newer database version fails closed rather than being downgraded. Append a new migration and add it to the manifest; never rewrite an applied file. Test both a fresh database and an upgrade containing saved review data.
+
+```mermaid
+flowchart LR
+  Open[Open local database] --> Version{Schema version}
+  Version -->|older| Backup[Consistent SQLite backup]
+  Backup --> Tx[Begin immediate transaction]
+  Version -->|current| Verify[Verify migration checksums]
+  Tx --> Verify
+  Verify --> Steps[Apply pending SQL in order]
+  Steps --> Commit[Record versions and commit]
+  Steps -->|error| Rollback[Roll back entire upgrade]
+  Version -->|newer| Stop[Require a newer app]
+```
