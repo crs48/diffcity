@@ -31,6 +31,7 @@ flowchart LR
 - [x] axe-core checks tagged WCAG 2 A/AA, 2.1 AA, and 2.2 AA report no violations on the sampled light/dark guide, dark Connections and Finish dialogs, and the narrow guide. This does not establish full WCAG conformance.
 - [x] Real WebKit interaction confirms that Escape from Connections returns focus to the Connections button.
 - [x] System appearance follows emulated light/dark changes without reloading; reduced-motion emulation removes button transitions.
+- [x] The installed production app renders both light and system-dark themes. Light appearance survives a full quit/relaunch alongside the live Codex guide, review progress, and private line discussion.
 - [ ] Complete a manual VoiceOver audit of the installed app, including long diffs, line ranges, streamed answers, and new revisions.
 - [ ] Audit every interactive/error/disabled state, full 200–400% zoom behavior, and platform-specific high-contrast modes.
 - [ ] Validate large-PR performance when full-line reading is enabled.
