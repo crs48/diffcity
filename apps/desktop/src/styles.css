@@ -2511,7 +2511,7 @@
     overflow: hidden;
   }
   .annotation-summary,
-  .annotation-reason p {
+  .annotation-reason > .comment-markdown {
     font-size: 12px;
     line-height: 1.7;
     white-space: pre-wrap;
@@ -2531,7 +2531,7 @@
   .annotation-reason strong {
     font-size: 11px;
   }
-  .annotation-reason p {
+  .annotation-reason > .comment-markdown {
     -webkit-line-clamp: 3;
     margin-top: 7px;
     color: var(--muted);
@@ -2564,19 +2564,39 @@
     margin-bottom: 24px;
     overflow-wrap: anywhere;
   }
-  .chapter-context p,
-  .chapter-context li {
-    font-size: 12px;
-    line-height: 1.8;
-    white-space: pre-wrap;
-    margin: 10px 0 18px;
-  }
-  .chapter-context h3,
-  .chapter-context strong {
+  .chapter-context > h3 {
     font-size: 13px;
+    margin: 22px 0 10px;
   }
-  .chapter-context ul {
+  .chapter-context > h3:first-child {
+    margin-top: 0;
+  }
+  .chapter-context > ul {
+    list-style: disc;
     padding-left: 20px;
+  }
+  .chapter-context > ul > li + li {
+    margin-top: 10px;
+  }
+  .guide-introduction {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+    overflow-wrap: anywhere;
+  }
+  .guide-introduction h2 {
+    font-size: 17px;
+    margin-bottom: 12px;
+  }
+  .guide-introduction > p {
+    font-size: 13px;
+    line-height: 1.7;
+    margin-top: 12px;
+  }
+  .guide-introduction > .comment-markdown,
+  .chapter-context > .comment-markdown {
+    max-width: 85ch;
+    font-size: 13px;
+    line-height: 1.75;
   }
   .guide-completion {
     padding: 32px 24px;

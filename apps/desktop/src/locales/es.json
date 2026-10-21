@@ -350,5 +350,14 @@
   "Footnotes": "Notas al pie",
   "Task": "Tarea",
   "Include draft {{number}}": "Incluir borrador {{number}}",
-  "PR chat messages": "Mensajes del chat del PR"
+  "PR chat messages": "Mensajes del chat del PR",
+  "About this change": "Acerca de este cambio",
+  "Guide not generated yet": "Guía aún no generada",
+  "These groups organize the diff only. Choose Review with Codex for an explanation of the behavior, design decisions, and what to verify.": "Estos grupos solo organizan los cambios. Elige Revisar con Codex para obtener una explicación del comportamiento, las decisiones de diseño y qué verificar.",
+  "This saved guide uses the earlier brief format. Choose Review again for a detailed walkthrough.": "Esta guía guardada usa el formato breve anterior. Elige Revisar de nuevo para obtener una explicación detallada.",
+  "Hide walkthrough": "Ocultar explicación",
+  "Show walkthrough": "Mostrar explicación",
+  "Walkthrough": "Explicación detallada",
+  "Why it matters": "Por qué importa",
+  "What to verify": "Qué verificar"
 }

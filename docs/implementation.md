@@ -358,7 +358,7 @@ Background capture preserves revision-specific notes and guides, never writes ba
 
 ## Continuous guided review
 
-The guide is one document with all sections rendered in priority order. Each section places a bounded explanation to the left of its code; it sticks below the outline while that section is visible and yields at the section boundary. A narrow workspace stacks the explanation above the code. An explanation that cannot fit in the available viewport stays in normal document flow. Full text and review questions expand in the code column, and opening them jumps to their section so they remain discoverable.
+The guide is one document with all sections rendered in priority order. Each section places a bounded explanation to the left of its code; it sticks below the outline while that section is visible and yields at the section boundary. A narrow workspace stacks the explanation above the code. An explanation that cannot fit in the available viewport stays in normal document flow. Full walkthroughs and review checks are visible by default in the code column and can be collapsed independently.
 
 ```mermaid
 flowchart TD
@@ -371,7 +371,7 @@ flowchart TD
   Jump[Outline or up/down jump] --> Heading[Scroll and focus destination heading]
 ```
 
-Codex is prompted for 5–20 high-level sections on substantial PRs, fewer on small changes, with concise summaries and rationales. The response schema caps model sections at 20. Provisional and omitted code groups by attention/category instead of one section per hunk, filtering already-covered hunks before grouping. Oversized saved guides compact within equal attention, assessment, and folding boundaries, preserving every explanation, question, finding, hunk, and unavailable path. Active and expanded section IDs remap while per-hunk progress stays unchanged.
+Codex is prompted for roughly 5–12 high-level sections on substantial PRs, fewer on small changes, with short sticky takeaways and separate detailed explanations. The response schema caps model sections at 20. Provisional and omitted code groups by attention/category instead of one section per hunk, filtering already-covered hunks before grouping. Oversized saved guides compact within equal attention, assessment, and folding boundaries, preserving every explanation, question, finding, hunk, and unavailable path. Active and expanded section IDs remap while per-hunk progress stays unchanged.
 
 Scrolling updates the outline and saved active section without resetting the viewport or moving focus. Explicit jumps focus the destination heading. Code and discussion remain mounted across jumps; each section can independently collapse. Long diffs, surrounding context, full explanations, and inline threads share the review scrollbar.
 
@@ -411,3 +411,37 @@ On narrow windows, chat occupies its own panel and the covered review is hidden 
 
 - [x] All 71 frontend tests, type checking, ESLint, formatting, and production web/native builds pass. WebKit verifies independent wheel/keyboard scrolling, scroll-boundary containment, fixed header/composer, new-reply following, preserved older-message position, bounded long drafts, and narrow-panel return to code. Light/dark axe WCAG A/AA checks report no violations.
 - [x] The installed app shows the restored real review beside its own bounded chat pane, with the latest GitHub comments and composer visible. All eight private notes, settings, and model preference remain unchanged. [CI passes on 93cb5b4](https://github.com/crs48/diffcity/actions/runs/39680579229). Installed executable SHA-256: `325e7909d6b220c79d30c2984651a4fe93be0f6801121f212cd58ed1a3ed889f`.
+
+
+## Informative walkthroughs
+
+Diffity's [guide prompt](https://github.com/nilbuild/diffity/blob/ce9de40e94707f1983d1995c9c63679ffa9c670c/src-tauri/prompts/guide.md) organizes an explanation around intent, a coherent reading path, and source context. Diffcity's [prompt](../apps/desktop/src-tauri/prompts/guide.md) applies those ideas while keeping high-impact code first and concrete suspected defects separate from explanations. It asks for PR orientation, before/after behavior, flow across actual symbols and paths, non-obvious decisions, evidence from tests, and specific review checks. Substantive explanations typically have two to five focused paragraphs; simple edits need less, and length is not a quota.
+
+```mermaid
+flowchart LR
+  Snapshot[Immutable PR snapshot] --> Input[Manifest and prioritized whole hunks]
+  Context[Validated surrounding code] --> Input
+  Input --> Codex[Intent and behavior walkthrough]
+  Codex --> Validate[Validate coverage and finding anchors]
+  Validate --> Store[Version 2 guide in SQLite]
+  Store --> Cue[Compact sticky takeaway]
+  Store --> Prose[Expanded explanation and review checks]
+  Store --> Code[Continuous code and inline discussions]
+```
+
+Evidence is bounded to 180 KB of complete hunks, a 24 KB file manifest, an 8,000-character PR description, and 32 KB of extra context. Behavior and tests precede bulk copy and dependency content when capturing hunks. Supplementary context reuses the existing revision-bound source cache and validates source against the diff; it requests 25 unchanged lines on either side of one hunk in up to eight modified files. A 12-second deadline bounds that preparation, cancellation interrupts it, and capture failures fall back to the supplied patch. The guide records capture limitations independently of the model's own limitations. Unseen callers remain explicitly unknown, and additional source lines never become valid finding anchors.
+
+New output requires nonempty section explanations; saved version-1 guides deserialize with an empty explanation and render their original summary intact. A notice offers regeneration rather than running Codex automatically. Compaction preserves full explanations, questions, findings, and progress. Provisional groups state that no guide has been generated. PR orientation, walkthroughs, rationale, and checks use the existing safe Markdown renderer, with no nested review scrollbar. The authored invitation demo also explains its deliberately incomplete migration, tenant scope, and expiry wiring.
+
+Live verification can be repeated without publishing comments:
+
+```sh
+DIFFCITY_DATA_DIR=.local/guide-smoke cargo run -p diffcity --bin guide-smoke -- owner/repo 123
+```
+
+The command saves the resulting workspace locally for qualitative review and checks structured output, anchors, stored coverage, and persistence. Word counts are diagnostics, not a quality assertion.
+
+- [x] Unit coverage for bounded complete-hunk capture, manifest omissions, Unicode description limits, exact immutable context, cancellation, legacy guides, explanation validation, preserved compaction, visible Markdown, and independent disclosure.
+- [x] Production WebKit verifies visible orientation and checks, sticky annotations, independent prose collapse, narrow stacking, no nested guide scrolling, and zero light/dark/narrow axe WCAG A/AA violations.
+- [ ] Live Codex walkthrough checked against a substantial real PR.
+- [ ] Updated production app installed and verified with existing private data preserved.

@@ -284,6 +284,9 @@ pub struct GuideSection {
     pub id: String,
     pub title: String,
     pub summary: String,
+    // Full Markdown walkthrough; absent in guides saved before policy version 2.
+    #[serde(default)]
+    pub explanation: String,
     pub attention: Attention,
     pub category: String,
     pub reason: String,

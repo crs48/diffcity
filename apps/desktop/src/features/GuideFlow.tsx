@@ -26,6 +26,7 @@ import type {
 } from "../lib/api";
 import { countProgress, labels, sectionHasDiscussion } from "../lib/review";
 import { anchorKey } from "../lib/diffRows";
+import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { useConversation } from "./conversation";
 import { useGuideScroll } from "./useGuideScroll";
 
@@ -136,6 +137,34 @@ export function GuideFlow(props: Props) {
           <ArrowDown size={17} />
         </Button>
       </nav>
+      <section
+        className="guide-introduction"
+        aria-label={t("About this change")}
+      >
+        <h2>
+          {t(
+            w.guide.source === "provisional"
+              ? "Guide not generated yet"
+              : "About this change",
+          )}
+        </h2>
+        {w.guide.source === "provisional" ? (
+          <p>
+            {t(
+              "These groups organize the diff only. Choose Review with Codex for an explanation of the behavior, design decisions, and what to verify.",
+            )}
+          </p>
+        ) : (
+          <CommentMarkdown body={w.guide.summary} />
+        )}
+        {w.guide.source === "codex" && w.guide.policyVersion < 2 && (
+          <p className="muted">
+            {t(
+              "This saved guide uses the earlier brief format. Choose Review again for a detailed walkthrough.",
+            )}
+          </p>
+        )}
+      </section>
       <div className="guide-chapters">
         {sections.map((section, i) => (
           <GuideChapter
@@ -144,7 +173,6 @@ export function GuideFlow(props: Props) {
             section={section}
             index={i}
             total={sections.length}
-            onRevealContext={() => navigate(section.id)}
           />
         ))}
       </div>
@@ -193,17 +221,15 @@ function GuideChapter({
   renderHunk,
   split,
   onSplit,
-  onRevealContext,
 }: Props & {
   section: GuideSection;
   index: number;
   total: number;
-  onRevealContext: () => void;
 }) {
   const { t } = useTranslation();
   const conversation = useConversation();
   const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
-  const [contextOpen, setContextOpen] = useState(false);
+  const [contextOpen, setContextOpen] = useState(true);
   const selected =
     selection && s.hunkIds.includes(selection.hunkId) ? selection : null;
   const editing = conversation?.inline.draft?.anchor;
@@ -264,7 +290,9 @@ function GuideChapter({
         <h2 id={titleId} className="section-title" tabIndex={-1}>
           {s.title}
         </h2>
-        <p className="annotation-summary">{s.summary}</p>
+        <div className="annotation-summary">
+          <CommentMarkdown body={s.summary} />
+        </div>
         <div className="annotation-reason">
           <strong>
             {t(
@@ -273,7 +301,7 @@ function GuideChapter({
                 : "Review context",
             )}
           </strong>
-          <p>{s.reason}</p>
+          <CommentMarkdown body={s.reason} />
         </div>
         <p className="annotation-counts">
           {t("{{count}} files", { count: files.length })} ·{" "}
@@ -283,12 +311,9 @@ function GuideChapter({
           className="text-button"
           aria-expanded={contextOpen}
           aria-controls={contextOpen ? contextId : undefined}
-          onPress={() => {
-            setContextOpen(!contextOpen);
-            if (!contextOpen) requestAnimationFrame(onRevealContext);
-          }}
+          onPress={() => setContextOpen(!contextOpen)}
         >
-          {t(contextOpen ? "Hide full context" : "Read full context")}
+          {t(contextOpen ? "Hide walkthrough" : "Show walkthrough")}
           <ChevronDown size={14} />
         </Button>
       </aside>
@@ -299,16 +324,18 @@ function GuideChapter({
             className="chapter-context"
             aria-label={t("Full section context")}
           >
-            <h3>{s.title}</h3>
-            <p>{s.summary}</p>
-            <strong>{t("Review context")}</strong>
-            <p>{s.reason}</p>
+            <h3>{t("Walkthrough")}</h3>
+            <CommentMarkdown body={s.explanation || s.summary} />
+            <h3>{t("Why it matters")}</h3>
+            <CommentMarkdown body={s.reason} />
             {s.questions.length > 0 && (
               <>
-                <h3>{t("AS YOU REVIEW")}</h3>
+                <h3>{t("What to verify")}</h3>
                 <ul>
                   {s.questions.map((q) => (
-                    <li key={q}>{q}</li>
+                    <li key={q}>
+                      <CommentMarkdown body={q} />
+                    </li>
                   ))}
                 </ul>
               </>

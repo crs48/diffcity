@@ -16,7 +16,7 @@ fn ids(s: &Snapshot) -> HashSet<String> {
         .collect()
 }
 fn proposal(hunks: Vec<String>, attention: &str) -> Proposal {
-    serde_json::from_value(json!({"summary":"Test review","limitations":[],"sections":[{"title":"Related change","summary":"Inspect the changed behavior.","attention":attention,"category":"Documentation","reason":"Grounded in the supplied diff.","hunkIds":hunks,"questions":[],"findings":[]}]})).unwrap()
+    serde_json::from_value(json!({"summary":"Test review","limitations":[],"sections":[{"title":"Related change","summary":"Inspect the changed behavior.","explanation":"The changed path now handles the scenario described in this fixture.","attention":attention,"category":"Documentation","reason":"Grounded in the supplied diff.","hunkIds":hunks,"questions":[],"findings":[]}]})).unwrap()
 }
 #[test]
 fn migration_and_authorization_precede_routine_content() {
@@ -117,6 +117,22 @@ fn unknown_hunk_ids_are_rejected() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn new_guides_require_explanations_but_old_saved_guides_still_load() {
+    let s = snapshot();
+    let mut p = proposal(vec![s.files[0].hunks[0].id.clone()], "high");
+    p.sections[0].explanation = "  ".into();
+    assert!(domain::validate_guide(&s, p, "test", &ids(&s)).is_err());
+    let (_, guide) = fixtures::sample().unwrap();
+    let mut saved = serde_json::to_value(guide).unwrap();
+    for section in saved["sections"].as_array_mut().unwrap() {
+        section.as_object_mut().unwrap().remove("explanation");
+    }
+    let restored: Guide = serde_json::from_value(saved).unwrap();
+    assert!(restored.sections.iter().all(|s| s.explanation.is_empty()));
+    assert!(!restored.sections[0].summary.is_empty());
 }
 #[test]
 fn auth_change_in_documentation_is_not_hidden_by_filename() {

@@ -350,5 +350,14 @@
   "Footnotes": "Footnotes",
   "Task": "Task",
   "Include draft {{number}}": "Include draft {{number}}",
-  "PR chat messages": "PR chat messages"
+  "PR chat messages": "PR chat messages",
+  "About this change": "About this change",
+  "Guide not generated yet": "Guide not generated yet",
+  "These groups organize the diff only. Choose Review with Codex for an explanation of the behavior, design decisions, and what to verify.": "These groups organize the diff only. Choose Review with Codex for an explanation of the behavior, design decisions, and what to verify.",
+  "This saved guide uses the earlier brief format. Choose Review again for a detailed walkthrough.": "This saved guide uses the earlier brief format. Choose Review again for a detailed walkthrough.",
+  "Hide walkthrough": "Hide walkthrough",
+  "Show walkthrough": "Show walkthrough",
+  "Walkthrough": "Walkthrough",
+  "Why it matters": "Why it matters",
+  "What to verify": "What to verify"
 }

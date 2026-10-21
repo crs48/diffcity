@@ -37,7 +37,7 @@ pub fn provisional_sections(snapshot: &Snapshot, excluded: &HashSet<String>) -> 
                 .to_string();
                 sections.push(GuideSection {
                     id: String::new(), title, summary: "Review these related changes together. Run Codex for an explanation grounded in the code.".into(),
-                    attention, category, reason, hunk_ids: vec![hunk.id.clone()], unavailable_paths: vec![],
+                    explanation: String::new(), attention, category, reason, hunk_ids: vec![hunk.id.clone()], unavailable_paths: vec![],
                     questions: vec![], findings: vec![], assessed: false, foldable: false,
                 });
             }
@@ -52,6 +52,7 @@ pub fn provisional_sections(snapshot: &Snapshot, excluded: &HashSet<String>) -> 
                 sections.push(GuideSection {
                     id: String::new(), title: "Changes that need additional context".into(),
                     summary: "These files could not be captured as text. Inspect their limitations before finishing the review.".into(),
+                    explanation: String::new(),
                     attention: Attention::NeedsAssessment, category: "Unavailable content".into(),
                     reason: "This content has not been assessed.".into(), hunk_ids: vec![], unavailable_paths: vec![file.path.clone()],
                     questions: vec![], findings: vec![], assessed: false, foldable: false,
@@ -81,7 +82,7 @@ fn joined(first: &str, second: &str) -> String {
 }
 
 /// Also adapts older saved guides. Never merge across attention/assessment/folding boundaries.
-/// Explanations and findings remain complete in the expandable context, not truncated.
+/// Explanations and findings remain complete in the document, not truncated.
 pub fn compact_sections(mut sections: Vec<GuideSection>) -> Vec<GuideSection> {
     sections.sort_by_key(|s| rank(&s.attention));
     while sections.len() > MAX_SECTIONS {
@@ -107,6 +108,20 @@ pub fn compact_sections(mut sections: Vec<GuideSection>) -> Vec<GuideSection> {
         };
         let later = sections.remove(b);
         let earlier = &mut sections[a];
+        if !earlier.explanation.is_empty() || !later.explanation.is_empty() {
+            earlier.explanation = joined(
+                if earlier.explanation.is_empty() {
+                    &earlier.summary
+                } else {
+                    &earlier.explanation
+                },
+                if later.explanation.is_empty() {
+                    &later.summary
+                } else {
+                    &later.explanation
+                },
+            );
+        }
         earlier.summary = format!(
             "{}\n{}\n\n{}\n{}",
             earlier.title, earlier.summary, later.title, later.summary
@@ -186,6 +201,7 @@ mod tests {
             sections: vec![domain::ProposedSection {
                 title: "Reviewed behavior".into(),
                 summary: "Only the first hunk was supplied.".into(),
+                explanation: "This behavior is supported by the first captured hunk.".into(),
                 reason: "One captured change".into(),
                 category: "Behavior".into(),
                 attention: Attention::Standard,
@@ -223,6 +239,7 @@ mod tests {
                 hunk_ids: vec![format!("hunk-{n}")],
                 title: format!("Behavior {n}"),
                 summary: format!("Explanation {n}"),
+                explanation: format!("Detailed walkthrough {n}"),
                 questions: vec![format!("Question {n}")],
                 findings: vec![Finding {
                     title: format!("Finding {n}"),
@@ -294,6 +311,7 @@ mod tests {
                 .unwrap();
             assert_eq!(now.attention, old.attention);
             assert!(now.summary.contains(&old.summary));
+            assert!(now.explanation.contains(&old.explanation));
             assert!(now.questions.contains(&old.questions[0]));
             let finding = now
                 .findings

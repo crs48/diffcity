@@ -291,13 +291,13 @@
                 "kind": "addition",
                 "old": null,
                 "new": 2,
-                "text": "  \"invite.title\": \"Inviter un coll\u00e8gue\","
+                "text": "  \"invite.title\": \"Inviter un collègue\","
               },
               {
                 "kind": "addition",
                 "old": null,
                 "new": 3,
-                "text": "  \"invite.help\": \"Un lien lui permettra de rejoindre votre \u00e9quipe.\""
+                "text": "  \"invite.help\": \"Un lien lui permettra de rejoindre votre équipe.\""
               },
               {
                 "kind": "addition",
@@ -324,14 +324,13 @@
         "attention": "high",
         "category": "Database migration",
         "reason": "Existing rows need an expiry value before adding NOT NULL.",
-        "hunkIds": [
-          "8e1714e7bf328bdbffa8972b"
-        ],
+        "hunkIds": ["8e1714e7bf328bdbffa8972b"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": false
+        "foldable": false,
+        "explanation": ""
       },
       {
         "id": "section-1",
@@ -340,14 +339,13 @@
         "attention": "high",
         "category": "Authorization",
         "reason": "Verify tenant scope in lookup and creation.",
-        "hunkIds": [
-          "d27777591d2d5fe1bb58ebcd"
-        ],
+        "hunkIds": ["d27777591d2d5fe1bb58ebcd"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": false
+        "foldable": false,
+        "explanation": ""
       },
       {
         "id": "section-2",
@@ -356,15 +354,13 @@
         "attention": "standard",
         "category": "Implementation and tests",
         "reason": "Read the helper and its test together.",
-        "hunkIds": [
-          "027290e5bbcb1ef3f6f62a37",
-          "85af06994c8900d1871e38cc"
-        ],
+        "hunkIds": ["027290e5bbcb1ef3f6f62a37", "85af06994c8900d1871e38cc"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": false
+        "foldable": false,
+        "explanation": ""
       },
       {
         "id": "section-3",
@@ -373,14 +369,13 @@
         "attention": "routine",
         "category": "Documentation",
         "reason": "Documentation only; expand to inspect the copy.",
-        "hunkIds": [
-          "04b0cee67fd2432eb6dcc8fc"
-        ],
+        "hunkIds": ["04b0cee67fd2432eb6dcc8fc"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": true
+        "foldable": true,
+        "explanation": ""
       },
       {
         "id": "section-4",
@@ -389,15 +384,13 @@
         "attention": "routine",
         "category": "Localization",
         "reason": "Matching translation keys without placeholders.",
-        "hunkIds": [
-          "686489737153a8eec643c89d",
-          "1417763e30bce78457bc0396"
-        ],
+        "hunkIds": ["686489737153a8eec643c89d", "1417763e30bce78457bc0396"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": true
+        "foldable": true,
+        "explanation": ""
       }
     ],
     "source": "sample",

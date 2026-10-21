@@ -1,0 +1,33 @@
+[
+  {
+    "explanation": "The expiry feature needs a deadline on each stored invitation, including invitations created before this change. `db/migrations/042_invitation_expiry.sql` adds `expires_at` as `TIMESTAMPTZ NOT NULL` immediately. It supplies neither a default nor a backfill, so an existing populated table cannot satisfy the new constraint. An empty development database would hide that deployment problem.\n\nThe index supports looking up invitations by expiry, but does not populate the column or enforce expiry during acceptance. Review the data transition before the application helper: a staged rollout needs a policy for existing invitations, a backfill, and only then enforcement of the required value. The provided diff contains no evidence that this sequence has been tested against existing rows.",
+    "questions": [
+      "What expiry should existing invitations receive, and does an upgrade with populated rows preserve them before enforcing NOT NULL?",
+      "Can the old application still create invitations during the migration rollout, or will inserts start failing because expires_at is required?"
+    ]
+  },
+  {
+    "explanation": "`inviteMember()` checks that the actor is an administrator, then tries to reuse an invitation with the requested email. Reusing an invitation may avoid duplicates, but the lookup only filters by email. Creation includes `tenant_id: actor.tenant_id`, so the read and write paths apply different tenant boundaries.\n\nFor example, if a person already has an invitation in team A, an administrator in team B inviting that same email can receive team A's existing record. The admin check alone does not establish ownership of that record. Verify the query scope and the meaning of reuse within a team. The visible creation call also omits the newly required expiry value; the supplied code does not show a database default or a call to `invitationExpiry()` that would supply it.",
+    "questions": [
+      "When the same email is invited to two different tenants, does each administrator receive only a record belonging to their own tenant?",
+      "Where does the creation path supply expires_at after the schema makes that column required?"
+    ]
+  },
+  {
+    "explanation": "`invitationExpiry(now)` adds seven 24-hour periods to an explicit input timestamp. Passing the time in makes the calculation deterministic: the test supplies midnight on January 1 and expects midnight on January 8. That checks the helper's arithmetic without depending on the wall clock.\n\nThis test does not show that invitations are persisted with this deadline or rejected after it passes. The visible `inviteMember()` implementation does not call the helper, and an invitation acceptance path is not included. Read this chapter as the definition of a duration, then verify the wiring and enforcement separately. Also confirm whether the intended policy is exactly 168 hours or a local-calendar deadline; those differ around daylight-saving transitions.",
+    "questions": [
+      "Which caller persists the helper's result, and what rejects an invitation at or after that deadline?",
+      "Does the product intend 168 elapsed hours, as implemented, or seven local calendar days?"
+    ]
+  },
+  {
+    "explanation": "The documentation directs administrators to the Members page and promises that invitations expire after seven days. It introduces no executable logic. The important connection is that the promise depends on the persistence and acceptance behavior from the earlier chapters, which the visible arithmetic test alone does not establish.",
+    "questions": [
+      "Does the shipped invitation flow enforce the seven-day lifetime promised here, including invitations that already exist?"
+    ]
+  },
+  {
+    "explanation": "The English and French files add the same two keys, `invite.title` and `invite.help`, without interpolation placeholders. These changes provide the invitation heading and help text in both languages. There is no key removal or parameter mismatch in the supplied pair, so they can be reviewed together after the behavior changes. UI callers and other locale files are not included in this sample.",
+    "questions": []
+  }
+]

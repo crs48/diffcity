@@ -62,8 +62,12 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-function Example() {
-  const [w, setW] = useState(structuredClone(fixture) as ReviewWorkspace);
+function Example({
+  initial = fixture as ReviewWorkspace,
+}: {
+  initial?: ReviewWorkspace;
+}) {
+  const [w, setW] = useState(structuredClone(initial));
   return (
     <div
       data-review-scroll
@@ -87,8 +91,8 @@ function Example() {
     </div>
   );
 }
-const mount = () => {
-  render(<Example />);
+const mount = (initial?: ReviewWorkspace) => {
+  render(<Example initial={initial} />);
   document
     .querySelectorAll<HTMLElement>("[data-guide-section]")
     .forEach((el, i) => (el.dataset.testChapter = String(i)));
@@ -153,27 +157,59 @@ it("tracks scrolling without resetting the viewport or moving keyboard focus", a
   await screen.findByRole("button", { name: "Review outline, section 5 of 5" });
   expect(viewport.scrollTop).toBe(3500);
 });
-it("opens complete explanations and questions in the main code column", async () => {
+it("shows the full Markdown walkthrough and concrete checks by default, with independent collapse", async () => {
   const user = userEvent.setup();
-  mount();
-  const first = screen.getByRole("region", {
-    name: fixture.guide.sections[0].title,
-  });
-  await user.click(
-    within(first).getByRole("button", { name: "Read full context" }),
-  );
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  w.guide.sections[0].explanation =
+    "Existing invitations need a deadline **before** the constraint.\n\n`migrate()` must backfill rows before adding `NOT NULL`.";
+  w.guide.sections[0].questions = [
+    "Does `migrate()` preserve existing invitations?",
+  ];
+  mount(w);
+  const first = screen.getByRole("region", { name: w.guide.sections[0].title });
   const full = within(first).getByRole("region", {
     name: "Full section context",
   });
   expect(full.closest(".guide-code")).toBeTruthy();
   expect(full.closest(".guide-annotation")).toBeNull();
-  expect(
-    within(full).getAllByText(fixture.guide.sections[0].summary).length,
-  ).toBeTruthy();
+  expect(full.querySelector("strong")?.textContent).toBe("before");
+  expect(full.querySelector("code")?.textContent).toBe("migrate()");
+  expect(within(full).getByText("Does", { exact: false })).toBeTruthy();
+  const second = screen.getByRole("region", {
+    name: w.guide.sections[1].title,
+  });
   await user.click(
-    within(first).getByRole("button", { name: "Hide full context" }),
+    within(first).getByRole("button", { name: "Hide walkthrough" }),
   );
   expect(
     within(first).queryByRole("region", { name: "Full section context" }),
   ).toBeNull();
+  expect(
+    within(second).getByRole("region", { name: "Full section context" }),
+  ).toBeTruthy();
+  await user.click(
+    within(first).getByRole("button", { name: "Show walkthrough" }),
+  );
+  expect(
+    within(first).getByRole("region", { name: "Full section context" }),
+  ).toBeTruthy();
+});
+it("preserves legacy explanations and distinguishes provisional groups from generated guides", () => {
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  w.guide.source = "codex";
+  w.guide.policyVersion = 1;
+  mount(w);
+  expect(screen.getByText(/earlier brief format/)).toBeTruthy();
+  expect(
+    within(
+      screen.getAllByRole("region", { name: "Full section context" })[0],
+    ).getAllByText(w.guide.sections[0].summary),
+  ).toBeTruthy();
+  cleanup();
+  w.guide.source = "provisional";
+  mount(w);
+  expect(
+    screen.getByRole("heading", { name: "Guide not generated yet" }),
+  ).toBeTruthy();
+  expect(screen.queryByText(/earlier brief format/)).toBeNull();
 });

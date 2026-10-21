@@ -245,6 +245,7 @@ pub struct Proposal {
 pub struct ProposedSection {
     pub title: String,
     pub summary: String,
+    pub explanation: String,
     pub attention: Attention,
     pub category: String,
     pub reason: String,
@@ -259,6 +260,9 @@ pub fn validate_guide(
     model: &str,
     supplied: &HashSet<String>,
 ) -> Result<Guide> {
+    if proposal.summary.trim().is_empty() || proposal.sections.is_empty() {
+        bail!("Codex returned no walkthrough; kept the previous guide");
+    }
     let hunks: HashMap<_, _> = snapshot
         .files
         .iter()
@@ -268,8 +272,15 @@ pub fn validate_guide(
     let mut seen = HashSet::new();
     let mut sections = Vec::new();
     for s in proposal.sections {
-        if s.hunk_ids.is_empty() || s.title.trim().is_empty() || s.reason.trim().is_empty() {
-            bail!("Codex returned an empty section or rationale; kept the previous guide");
+        if s.hunk_ids.is_empty()
+            || s.title.trim().is_empty()
+            || s.summary.trim().is_empty()
+            || s.explanation.trim().is_empty()
+            || s.reason.trim().is_empty()
+        {
+            bail!(
+                "Codex returned an empty section, explanation, or rationale; kept the previous guide"
+            );
         }
         for id in &s.hunk_ids {
             if !hunks.contains_key(id) || !supplied.contains(id) || !seen.insert(id.clone()) {
@@ -311,6 +322,7 @@ pub fn validate_guide(
             id,
             title: s.title,
             summary: s.summary,
+            explanation: s.explanation,
             attention,
             category: categories.join(" · "),
             reason: reasons.join(" "),
@@ -346,7 +358,7 @@ pub fn validate_guide(
         model: model.into(),
         generated_at: chrono::Utc::now().to_rfc3339(),
         limitations,
-        policy_version: 1,
+        policy_version: 2,
     })
 }
 
