@@ -319,7 +319,7 @@
     margin: 0 16px 12px;
     font-size: 12px;
   }
-  .repo-filter > span:first-child {
+  .repo-filter > label {
     color: var(--muted);
     flex-shrink: 0;
   }
@@ -431,11 +431,59 @@
   .pull-list section > h2 span {
     font-weight: 400;
   }
+  .pin-toggle {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+  }
+  .pin-toggle:hover,
+  .pin-toggle[aria-pressed="true"] {
+    color: var(--text);
+    background: var(--subtle);
+  }
+  .pinned-repos {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    margin: -4px 16px 12px;
+    padding: 3px;
+  }
+  .pinned-repos button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    min-height: 28px;
+    max-width: 240px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 11px;
+    background: var(--surface);
+  }
+  .pinned-repos button[aria-pressed="true"] {
+    border-color: var(--text);
+  }
+  .pull-card-row {
+    position: relative;
+    margin-bottom: 5px;
+  }
+  .pull-card-row > .pin-toggle {
+    position: absolute;
+    top: 5px;
+    right: 4px;
+  }
   .pull-card {
     display: block;
     text-align: left;
     padding: 13px 12px;
-    margin-bottom: 5px;
+    margin-bottom: 0;
     border-radius: 7px;
     width: 100%;
     border: 1px solid transparent;
@@ -450,6 +498,7 @@
     box-shadow: 0 2px 4px #00000012;
   }
   .pull-card > div {
+    padding-right: 25px;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -2163,6 +2212,7 @@
     color: var(--text);
   }
   .pull-card > div {
+    padding-right: 25px;
     flex-wrap: wrap;
   }
   .pull-card > div small {

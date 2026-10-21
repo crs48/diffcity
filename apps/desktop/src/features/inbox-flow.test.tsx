@@ -22,6 +22,7 @@ import type {
   Settings,
   RepositoryDirectory,
   InboxResult,
+  Pins,
 } from "../lib/api";
 import fixture from "../../../../tests/fixtures/review-workspace.json";
 const workspace = fixture as ReviewWorkspace;
@@ -29,6 +30,9 @@ let settings: Settings;
 let livePulls: PullRequest[];
 let connected: boolean;
 let discovered: RepositoryDirectory;
+let pins: Pins;
+let historyPulls: PullRequest[];
+let pinFailure: boolean;
 const discoveryRequest = vi.fn();
 const historyRequest = vi.fn();
 const ago = (days: number) =>
@@ -75,6 +79,9 @@ const samples: PullRequest[] = [
 beforeEach(() => {
   localStorage.clear();
   livePulls = [];
+  pins = { repositories: [], pulls: [] };
+  historyPulls = [];
+  pinFailure = false;
   connected = false;
   discovered = { repositories: [], organizations: [], syncError: null };
   discoveryRequest.mockReset();
@@ -126,6 +133,7 @@ beforeEach(() => {
           },
           models: [],
           pulls: connected ? [] : livePulls,
+          pins: structuredClone(pins),
           directory: {
             repositories: settings.repositories.map((fullName) => ({
               id: fullName,
@@ -141,7 +149,7 @@ beforeEach(() => {
         } satisfies Bootstrap;
       if (command === "list_pull_history") {
         historyRequest(payload);
-        return { pulls: [], nextPage: null, syncError: null };
+        return { pulls: historyPulls, nextPage: null, syncError: null };
       }
       if (command === "refresh_directory") {
         discoveryRequest();
@@ -157,6 +165,26 @@ beforeEach(() => {
             pull: samples.find((p) => p.number === payload.number),
           },
         };
+      if (command === "pin_repository") {
+        if (pinFailure) throw Error("Could not save pin");
+        const repo = payload.repository as string;
+        pins.repositories = [
+          ...pins.repositories.filter((p) => p !== repo),
+          ...(payload.pinned ? [repo] : []),
+        ];
+        return structuredClone(pins);
+      }
+      if (command === "pin_pull") {
+        if (pinFailure) throw Error("Could not save pin");
+        const pull = payload.pull as PullRequest;
+        pins.pulls = [
+          ...pins.pulls.filter(
+            (p) => p.repository !== pull.repository || p.number !== pull.number,
+          ),
+          ...(payload.pinned ? [pull] : []),
+        ];
+        return structuredClone(pins);
+      }
       if (command === "save_settings") {
         settings = payload.settings as Settings;
         return settings;
@@ -417,4 +445,169 @@ it("shows incremental PR batches and preserves them when a sync is partial", asy
     screen.getByRole("button", { name: /First discovered PR/ }),
   ).toBeTruthy();
   expect(screen.queryByText(/^Synced /)).toBeNull();
+});
+
+it("persists repo shortcuts, groups selector options, and respects account scope", async () => {
+  settings.repositories = ["acme/api", "acme/web", "other/api"];
+  const user = userEvent.setup();
+  const view = render(<App />);
+  await user.selectOptions(
+    await screen.findByRole("combobox", { name: "Repo" }),
+    "acme/web",
+  );
+  await user.click(screen.getByRole("button", { name: "Pin repo acme/web" }));
+  const shortcuts = await screen.findByRole("navigation", {
+    name: "Pinned repos",
+  });
+  expect(
+    within(shortcuts)
+      .getByRole("button", { name: "Show pinned repo acme/web" })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
+  expect(
+    screen.getAllByRole("option").map((o) => (o as HTMLOptionElement).value),
+  ).toEqual(["", "acme/web", "acme/api", "other/api"]);
+  await user.click(screen.getByRole("button", { name: "other" }));
+  expect(screen.queryByRole("navigation", { name: "Pinned repos" })).toBeNull();
+  view.unmount();
+  render(<App />);
+  await user.click(
+    await screen.findByRole("button", { name: "Show pinned repo acme/web" }),
+  );
+  expect(
+    (screen.getByRole("combobox", { name: "Repo" }) as HTMLSelectElement).value,
+  ).toBe("acme/web");
+  await user.click(screen.getByRole("button", { name: "Unpin repo acme/web" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("navigation", { name: "Pinned repos" }),
+    ).toBeNull(),
+  );
+  expect(settings.repositories).toEqual(["acme/api", "acme/web", "other/api"]);
+});
+
+it("pins a PR without opening it, restores keyboard focus, and survives remount", async () => {
+  livePulls = [
+    {
+      ...workspace.snapshot.pull,
+      repository: "owner/repo",
+      number: 1,
+      title: "My PR",
+      author: "me",
+    },
+    {
+      ...workspace.snapshot.pull,
+      repository: "owner/repo",
+      number: 2,
+      title: "Review this PR",
+      author: "alex",
+      requested: ["me"],
+    },
+  ];
+  const openRequest = vi.spyOn(api, "open");
+  const user = userEvent.setup();
+  const view = render(<App />);
+  (
+    await screen.findByRole("button", { name: "Pin pull request owner/repo#2" })
+  ).focus();
+  await user.keyboard("{Enter}");
+  const pinnedGroup = await screen.findByRole("region", {
+    name: "Pinned pull requests",
+  });
+  expect(
+    within(pinnedGroup).getByRole("button", { name: /Review this PR/ }),
+  ).toBeTruthy();
+  expect(
+    document.querySelector(".pull-list section")?.getAttribute("aria-label"),
+  ).toBe("Pinned pull requests");
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Unpin pull request owner/repo#2" }),
+    ),
+  );
+  expect(openRequest).not.toHaveBeenCalled();
+  view.unmount();
+  render(<App />);
+  await screen.findByRole("region", { name: "Pinned pull requests" });
+  await user.click(
+    screen.getByRole("button", { name: "Unpin pull request owner/repo#2" }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("region", { name: "Pinned pull requests" }),
+    ).toBeNull(),
+  );
+  expect(
+    within(screen.getByRole("region", { name: "Needs your review" })).getByRole(
+      "button",
+      { name: /Review this PR/ },
+    ),
+  ).toBeTruthy();
+});
+
+it("keeps an old pinned completion in the inbox, honors filters, and preserves pins after a failed save", async () => {
+  settings.repositories = ["owner/repo", "other/repo"];
+  settings.completedDays = 0;
+  historyPulls = [
+    {
+      ...workspace.snapshot.pull,
+      repository: "owner/repo",
+      number: 3,
+      title: "Old merged work",
+      state: "merged",
+      author: "alex",
+      closedAt: ago(40),
+      mergedAt: ago(40),
+    },
+  ];
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    await screen.findByRole("button", { name: "History" }),
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Pin pull request owner/repo#3",
+    }),
+  );
+  await screen.findByRole("region", { name: "Pinned pull requests" });
+  await user.click(screen.getByRole("button", { name: "Inbox" }));
+  expect(screen.getByRole("button", { name: /Old merged work/ })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "other" }));
+  expect(screen.queryByRole("button", { name: /Old merged work/ })).toBeNull();
+  await user.click(
+    screen.getByRole("button", { name: "All accounts" }),
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: "Search pull requests" }),
+    "unrelated",
+  );
+  expect(
+    screen.queryByRole("region", { name: "Pinned pull requests" }),
+  ).toBeNull();
+  await user.clear(
+    screen.getByRole("textbox", { name: "Search pull requests" }),
+  );
+  pinFailure = true;
+  await user.click(
+    screen.getByRole("button", { name: "Unpin pull request owner/repo#3" }),
+  );
+  await screen.findByText(/Could not save pin/);
+  expect(
+    screen.getByRole("region", { name: "Pinned pull requests" }),
+  ).toBeTruthy();
+  pinFailure = false;
+  await user.click(
+    screen.getByRole("button", { name: "Unpin pull request owner/repo#3" }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: /Old merged work/ }),
+    ).toBeNull(),
+  );
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Search pull requests" }),
+    ),
+  );
 });

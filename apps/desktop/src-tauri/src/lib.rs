@@ -6,6 +6,7 @@ pub mod fixtures;
 pub mod github;
 mod github_lists;
 pub mod migrations;
+mod pins;
 pub mod service;
 pub mod text_diff;
 
@@ -28,6 +29,8 @@ pub fn run() {
             commands::list_pull_history,
             commands::refresh_directory,
             commands::save_settings,
+            commands::pin_repository,
+            commands::pin_pull,
             commands::open_pull,
             commands::open_saved_review,
             commands::check_pull,

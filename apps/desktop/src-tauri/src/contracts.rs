@@ -51,6 +51,14 @@ pub struct Bootstrap {
     pub data_directory: String,
     pub schema_version: u32,
     pub directory: RepositoryDirectory,
+    pub pins: Pins,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Pins {
+    pub repositories: Vec<String>,
+    pub pulls: Vec<PullRequest>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]

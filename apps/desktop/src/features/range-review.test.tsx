@@ -182,6 +182,7 @@ describe("multi-line review", () => {
               detail: "",
               executable: "",
             },
+            pins: { repositories: [], pulls: [] },
             directory: { repositories: [], organizations: [], syncError: null },
             models: [],
             pulls: [],

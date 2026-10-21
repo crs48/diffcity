@@ -69,6 +69,7 @@ beforeEach(() => {
           },
           models: [],
           pulls: [],
+          pins: { repositories: [], pulls: [] },
           directory: {
             repositories: settings.repositories.map((fullName) => ({
               id: fullName,

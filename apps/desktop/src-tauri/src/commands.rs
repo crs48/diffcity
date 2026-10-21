@@ -48,6 +48,18 @@ pub fn save_settings(service: State<'_, Arc<Service>>, settings: Settings) -> Ou
     service.settings(settings).map_err(error)
 }
 #[tauri::command]
+pub fn pin_repository(
+    service: State<'_, Arc<Service>>,
+    repository: String,
+    pinned: bool,
+) -> Output<Pins> {
+    service.pin_repository(&repository, pinned).map_err(error)
+}
+#[tauri::command]
+pub fn pin_pull(service: State<'_, Arc<Service>>, pull: PullRequest, pinned: bool) -> Output<Pins> {
+    service.pin_pull(pull, pinned).map_err(error)
+}
+#[tauri::command]
 pub async fn open_pull(
     service: State<'_, Arc<Service>>,
     repository: String,

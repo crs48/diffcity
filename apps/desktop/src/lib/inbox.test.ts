@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PullRequest } from "./api";
 import {
   inboxGroup,
+  pinKey,
   inboxGroups,
   reviewLabel,
   visiblePulls,
@@ -184,4 +185,25 @@ it("keeps discovered organizations selectable even without repos and puts your a
       owners,
     ),
   ).toEqual({ owner: "empty-org", repository: null });
+});
+
+it("keeps pinned completions beyond the completion window without bypassing scope or search", () => {
+  const closed = pr({
+    repository: "a/repo",
+    number: 99,
+    state: "merged",
+    mergedAt: ago(40),
+    author: "other",
+  });
+  const pinned = new Set([pinKey(closed)]);
+  expect(
+    visiblePulls([closed], { ...options, completedDays: 0, pinned }),
+  ).toEqual([closed]);
+  expect(visiblePulls([closed], { ...options, owner: "b", pinned })).toEqual(
+    [],
+  );
+  expect(
+    visiblePulls([closed], { ...options, query: "missing-title", pinned }),
+  ).toEqual([]);
+  expect(visiblePulls([closed], options)).toEqual([]);
 });

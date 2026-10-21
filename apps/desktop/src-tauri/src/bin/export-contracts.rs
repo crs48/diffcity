@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Connection,
         Model,
         Bootstrap,
+        Pins,
         Repository,
         RepositoryDirectory,
         InboxResult,

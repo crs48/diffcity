@@ -9,6 +9,8 @@
     "allow-list-pull-history",
     "allow-refresh-directory",
     "allow-save-settings",
+    "allow-pin-repository",
+    "allow-pin-pull",
     "allow-open-pull",
     "allow-open-saved-review",
     "core:window:allow-destroy",

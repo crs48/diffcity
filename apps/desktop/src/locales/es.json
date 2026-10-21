@@ -259,5 +259,15 @@
   "Syncing repos {{completed}} / {{total}}": "Sincronizando repos {{completed}} / {{total}}",
   "Loading pull requests…": "Cargando pull requests…",
   "Some results may be out of date": "Algunos resultados pueden estar desactualizados",
-  "Synced {{time}} · {{count}} repos": "Sincronizado {{time}} · {{count}} repos"
+  "Synced {{time}} · {{count}} repos": "Sincronizado {{time}} · {{count}} repos",
+  "Pinned repos": "Repos fijados",
+  "Other repos": "Otros repos",
+  "Pinned pull requests": "Pull requests fijados",
+  "Pin repo {{repo}}": "Fijar repo {{repo}}",
+  "Unpin repo {{repo}}": "Desfijar repo {{repo}}",
+  "Show pinned repo {{repo}}": "Mostrar repo fijado {{repo}}",
+  "Pin pull request {{name}}": "Fijar pull request {{name}}",
+  "Unpin pull request {{name}}": "Desfijar pull request {{name}}",
+  "Pinned {{name}}": "Se fijó {{name}}",
+  "Unpinned {{name}}": "Se desfijó {{name}}"
 }

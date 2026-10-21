@@ -259,5 +259,15 @@
   "Syncing repos {{completed}} / {{total}}": "Syncing repos {{completed}} / {{total}}",
   "Loading pull requests…": "Loading pull requests…",
   "Some results may be out of date": "Some results may be out of date",
-  "Synced {{time}} · {{count}} repos": "Synced {{time}} · {{count}} repos"
+  "Synced {{time}} · {{count}} repos": "Synced {{time}} · {{count}} repos",
+  "Pinned repos": "Pinned repos",
+  "Other repos": "Other repos",
+  "Pinned pull requests": "Pinned pull requests",
+  "Pin repo {{repo}}": "Pin repo {{repo}}",
+  "Unpin repo {{repo}}": "Unpin repo {{repo}}",
+  "Show pinned repo {{repo}}": "Show pinned repo {{repo}}",
+  "Pin pull request {{name}}": "Pin pull request {{name}}",
+  "Unpin pull request {{name}}": "Unpin pull request {{name}}",
+  "Pinned {{name}}": "Pinned {{name}}",
+  "Unpinned {{name}}": "Unpinned {{name}}"
 }

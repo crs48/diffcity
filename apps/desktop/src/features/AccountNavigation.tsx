@@ -6,9 +6,12 @@ import {
   ChevronDown,
   FlaskConical,
   RefreshCw,
+  Pin,
   Settings2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { PinToggle } from "../ui/PinToggle";
+import { sameLogin } from "../lib/inbox";
 import type { Bootstrap } from "../lib/api";
 
 function RailButton({
@@ -164,31 +167,87 @@ export function RepoFilter({
   repositories,
   owner,
   repository,
+  pinned,
+  saving,
   onChange,
+  onPin,
 }: {
   repositories: string[];
   owner: string | null;
   repository: string | null;
+  pinned: string[];
+  saving: boolean;
   onChange: (repository: string | null) => void;
+  onPin: (repository: string) => void;
 }) {
   const { t } = useTranslation();
+  const isPinned = (repo: string) => pinned.some((pin) => sameLogin(pin, repo));
+  const favorites = repositories.filter(isPinned);
+  const others = repositories.filter((repo) => !isPinned(repo));
+  const options = (repos: string[]) =>
+    repos.map((repo) => (
+      <option key={repo} value={repo}>
+        {owner ? repo.split("/")[1] : repo}
+      </option>
+    ));
   return (
-    <label className="repo-filter">
-      <span>{t("Repo")}</span>
-      <span className="repo-select">
-        <select
-          value={repository ?? ""}
-          onChange={(event) => onChange(event.target.value || null)}
-        >
-          <option value="">{t("All repos")}</option>
-          {repositories.map((repo) => (
-            <option key={repo} value={repo}>
+    <>
+      <div className="repo-filter">
+        <label htmlFor="repo-selector">{t("Repo")}</label>
+        <span className="repo-select">
+          <select
+            id="repo-selector"
+            value={repository ?? ""}
+            onChange={(event) => onChange(event.target.value || null)}
+          >
+            <option value="">{t("All repos")}</option>
+            {favorites.length ? (
+              <>
+                <optgroup label={t("Pinned repos")}>
+                  {options(favorites)}
+                </optgroup>
+                {!!others.length && (
+                  <optgroup label={t("Other repos")}>
+                    {options(others)}
+                  </optgroup>
+                )}
+              </>
+            ) : (
+              options(repositories)
+            )}
+          </select>
+          <ChevronDown size={14} aria-hidden="true" />
+        </span>
+        {repository && (
+          <PinToggle
+            id="pin-repository"
+            label={t(
+              isPinned(repository)
+                ? "Unpin repo {{repo}}"
+                : "Pin repo {{repo}}",
+              { repo: repository },
+            )}
+            pinned={isPinned(repository)}
+            disabled={saving}
+            onPress={() => onPin(repository)}
+          />
+        )}
+      </div>
+      {!!favorites.length && (
+        <nav className="pinned-repos" aria-label={t("Pinned repos")}>
+          {favorites.map((repo) => (
+            <Button
+              key={repo}
+              aria-label={t("Show pinned repo {{repo}}", { repo })}
+              aria-pressed={sameLogin(repo, repository || "")}
+              onPress={() => onChange(repo)}
+            >
+              <Pin size={12} aria-hidden="true" />
               {owner ? repo.split("/")[1] : repo}
-            </option>
+            </Button>
           ))}
-        </select>
-        <ChevronDown size={14} aria-hidden="true" />
-      </span>
-    </label>
+        </nav>
+      )}
+    </>
   );
 }

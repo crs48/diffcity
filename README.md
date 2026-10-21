@@ -34,6 +34,8 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 6. **Finish review** shows coverage and the exact selected drafts. Publish a comment, approval, or change request as supported by GitHub; your own PR only permits a comment.
 7. New code appears as an update banner. Loading it preserves review marks only for uniquely matching unchanged hunks. Earlier notes stay attached to their original code and can be reopened with **Open previous revision**.
 
+**Pin repos and PRs:** Select a repo and use its pin button to add a shortcut and move it to the top of the repo selector. Each PR card and the review toolbar also has a pin button. Pinned PRs appear above the usual priority groups and remain in the inbox after closing or merging until unpinned. Account, repo, and search filters still apply. Pins save locally and survive restarts.
+
 **Explore a sample** works without a GitHub PR and demonstrates migrations, authorization, tests, documentation, and localization. It contains deliberate issues and cannot publish feedback.
 
 ## Appearance and accessibility

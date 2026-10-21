@@ -80,6 +80,7 @@ impl Service {
             data_directory: self.store.directory.to_string_lossy().into(),
             schema_version: crate::migrations::VERSION,
             directory: self.cached_directory()?,
+            pins: self.store.pins()?,
         })
     }
     pub fn cached_directory(&self) -> Result<RepositoryDirectory> {
@@ -220,6 +221,7 @@ impl Service {
                 pulls: progress_pulls,
             });
         }
+        self.sync_pinned_pulls(&mut pulls, &mut errors).await?;
         self.store.put("cache", "inbox", &pulls)?;
         Ok(InboxResult {
             pulls,

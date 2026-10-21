@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
 import { usePullHistory } from "./features/usePullHistory";
 import { Button, Tabs, TabList, Tab, TabPanel } from "react-aria-components";
+import { PinToggle } from "./ui/PinToggle";
 import { ThemeSwitcher } from "./ui/ThemeSwitcher";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -38,6 +39,7 @@ import {
   type ReviewWorkspace,
   type RunEvent,
   type InboxSync,
+  type Pins,
 } from "./lib/api";
 import { newNote, parsePullUrl } from "./lib/review";
 import { GuideView } from "./features/Guide";
@@ -54,6 +56,8 @@ import {
   sameLogin,
   requestedFrom,
   visiblePulls,
+  pinKey,
+  pullPinId,
   accountOwners,
   repositoriesForOwner,
   resolveScope,
@@ -112,6 +116,60 @@ export default function App() {
   const [syncProgress, setSyncProgress] = useState<InboxSync | null>(null);
   const [syncError, setSyncError] = useState("");
   const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [pinSaving, setPinSaving] = useState(false);
+  const pinBusy = useRef(false);
+  const [pinNotice, setPinNotice] = useState("");
+  const pinned = new Set(data?.pins.pulls.map(pinKey) ?? []);
+  const changePin = async (
+    save: () => Promise<Pins>,
+    label: string,
+    focusId: string,
+  ) => {
+    if (pinBusy.current) return;
+    pinBusy.current = true;
+    setPinSaving(true);
+    const origin = document.activeElement;
+    try {
+      const pins = await save();
+      setData((current) => (current ? { ...current, pins } : current));
+      setPinNotice(label);
+    } catch (e) {
+      onError(e);
+    } finally {
+      pinBusy.current = false;
+      setPinSaving(false);
+      const restore =
+        document.activeElement === origin ||
+        document.activeElement === document.body;
+      requestAnimationFrame(() => {
+        if (restore)
+          (
+            document.getElementById(focusId) ??
+            document.getElementById("pull-search")
+          )?.focus();
+      });
+    }
+  };
+  const togglePullPin = (pull: PullRequest, focusId = pullPinId(pull)) => {
+    const next = !pinned.has(pinKey(pull));
+    void changePin(
+      () => api.pinPull(pull, next),
+      t(next ? "Pinned {{name}}" : "Unpinned {{name}}", {
+        name: `${pull.repository}#${pull.number}`,
+      }),
+      focusId,
+    );
+  };
+  const toggleRepoPin = (repository: string) => {
+    const next = !data?.pins.repositories.some((repo) =>
+      sameLogin(repo, repository),
+    );
+    void changePin(
+      () => api.pinRepository(repository, next),
+      t(next ? "Pinned {{name}}" : "Unpinned {{name}}", { name: repository }),
+      "pin-repository",
+    );
+  };
   const [lastSync, setLastSync] = useState<string | null>(null);
   const setInboxOpen = (open: boolean) => {
     setInboxVisible(open);
@@ -501,7 +559,13 @@ export default function App() {
   const login = data?.github.identity || "you";
   const samples = repo === SAMPLE_REPO;
   const visible = visiblePulls(
-    samples ? samplePulls : inboxView === "open" ? pulls : history.pulls,
+    samples
+      ? samplePulls
+      : [
+          ...(data?.pins.pulls.filter((p) => !isSampleRepo(p.repository)) ??
+            []),
+          ...(inboxView === "open" ? pulls : history.pulls),
+        ],
     {
       login,
       repository: repo,
@@ -509,6 +573,7 @@ export default function App() {
       query,
       history: inboxView === "history",
       completedDays: data?.settings.completedDays ?? 2,
+      pinned,
     },
   );
   const exploreInbox = async () => {
@@ -553,6 +618,9 @@ export default function App() {
       >
         {t("Skip to review")}{" "}
       </a>
+      <div className="sr-only" role="status">
+        {pinNotice}
+      </div>
       <AccountNavigation
         owners={owners}
         owner={owner}
@@ -610,6 +678,9 @@ export default function App() {
               repositories={scopedRepositories}
               owner={owner}
               repository={repo}
+              pinned={data?.pins.repositories ?? []}
+              saving={pinSaving}
+              onPin={toggleRepoPin}
               onChange={(repository) => setScope({ owner, repository })}
             />
           )}
@@ -685,6 +756,9 @@ export default function App() {
           <div className="pull-list">
             <PullList
               pulls={visible}
+              pinned={pinned}
+              saving={pinSaving}
+              onPin={togglePullPin}
               selected={pull}
               login={login}
               history={inboxView === "history"}
@@ -841,6 +915,18 @@ export default function App() {
           />
           {pull && (
             <>
+              <PinToggle
+                id="workspace-pin"
+                label={t(
+                  pinned.has(pinKey(pull))
+                    ? "Unpin pull request {{name}}"
+                    : "Pin pull request {{name}}",
+                  { name: `${pull.repository}#${pull.number}` },
+                )}
+                pinned={pinned.has(pinKey(pull))}
+                disabled={pinSaving}
+                onPress={() => togglePullPin(pull, "workspace-pin")}
+              />
               {!isSampleRepo(pull.repository) && (
                 <Button
                   className="icon-button"

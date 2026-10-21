@@ -215,3 +215,26 @@ The live check exposed GitHub 502 responses when requesting diff statistics for 
 
 - [x] The installed production app automatically discovers the full live directory through the registered Tauri command, renders all 19 repos in the selected organization's menu, filters the inbox to its main repo, and loads 30 historical PRs. Background sync reaches all 179 repos and reports success. All eight pre-existing note records are byte-for-byte unchanged at schema 3.
 - [x] [Discovery CI](https://github.com/crs48/diffcity/actions/runs/39638310475) passes on `41b2490`. The installed executable matches that source build and the packaged bundle, SHA-256 `9e2577d46041e0404eb70d0959291c9fbcfe13b898190aecb10a480fb61013eb`.
+
+
+## Local repo and PR pins
+
+Repo pins add compact shortcuts below the repo selector and a **Pinned repos** option group. They respect the selected account and do not widen the navigation rail. Pin controls appear beside a selected repo, on each PR card, and in the review toolbar.
+
+Pinned PRs occupy a single **Pinned pull requests** section before the usual priority groups. Pins remain subject to account, repo, and search filters; History continues to show only closed/merged work. A pinned completion remains in the Inbox regardless of author or completion window. Unpinning restores its ordinary priority and visibility. Sample pins stay in the sample inbox.
+
+```mermaid
+flowchart LR
+  Pins[Local pins] --> Repos[Repo shortcuts and selector group]
+  Pins --> Saved[Cached pinned PR metadata]
+  Saved --> Scope[Account, repo, and search filters]
+  Scope --> First[Pinned PR section]
+  Scope --> Usual[Ordinary review priorities]
+```
+
+Pins use separate per-item SQLite documents, so saving a theme or connection preference cannot overwrite them. Existing databases need no schema upgrade and start with empty pins. Sync uses fresh inbox metadata for open pins and separately refreshes pinned PRs absent from the ordinary inbox, including old completions. Offline failures retain saved pin metadata and surface a sync error. Refreshed metadata lives separately from the pin preference, so an in-flight refresh cannot recreate an unpinned item.
+
+Pin buttons use React Aria, named tooltips, pressed state, visible keyboard focus, and saved-state announcements. PR card and pin controls are sibling buttons. After a PR moves between groups, keyboard focus returns to its pin control; if an unpinned old completion disappears, focus returns to search. Failed saves retain the previous pin state.
+
+- [x] 54 Rust tests and 35 TypeScript/component tests pass, with types, ESLint, Clippy, formatting, and generated contracts checked. Coverage includes persistence, case-insensitive identity, independent settings, offline pinned history, current metadata, filters, failed saves, and focus restoration.
+- [x] Production WebKit verifies repo grouping/shortcuts, keyboard PR pinning without opening the review, a 60-day-old other-author completion retained in the Inbox, reload persistence, search, failed unpin recovery, and narrow layout. Light and dark states pass axe WCAG A/AA. The pin controls preserve the 64px rail and 300px inbox.

@@ -6,6 +6,8 @@ fn main() {
             "list_pull_history",
             "refresh_directory",
             "save_settings",
+            "pin_repository",
+            "pin_pull",
             "open_pull",
             "open_saved_review",
             "check_pull",

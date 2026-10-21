@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Bootstrap,
+  Pins,
   Settings,
   RepositoryDirectory,
   InboxResult,
@@ -19,6 +20,10 @@ export const api = {
   inbox: () => invoke<InboxResult>("refresh_inbox"),
   history: (repository: string | null, page = 1, owner: string | null = null) =>
     invoke<PullPage>("list_pull_history", { repository, page, owner }),
+  pinRepository: (repository: string, pinned: boolean) =>
+    invoke<Pins>("pin_repository", { repository, pinned }),
+  pinPull: (pull: PullRequest, pinned: boolean) =>
+    invoke<Pins>("pin_pull", { pull, pinned }),
   directory: () => invoke<RepositoryDirectory>("refresh_directory"),
   settings: (settings: Settings) =>
     invoke<Settings>("save_settings", { settings }),

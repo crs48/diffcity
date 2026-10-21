@@ -7,6 +7,10 @@ export const sameLogin = (a: string, b: string) =>
   !!b && a.toLowerCase() === b.toLowerCase();
 export const requestedFrom = (p: PullRequest, login: string) =>
   p.requested.some((name) => sameLogin(name, login));
+export const pinKey = (p: PullRequest) =>
+  `${p.repository.toLowerCase()}#${p.number}`;
+export const pullPinId = (p: PullRequest) =>
+  `pin-pr-${encodeURIComponent(pinKey(p))}`;
 export const completedAt = (p: PullRequest) => p.mergedAt || p.closedAt;
 export const hasReviewed = (p: PullRequest) =>
   !!p.viewerReview &&
@@ -41,6 +45,7 @@ export function visiblePulls(
     query,
     history,
     completedDays,
+    pinned = new Set<string>(),
     now = Date.now(),
   }: {
     login: string;
@@ -49,13 +54,12 @@ export function visiblePulls(
     query: string;
     history: boolean;
     completedDays: number;
+    pinned?: ReadonlySet<string>;
     now?: number;
   },
 ) {
   const cutoff = now - completedDays * 86_400_000;
-  return [
-    ...new Map(pulls.map((p) => [`${p.repository}#${p.number}`, p])).values(),
-  ]
+  return [...new Map(pulls.map((p) => [pinKey(p), p])).values()]
     .filter((p) => {
       if (repository && !sameLogin(p.repository, repository)) return false;
       if (owner && !sameLogin(p.repository.split("/")[0], owner)) return false;
@@ -66,7 +70,7 @@ export function visiblePulls(
       )
         return false;
       if (history) return p.state !== "open";
-      if (p.state === "open") return true;
+      if (p.state === "open" || pinned.has(pinKey(p))) return true;
       const completed = Date.parse(completedAt(p) || "");
       return (
         completedDays > 0 &&
