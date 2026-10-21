@@ -50,6 +50,7 @@ import {
 } from "./lib/api";
 import { newNote, parsePullUrl } from "./lib/review";
 import { GuideView } from "./features/Guide";
+import { ReviewHeader } from "./features/ReviewHeader";
 import { Discussion } from "./features/Discussion";
 import { ConversationContext } from "./features/conversation";
 import { useNoteComposer } from "./features/useNoteComposer";
@@ -1038,45 +1039,13 @@ export default function App() {
             selectedKey={mode}
             onSelectionChange={(key) => setMode(key as typeof mode)}
           >
-            <div className="pr-heading">
-              <div>
-                <div className="eyebrow">
-                  <GitPullRequest size={13} />
-                  {pull.author} <span>·</span> {workspace.checks}
-                </div>
-                <h1>{pull.title}</h1>
-                <div className="pr-meta">
-                  <span>
-                    {t("{{count}} files", {
-                      count: workspace.snapshot.files.length,
-                    })}
-                  </span>
-                  <span className="added">+{pull.additions}</span>
-                  <span className="removed">−{pull.deletions}</span>
-                  <span className="mono">{pull.head.slice(0, 8)}</span>
-                  {workspace.guide.source === "sample" && (
-                    <span className="badge">{t("Sample")} </span>
-                  )}
-                </div>
-              </div>
-              <Button
-                className="primary analyze-button"
-                isDisabled={loading || !!run || !data?.codex.connected}
-                onPress={() => void analyze()}
-              >
-                <Sparkles size={15} />
-                {workspace.guide.source === "codex"
-                  ? t("Review again")
-                  : t("Review with Codex")}
-              </Button>
-            </div>
-            {pull?.state !== "open" && (
-              <div className="history-status">
-                {t(
-                  "Historical review: code, private comments, and Codex are available. GitHub publication requires an open PR.",
-                )}
-              </div>
-            )}
+            <ReviewHeader
+              key={`${workspace.snapshot.id}/${mode}`}
+              workspace={workspace}
+              viewport={reviewScroll}
+              disabled={loading || !!run || !data?.codex.connected}
+              onAnalyze={() => void analyze()}
+            />
             <div className="workspace-tabs">
               <TabList aria-label={t("Review views")}>
                 {(["guide", "files", "overview"] as const).map((tab) => (
@@ -1173,31 +1142,9 @@ export default function App() {
                 </Button>
               </div>
             )}
-            {workspace.previousSnapshotId && (
-              <div className="update-banner">
-                <span>
-                  {t(
-                    "Earlier notes and progress remain saved with their original code.",
-                  )}{" "}
-                </span>
-                <Button
-                  onPress={() => void saved(workspace.previousSnapshotId!)}
-                >
-                  {t("Open previous revision")}{" "}
-                </Button>
-              </div>
-            )}
             {workspace.syncError && (
               <div className="sync-warning">
                 {t("Showing saved content ·")} {workspace.syncError}
-              </div>
-            )}
-            {workspace.changedHunks.length > 0 && (
-              <div className="update-banner">
-                {workspace.changedHunks.length}
-                {t(
-                  "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
-                )}{" "}
               </div>
             )}
             <ConversationContext.Provider
@@ -1222,6 +1169,38 @@ export default function App() {
                 data-review-scroll
               >
                 <TabPanel id={mode} className="review-panel">
+                  {pull?.state !== "open" && (
+                    <div className="history-status">
+                      {t(
+                        "Historical review: code, private comments, and Codex are available. GitHub publication requires an open PR.",
+                      )}
+                    </div>
+                  )}
+                  {workspace.previousSnapshotId && (
+                    <div className="update-banner">
+                      <span>
+                        {t(
+                          "Earlier notes and progress remain saved with their original code.",
+                        )}{" "}
+                      </span>
+                      <Button
+                        onPress={() =>
+                          void saved(workspace.previousSnapshotId!)
+                        }
+                      >
+                        {t("Open previous revision")}{" "}
+                      </Button>
+                    </div>
+                  )}
+                  {workspace.changedHunks.length > 0 && (
+                    <div className="update-banner">
+                      {workspace.changedHunks.length}
+                      {t(
+                        "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
+                      )}{" "}
+                    </div>
+                  )}
+
                   <GuideView
                     key={workspace.snapshot.id}
                     workspace={workspace}

@@ -34,6 +34,8 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 6. **Finish review** shows coverage and the exact selected drafts. Publish a comment, approval, or change request as supported by GitHub; your own PR only permits a comment.
 7. New code appears as an update banner. Loading it preserves review marks only for uniquely matching unchanged hunks. Earlier notes stay attached to their original code and can be reopened with **Open previous revision**.
 
+**More room for code:** Scrolling compacts the PR title and Codex action into a 48px header. Author, checks, and diff totals return when you scroll to the top. History and previous-revision details scroll with the document, while review tabs, navigation, and active update/error controls remain available.
+
 **Fast review switching:** Your open PRs (including drafts), requested reviews, and assigned PRs prepare in the background across all repos, independent of the inbox filter. Saved code and guides open from local storage immediately; comments, checks, and PR metadata refresh in the background. Downloads run one at a time, yield to interactive opens, reuse unchanged revisions, and back off after failures. Prefetching does not run Codex. New code stays behind **Load new revision** while you review, and inherits your latest progress when opened.
 
 **Choose a model:** The default is **Codex · GPT-6 Astra · Extra high**. The Model panel lists models and reasoning levels available through your local Codex login. Save a choice for future guided reviews, inline replies, and PR chat. Changing it leaves an active request unchanged. Existing explicit choices from Connections are retained; unavailable selections are shown with an explanation instead of silently falling back.

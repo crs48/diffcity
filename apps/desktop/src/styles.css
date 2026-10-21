@@ -2595,3 +2595,51 @@
     }
   }
 }
+
+@layer components {
+  .pr-heading[data-compact="true"] {
+    min-height: 48px;
+    padding: 8px 24px;
+    gap: 16px;
+    flex-wrap: nowrap;
+  }
+  .pr-heading[data-compact="true"] > div {
+    flex-basis: 0;
+  }
+  .pr-heading[data-compact="true"] .eyebrow,
+  .pr-heading[data-compact="true"] .pr-meta {
+    display: none;
+  }
+  .pr-heading[data-compact="true"] h1 {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.2px;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pr-heading[data-compact="true"] .analyze-button {
+    min-height: 32px;
+    padding: 4px 10px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 1000px) {
+    .pr-heading[data-compact="true"] {
+      padding: 8px 16px;
+      gap: 10px;
+    }
+  }
+  @media (max-width: 600px) {
+    .pr-heading[data-compact="true"] .analyze-button > span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+}
