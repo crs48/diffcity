@@ -349,5 +349,6 @@
   "{{count}} hunks_other": "{{count}} hunks",
   "Footnotes": "Footnotes",
   "Task": "Task",
-  "Include draft {{number}}": "Include draft {{number}}"
+  "Include draft {{number}}": "Include draft {{number}}",
+  "PR chat messages": "PR chat messages"
 }

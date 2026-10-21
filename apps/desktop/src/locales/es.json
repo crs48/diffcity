@@ -349,5 +349,6 @@
   "{{count}} hunks_other": "{{count}} bloques",
   "Footnotes": "Notas al pie",
   "Task": "Tarea",
-  "Include draft {{number}}": "Incluir borrador {{number}}"
+  "Include draft {{number}}": "Incluir borrador {{number}}",
+  "PR chat messages": "Mensajes del chat del PR"
 }

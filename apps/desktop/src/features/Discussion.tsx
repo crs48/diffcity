@@ -6,14 +6,32 @@ import { lineRange } from "../lib/selection";
 import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
+import { useLayoutEffect, useRef } from "react";
 
 export function Discussion({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const c = useConversation();
+  const messages = useRef<HTMLDivElement>(null);
+  const followReplies = useRef(true);
+  useLayoutEffect(() => {
+    const viewport = messages.current;
+    if (viewport && followReplies.current)
+      viewport.scrollTop = viewport.scrollHeight;
+  }, [c?.workspace.notes, c?.workspace.comments, c?.stream]);
   if (!c) return null;
   const anchor = c.chat.draft?.anchor;
   return (
-    <aside className="discussion" aria-label={t("PR chat")}>
+    <aside
+      id="pr-chat"
+      className="discussion"
+      aria-label={t("PR chat")}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          onClose();
+        }
+      }}
+    >
       <header>
         <Sparkles size={16} />
         <strong>{t("PR chat")} </strong>
@@ -43,8 +61,20 @@ export function Discussion({ onClose }: { onClose: () => void }) {
           </span>
         )}
       </div>
-      <div className="messages">
-        {!c.workspace.notes.length && (
+      <div
+        ref={messages}
+        className="messages"
+        role="region"
+        aria-label={t("PR chat messages")}
+        tabIndex={0}
+        onScroll={(event) => {
+          const viewport = event.currentTarget;
+          followReplies.current =
+            viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <
+            48;
+        }}
+      >
+        {!c.workspace.notes.length && !c.workspace.comments.length && (
           <div className="discussion-empty">
             <Sparkles size={22} />
             <h3>{t("Review together.")} </h3>

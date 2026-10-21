@@ -110,6 +110,7 @@ export default function App() {
   const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
   const reviewScroll = useRef<HTMLDivElement>(null);
+  const chatToggle = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
     // The continuous guide restores its own chapter; other views start at the top.
     if (reviewScroll.current) reviewScroll.current.scrollTop = 0;
@@ -520,6 +521,8 @@ export default function App() {
     const request = ++selecting.current;
     const snapshotId = workspace?.snapshot.id;
     try {
+      if (jumpToCode && matchMedia("(max-width: 1000px)").matches)
+        setDiscussion(false);
       if (openDiscussion) await inline.start(snapshotId!, anchor);
       if (
         request !== selecting.current ||
@@ -1066,7 +1069,10 @@ export default function App() {
                 ))}
               </TabList>
               <Button
+                ref={chatToggle}
                 className="text-button"
+                aria-expanded={discussion}
+                aria-controls={discussion ? "pr-chat" : undefined}
                 onPress={async () => {
                   try {
                     if (discussion) {
@@ -1163,61 +1169,66 @@ export default function App() {
                 onError,
               }}
             >
-              <div
-                ref={reviewScroll}
-                className="review-body"
-                data-review-scroll
-              >
-                <TabPanel id={mode} className="review-panel">
-                  {pull?.state !== "open" && (
-                    <div className="history-status">
-                      {t(
-                        "Historical review: code, private comments, and Codex are available. GitHub publication requires an open PR.",
-                      )}
-                    </div>
-                  )}
-                  {workspace.previousSnapshotId && (
-                    <div className="update-banner">
-                      <span>
+              <div className="review-body" data-chat-open={discussion}>
+                <div
+                  ref={reviewScroll}
+                  className="review-scroll"
+                  data-review-scroll
+                >
+                  <TabPanel id={mode} className="review-panel">
+                    {pull?.state !== "open" && (
+                      <div className="history-status">
                         {t(
-                          "Earlier notes and progress remain saved with their original code.",
+                          "Historical review: code, private comments, and Codex are available. GitHub publication requires an open PR.",
+                        )}
+                      </div>
+                    )}
+                    {workspace.previousSnapshotId && (
+                      <div className="update-banner">
+                        <span>
+                          {t(
+                            "Earlier notes and progress remain saved with their original code.",
+                          )}{" "}
+                        </span>
+                        <Button
+                          onPress={() =>
+                            void saved(workspace.previousSnapshotId!)
+                          }
+                        >
+                          {t("Open previous revision")}{" "}
+                        </Button>
+                      </div>
+                    )}
+                    {workspace.changedHunks.length > 0 && (
+                      <div className="update-banner">
+                        {workspace.changedHunks.length}
+                        {t(
+                          "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
                         )}{" "}
-                      </span>
-                      <Button
-                        onPress={() =>
-                          void saved(workspace.previousSnapshotId!)
-                        }
-                      >
-                        {t("Open previous revision")}{" "}
-                      </Button>
-                    </div>
-                  )}
-                  {workspace.changedHunks.length > 0 && (
-                    <div className="update-banner">
-                      {workspace.changedHunks.length}
-                      {t(
-                        "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
-                      )}{" "}
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  <GuideView
-                    key={workspace.snapshot.id}
-                    workspace={workspace}
-                    selection={selection}
-                    onSelect={(a) => void select(a)}
-                    onDiscuss={(a) => void select(a, true)}
-                    onProgress={progress}
-                    onFinish={() => void finish()}
-                    mode={mode}
-                  />
-                </TabPanel>
+                    <GuideView
+                      key={workspace.snapshot.id}
+                      workspace={workspace}
+                      selection={selection}
+                      onSelect={(a) => void select(a)}
+                      onDiscuss={(a) => void select(a, true)}
+                      onProgress={progress}
+                      onFinish={() => void finish()}
+                      mode={mode}
+                    />
+                  </TabPanel>
+                </div>
                 {discussion && (
                   <Discussion
                     onClose={() => {
                       void chat
                         .flush()
-                        .then(() => setDiscussion(false))
+                        .then(() => {
+                          setDiscussion(false);
+                          chatToggle.current?.focus();
+                        })
                         .catch(onError);
                     }}
                   />
