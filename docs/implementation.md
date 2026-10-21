@@ -81,7 +81,7 @@ The local macOS bundle is not a signed/notarized release, and other OS/architect
 
 ## Historical reviews, languages, and schema upgrades
 
-Open PRs remain the default inbox. **History** pages through closed and merged PRs for the selected projects, retaining cached pages during connection failures. PR URLs work independently of state. A historical snapshot supports the guided flow, private discussions, and Codex; GitHub publication requires an open PR and is checked again immediately before posting. Reopening a cached snapshot refreshes its PR metadata without changing its code anchors.
+Open PRs remain the default inbox. **History** pages through closed and merged PRs for the selected repos, retaining cached pages during connection failures. PR URLs work independently of state. A historical snapshot supports the guided flow, private discussions, and Codex; GitHub publication requires an open PR and is checked again immediately before posting. Reopening a cached snapshot refreshes its PR metadata without changing its code anchors.
 
 The interface uses i18next and react-i18next, with English and Spanish catalogs in `apps/desktop/src/locales/`. **Connections → Language** persists the selection in SQLite and updates the document language. Catalog tests check matching keys, interpolation variables, plurals, and English fallback. Repository content and generated review prose retain their original language. Add a new locale by registering its catalog in `src/i18n.ts` and the supported settings values in Rust.
 
@@ -122,16 +122,16 @@ The current installed executable SHA-256 is `bef045cee7c82e013f9b8945ca8091c1c1f
 
 ## Repo inbox priority
 
-The sidebar calls GitHub repositories **repos**. The Inbox groups each PR once: your open PRs (including drafts), review requests, assigned work, other PRs awaiting review, reviewed PRs, other authors' drafts, then your recent completions. Within a group, recent activity sorts first; completed items use their completion time. Submitted GitHub reviews reduce priority and use subdued text with explicit status labels. A current review request overrides an earlier review. Private notes, Codex discussion, and local reading progress do not count as submitted reviews. Review-request matching currently covers individual requested reviewers; team-level requests are not expanded into membership.
+GitHub repositories are labeled **repos**. The Inbox groups each PR once: your open PRs (including drafts), review requests, assigned work, other PRs awaiting review, reviewed PRs, other authors' drafts, then your recent completions. Within a group, recent activity sorts first; completed items use their completion time. Submitted GitHub reviews reduce priority and use subdued text with explicit status labels. A current review request overrides an earlier review. Private notes, Codex discussion, and local reading progress do not count as submitted reviews. Review-request matching currently covers individual requested reviewers; team-level requests are not expanded into membership.
 
-**Display settings** in the inbox header controls recently completed work: hidden, 24 hours, two days (default), one week, or 30 days. The preference is saved in SQLite with a backward-compatible default for older settings. Only your own completed PRs appear in the Inbox; **History** includes every author's closed and merged PRs independently of that preference. Counts in the repo rail include open work only.
+**Display settings** in the inbox header controls recently completed work: hidden, 24 hours, two days (default), one week, or 30 days. The preference is saved in SQLite with a backward-compatible default for older settings. Only your own completed PRs appear in the Inbox; **History** includes every author's closed and merged PRs independently of that preference.
 
 [GitHub's review fields](https://docs.github.com/en/graphql/reference/pulls) supply the signed-in user's latest submitted review and the aggregate review decision in batches of 25 PRs. Pending or dismissed reviews do not count as completed reviews. Current REST reviewer requests determine re-request priority. Recent completions use the paginated closed-PR list, stopping when the page falls outside the update window and filtering by actual `closed_at`; an old PR with a new comment cannot masquerade as recently completed. This avoids search-index lag. Pagination-budget failures retain the previous inbox and report an error instead of silently reporting complete results.
 
 ```mermaid
 flowchart TD
   GitHub[Open PRs + review metadata + recent completions] --> Cache[Persist inbox]
-  Cache --> Filter[Repo, search, completion window]
+  Cache --> Filter[Account, repo, search, completion window]
   Filter --> Own[Your open PRs, including drafts]
   Own --> Requested[Needs your review]
   Requested --> Assigned[Assigned to you]
@@ -154,3 +154,32 @@ The separate **Sample inbox** contains 23 labeled, fictional scenarios and a ses
 - [x] A one-week completion window adds the four-day-old merged sample. After quitting and relaunching, the saved preference, prior real PR, and both connections return. The default two-day window is restored afterward. All eight original private messages remain intact at schema 3.
 
 The installed bundle matches the build from `ef57f00`; its executable SHA-256 is `1e7829616ecbac8a8de7e5401a1b1f414d0115ac8039885649cbc637ddb7f97e`. The synthetic GitHub PRs remain unmerged. Sample metadata resets when reloaded, while sample notes and code-reading progress are stored separately for each sample.
+
+
+## Compact account navigation
+
+A 64-pixel rail selects **All accounts**, a GitHub organization, or a personal account. Accounts are derived from tracked repo owners and use monochrome GitHub avatars with initials as an offline fallback. The selected account name remains visible in the inbox header. A labeled **Repo** selector narrows its tracked repos; under All accounts, options include the owner to distinguish same-name repos. The standard PR list is 300 pixels wide, leaving 111 more pixels for the review than the former 205 + 270 pixel layout.
+
+```mermaid
+flowchart LR
+  Rail[All accounts or one account] --> Repos[All tracked repos or one repo]
+  Repos --> Scope{Inbox or History}
+  Scope -->|Inbox| Priority[Existing priority groups]
+  Scope -->|History| Pages[Closed and merged PR pages]
+  Priority --> Review[Guided review]
+  Pages --> Review
+```
+
+Account changes reset the repo filter and preserve search and the Inbox/History choice. Removing a tracked repo falls back to its account; removing the last repo for an account falls back to All accounts. Both local filtering and history requests honor the account. Rust validates the selected account/repo against tracked repos before making requests, and cached history pages retain the exact repo set as their key. In-flight responses from an old account are discarded; changing tracked repos reloads history.
+
+The rail has 44-pixel circular buttons, named controls, React Aria hover/focus tooltips, and a selected outline/edge marker. The native repo selector supports keyboard navigation and type-ahead. The account list scrolls independently when many accounts are tracked. Connections and the two sample entry points remain available at the bottom. Avatar image loading is limited by CSP to GitHub and its avatar host; no GitHub tokens enter the webview. The narrow-window search focus target now works independently of the selected language.
+
+### Compact navigation verification (October 21, 2026)
+
+- [x] 43 Rust tests and 28 TypeScript/component tests pass, alongside type checking, ESLint, Clippy, and formatting. Coverage includes account/repo isolation, repo removal fallback, failed avatar loading, keyboard selection, history request scope, and stale history responses.
+- [x] Production WebKit replay verifies three account owners, narrowing from account to repo, restoring All accounts, live-history fixtures, and 64/300-pixel panel widths. The real account avatar loads; unavailable fixture avatars retain initials.
+- [x] Light account navigation and dark guided-review states report no axe WCAG A/AA violations. A 1000-pixel window switches between inbox and review without horizontal overflow and returns keyboard focus to search. These automated checks do not replace a full assistive-technology audit.
+
+- [x] The installed native app loads the real `crs48` avatar, scoped repo menu, 12 open PRs, and three historical PRs. Selecting `diffcity` preserves the account scope; opening closed PR #15 renders its code. A transient GitHub TLS handshake failure on the first launch recovered through the existing Save and reconnect action. The final build restarts with a live inbox and restores PR #15 without the connection error. All eight private notes remain at schema 3.
+
+The installed executable matches the bundle built from `d44bd6e`, SHA-256 `5144f59116bdc2fb6fe55c2fe72b4404e8dc79bb4126b29a216d0f42e6b244d8`. WebKit's native select appearance initially ignored the desired control height; an explicit chevron now preserves native select semantics while allowing a verified 34-pixel target. [Navigation CI](https://github.com/crs48/diffcity/actions/runs/39624993187) passes on `d10c7d8`; the final select styling also passes all local checks and the production bundle.
