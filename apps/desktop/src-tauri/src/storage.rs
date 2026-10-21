@@ -119,6 +119,18 @@ impl Store {
                 .collect::<Result<Vec<Note>>>()?
         })
     }
+    pub fn previous_snapshot(&self, snapshot: &Snapshot) -> Result<Option<String>> {
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        // Only return the ID. Opening one review must not deserialize every saved diff.
+        Ok(db.query_row(
+            "SELECT key FROM documents WHERE kind='snapshot' AND json_extract(value,'$.pull.repository')=?1 COLLATE NOCASE AND json_extract(value,'$.pull.number')=?2 AND key!=?3 AND json_extract(value,'$.capturedAt')<?4 ORDER BY json_extract(value,'$.capturedAt') DESC LIMIT 1",
+            params![snapshot.pull.repository, snapshot.pull.number, snapshot.id, snapshot.captured_at],
+            |row| row.get(0),
+        ).optional()?)
+    }
 }
 
 #[cfg(test)]

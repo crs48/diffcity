@@ -33,8 +33,11 @@ export const api = {
   directory: () => invoke<RepositoryDirectory>("refresh_directory"),
   settings: (settings: Settings) =>
     invoke<Settings>("save_settings", { settings }),
-  open: (repository: string, number: number, refresh = true) =>
+  open: (repository: string, number: number, refresh = false) =>
     invoke<ReviewWorkspace>("open_pull", { repository, number, refresh }),
+  sync: (repository: string, number: number) =>
+    invoke<ReviewWorkspace>("sync_pull", { repository, number }),
+  prefetch: (pull: PullRequest) => invoke<boolean>("prefetch_pull", { pull }),
   saved: (snapshotId: string) =>
     invoke<ReviewWorkspace>("open_saved_review", { snapshotId }),
   context: (

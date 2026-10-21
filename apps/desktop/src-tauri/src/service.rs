@@ -18,6 +18,7 @@ pub struct Service {
     inbox_sync: Mutex<()>,
     analysis: Mutex<()>,
     publication: Mutex<()>,
+    pub(crate) review_loads: crate::review_cache::ReviewLoads,
     cancellation: Mutex<Option<watch::Sender<bool>>>,
 }
 impl Service {
@@ -28,6 +29,7 @@ impl Service {
             inbox_sync: Mutex::new(()),
             analysis: Mutex::new(()),
             publication: Mutex::new(()),
+            review_loads: crate::review_cache::ReviewLoads::default(),
             cancellation: Mutex::new(None),
         })
     }
@@ -368,18 +370,14 @@ impl Service {
             .get("snapshot", id)?
             .context("This revision is no longer available locally")
     }
-    fn previous_snapshot(&self, snapshot: &Snapshot) -> Result<Option<String>> {
-        Ok(self
-            .store
-            .list::<Snapshot>("snapshot")?
-            .into_iter()
-            .filter(|s| {
-                domain::pull_key(&s.pull) == domain::pull_key(&snapshot.pull)
-                    && s.id != snapshot.id
-                    && s.captured_at < snapshot.captured_at
-            })
-            .max_by(|a, b| a.captured_at.cmp(&b.captured_at))
-            .map(|s| s.id))
+    pub(crate) fn previous_snapshot(&self, snapshot: &Snapshot) -> Result<Option<String>> {
+        if let Some(previous) = self.store.get("previous-snapshot", &snapshot.id)? {
+            return Ok(previous);
+        }
+        let previous = self.store.previous_snapshot(snapshot)?;
+        self.store
+            .put("previous-snapshot", &snapshot.id, &previous)?;
+        Ok(previous)
     }
     pub fn saved(&self, id: &str) -> Result<ReviewWorkspace> {
         let snapshot = self.snapshot(id)?;
@@ -392,82 +390,10 @@ impl Service {
             notes: self.store.notes(id)?,
             progress: self.store.get("progress", id)?.unwrap_or_default(),
             comments: self.store.get("comments", id)?.unwrap_or_default(),
-            checks: "Saved revision".into(),
+            checks: self.cached_checks(id)?,
             snapshot,
-            changed_hunks: vec![],
+            changed_hunks: self.store.get("changed-hunks", id)?.unwrap_or_default(),
             sync_error: None,
-        })
-    }
-    pub async fn open(&self, repo: &str, number: u32, refresh: bool) -> Result<ReviewWorkspace> {
-        if repo == fixtures::INBOX_REPO {
-            return self.sample_pull(number);
-        }
-        let key = format!("{repo}#{number}");
-        let old_id: Option<String> = self.store.get("latest", &key)?;
-        let old = old_id.as_deref().map(|id| self.snapshot(id)).transpose()?;
-        let (mut snapshot, mut sync_error) = if !refresh && old.is_some() {
-            (old.clone().unwrap(), None)
-        } else {
-            match self.github.snapshot(repo, number).await {
-                Ok(s) => (s, None),
-                Err(e) => match &old {
-                    Some(s) => (s.clone(), Some(e.to_string())),
-                    None => return Err(e),
-                },
-            }
-        };
-        if !refresh {
-            match self.github.pull(repo, number).await {
-                Ok(latest) if latest.head == snapshot.pull.head && latest.base == snapshot.pull.base => snapshot.pull = latest,
-                Ok(_) => sync_error = Some("A newer revision is available. Load the latest revision to review its changes.".into()),
-                Err(error) => sync_error = Some(error.to_string()),
-            }
-        }
-        self.store.put("snapshot", &snapshot.id, &snapshot)?;
-        self.store.put("latest", &key, &snapshot.id)?;
-        let previous_snapshot_id = old_id
-            .filter(|id| id != &snapshot.id)
-            .or(self.previous_snapshot(&snapshot)?);
-        let (progress, changed_hunks) = if let Some(p) = self.store.get("progress", &snapshot.id)? {
-            (p, vec![])
-        } else if let Some(old) = old.filter(|o| o.id != snapshot.id) {
-            let p = self.store.get("progress", &old.id)?.unwrap_or_default();
-            domain::transfer_progress(&old, &snapshot, &p)
-        } else {
-            (ReviewProgress::default(), vec![])
-        };
-        self.store.put("progress", &snapshot.id, &progress)?;
-        let guide = self
-            .store
-            .get("guide", &snapshot.id)?
-            .unwrap_or_else(|| domain::provisional(&snapshot));
-        let (comments, comment_error) = match self.github.comments(&snapshot.pull).await {
-            Ok(c) => {
-                self.store.put("comments", &snapshot.id, &c)?;
-                (c, None)
-            }
-            Err(e) => (
-                self.store
-                    .get("comments", &snapshot.id)?
-                    .unwrap_or_default(),
-                Some(e.to_string()),
-            ),
-        };
-        let checks = self
-            .github
-            .checks(&snapshot.pull)
-            .await
-            .unwrap_or_else(|_| "Checks unavailable".into());
-        Ok(ReviewWorkspace {
-            notes: self.store.notes(&snapshot.id)?,
-            snapshot,
-            guide,
-            progress,
-            comments,
-            checks,
-            previous_snapshot_id,
-            changed_hunks,
-            sync_error: sync_error.or(comment_error),
         })
     }
     pub fn sample_pull(&self, number: u32) -> Result<ReviewWorkspace> {

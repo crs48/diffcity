@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
+import { useReviewPrefetch } from "./features/useReviewPrefetch";
 import { usePullHistory } from "./features/usePullHistory";
 import { Button, Tabs, TabList, Tab, TabPanel } from "react-aria-components";
 import { PinToggle } from "./ui/PinToggle";
@@ -186,6 +187,14 @@ export default function App() {
       "pin-repository",
     );
   };
+  useReviewPrefetch(
+    pulls,
+    data?.github.identity ?? "",
+    !!data?.github.connected,
+    loading,
+    workspace ? pinKey(workspace.snapshot.pull) : null,
+  );
+  const [reviewSyncing, setReviewSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const setInboxOpen = (open: boolean) => {
     setInboxVisible(open);
@@ -312,8 +321,7 @@ export default function App() {
     setPulls(result.pulls);
     setStatus("");
     if (result.github.connected) {
-      await discover().catch(onError);
-      void refresh().catch(onError);
+      void discover().then(refresh).catch(onError);
     }
     return result;
   }, [discover, refresh, onError]);
@@ -369,52 +377,77 @@ export default function App() {
       try {
         if (++tick % 30 === 0) await discover();
         if (tick % 3 === 0) void refresh().catch(onError);
-        const w = current.current;
-        if (
-          w &&
-          w.snapshot.pull.state === "open" &&
-          !isSampleRepo(w.snapshot.pull.repository)
-        ) {
-          const p = w.snapshot.pull;
-          const latest = await api.check(p.repository, p.number);
-          if (
-            current.current?.snapshot.id === w.snapshot.id &&
-            (latest.head !== p.head || latest.base !== p.base)
-          )
-            setNewRevision(true);
-          const fresh = await api.open(p.repository, p.number, false);
-          setWorkspace((current) =>
-            current?.snapshot.id === fresh.snapshot.id
-              ? {
-                  ...current,
-                  snapshot: { ...current.snapshot, pull: fresh.snapshot.pull },
-                  comments: fresh.comments,
-                  checks: fresh.checks,
-                  syncError: fresh.syncError,
-                }
-              : current,
-          );
-          setLastSync(
-            new Date().toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          );
-        }
       } catch (e) {
-        setWorkspace((w) => (w ? { ...w, syncError: String(e) } : w));
+        onError(e);
       } finally {
         polling.current = false;
       }
     }, 30_000);
     return () => clearInterval(timer);
   }, [data?.github.connected, discover, refresh, onError]);
-  const open = async (repository: string, number: number, force = true) => {
+  useEffect(() => {
+    const w = current.current;
+    if (
+      !data?.github.connected ||
+      loading ||
+      !w ||
+      isSampleRepo(w.snapshot.pull.repository)
+    )
+      return;
+    let removed = false;
+    let busy = false;
+    const generation = opening.current;
+    const matches = () =>
+      !removed &&
+      opening.current === generation &&
+      current.current?.snapshot.id === w.snapshot.id;
+    const sync = async () => {
+      if (document.hidden || busy) return;
+      busy = true;
+      setReviewSyncing(true);
+      try {
+        const fresh = await api.sync(
+          w.snapshot.pull.repository,
+          w.snapshot.pull.number,
+        );
+        if (!matches()) return;
+        setNewRevision(fresh.snapshot.id !== w.snapshot.id);
+        // Code, notes, guide and progress stay pinned to the review the user opened.
+        setWorkspace((current) =>
+          current?.snapshot.id === fresh.snapshot.id
+            ? {
+                ...current,
+                snapshot: { ...current.snapshot, pull: fresh.snapshot.pull },
+                comments: fresh.comments,
+                checks: fresh.checks,
+                syncError: fresh.syncError,
+              }
+            : current,
+        );
+      } catch (e) {
+        if (matches())
+          setWorkspace((current) =>
+            current ? { ...current, syncError: String(e) } : current,
+          );
+      } finally {
+        busy = false;
+        if (matches()) setReviewSyncing(false);
+      }
+    };
+    void sync();
+    const timer = setInterval(() => void sync(), 30_000);
+    return () => {
+      removed = true;
+      clearInterval(timer);
+    };
+  }, [workspace?.snapshot.id, data?.github.connected, loading]);
+  const open = async (repository: string, number: number, force = false) => {
     const request = ++opening.current;
     setLoading(true);
     setError("");
     try {
       await flush();
+      if (request !== opening.current) return;
       const w = await api.open(repository, number, force);
       const samplePull = samplePulls.find((p) => p.number === number);
       if (repository === SAMPLE_REPO && samplePull)
@@ -431,7 +464,7 @@ export default function App() {
       if (!isSampleRepo(repository))
         localStorage.setItem("diffcity.lastPr", w.snapshot.pull.url);
     } catch (e) {
-      onError(e);
+      if (request === opening.current) onError(e);
     } finally {
       if (request === opening.current) setLoading(false);
     }
@@ -917,6 +950,15 @@ export default function App() {
             )}
           </div>
           <div className="spacer" />
+          {!loading &&
+            reviewSyncing &&
+            data?.github.connected &&
+            pull &&
+            !isSampleRepo(pull.repository) && (
+              <span className="review-sync-status" role="status">
+                {t("Updating review in the background…")}
+              </span>
+            )}
           <ThemeSwitcher
             value={data?.settings.theme || "system"}
             disabled={!data}
@@ -1124,7 +1166,9 @@ export default function App() {
                     "New code is available. Your current review is preserved.",
                   )}{" "}
                 </span>
-                <Button onPress={() => void open(pull.repository, pull.number)}>
+                <Button
+                  onPress={() => void open(pull.repository, pull.number, true)}
+                >
                   {t("Load new revision")} <ArrowRight size={13} />
                 </Button>
               </div>
@@ -1323,7 +1367,7 @@ export default function App() {
             const w = await api.open(
               workspace.snapshot.pull.repository,
               workspace.snapshot.pull.number,
-              false,
+              true,
             );
             setWorkspace((current) =>
               current?.snapshot.id === w.snapshot.id

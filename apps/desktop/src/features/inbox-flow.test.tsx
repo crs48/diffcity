@@ -163,7 +163,7 @@ beforeEach(() => {
         return discovered;
       }
       if (command === "sample_inbox") return structuredClone(samples);
-      if (command === "open_pull")
+      if (command === "open_pull" || command === "sync_pull")
         return {
           ...structuredClone(workspace),
           snapshot: {
@@ -752,4 +752,176 @@ it("keeps an old pinned completion in the inbox, honors filters, and preserves p
       screen.getByRole("textbox", { name: "Search pull requests" }),
     ),
   );
+});
+
+it("opens cached reviews immediately while GitHub is slow and ignores late updates after switching", async () => {
+  connected = true;
+  const first = {
+    ...workspace.snapshot.pull,
+    repository: "owner/repo",
+    number: 201,
+    title: "Cached first review",
+    author: "me",
+    state: "open",
+  };
+  const second = { ...first, number: 202, title: "Cached second review" };
+  livePulls = [first, second];
+  discovered.repositories = [
+    {
+      id: "owner/repo",
+      fullName: "owner/repo",
+      private: true,
+      description: "",
+      updatedAt: null,
+      pushedAt: null,
+    },
+  ];
+  let finishFirst: (value: ReviewWorkspace) => void = () => {};
+  let finishSecond: (value: ReviewWorkspace) => void = () => {};
+  const cached = (pull: PullRequest) => ({
+    ...structuredClone(workspace),
+    snapshot: { ...workspace.snapshot, id: `cached-${pull.number}`, pull },
+  });
+  const open = vi
+    .spyOn(api, "open")
+    .mockImplementation(async (_repo, number) =>
+      cached(number === 201 ? first : second),
+    );
+  const sync = vi
+    .spyOn(api, "sync")
+    .mockImplementation(async (_repo, number) => {
+      return new Promise((resolve) => {
+        if (number === 201) finishFirst = resolve;
+        else finishSecond = resolve;
+      });
+    });
+  vi.spyOn(api, "prefetch").mockResolvedValue(true);
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    await screen.findByRole("button", { name: /Cached first review/ }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: first.title }),
+  ).toBeTruthy();
+  expect(open).toHaveBeenCalledWith("owner/repo", 201, false);
+  await waitFor(() => expect(sync).toHaveBeenCalledWith("owner/repo", 201));
+  await user.click(
+    screen.getByRole("button", { name: /Cached second review/ }),
+  );
+  expect(
+    await screen.findByRole("heading", { name: second.title }),
+  ).toBeTruthy();
+  const newerFirst = cached({ ...first, head: "changed-head" });
+  newerFirst.snapshot.id = "newer-first";
+  await act(async () => finishFirst(newerFirst));
+  expect(screen.getByRole("heading", { name: second.title })).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /Load new revision/ }),
+  ).toBeNull();
+  const newerSecond = cached({ ...second, head: "changed-head" });
+  newerSecond.snapshot.id = "newer-second";
+  await act(async () => finishSecond(newerSecond));
+  expect(
+    await screen.findByRole("button", { name: /Load new revision/ }),
+  ).toBeTruthy();
+  // The current code remains pinned until that explicit action.
+  expect(screen.getByRole("heading", { name: second.title })).toBeTruthy();
+});
+
+it("restores a saved review before directory discovery finishes", async () => {
+  connected = true;
+  localStorage.setItem(
+    "diffcity.lastPr",
+    "https://github.com/owner/repo/pull/201",
+  );
+  vi.spyOn(api, "directory").mockReturnValue(new Promise(() => {}));
+  const cached = {
+    ...structuredClone(workspace),
+    snapshot: {
+      ...workspace.snapshot,
+      pull: {
+        ...workspace.snapshot.pull,
+        repository: "owner/repo",
+        number: 201,
+        title: "Restored before discovery",
+      },
+    },
+  };
+  vi.spyOn(api, "open").mockImplementation((_repo, _number, refresh) =>
+    refresh ? new Promise(() => {}) : Promise.resolve(cached),
+  );
+  vi.spyOn(api, "sync").mockReturnValue(new Promise(() => {}));
+  render(<App />);
+  expect(
+    await screen.findByRole("heading", { name: "Restored before discovery" }),
+  ).toBeTruthy();
+});
+
+it("keeps review progress and saved private notes when background metadata arrives", async () => {
+  connected = true;
+  const pull = {
+    ...workspace.snapshot.pull,
+    repository: "owner/repo",
+    number: 201,
+    title: "Review with private progress",
+    author: "me",
+    state: "open",
+  };
+  livePulls = [pull];
+  discovered.repositories = [
+    {
+      id: "owner/repo",
+      fullName: "owner/repo",
+      private: true,
+      description: "",
+      updatedAt: null,
+      pushedAt: null,
+    },
+  ];
+  const cached: ReviewWorkspace = {
+    ...structuredClone(workspace),
+    snapshot: { ...workspace.snapshot, pull },
+    notes: [
+      {
+        id: "private-note",
+        snapshotId: workspace.snapshot.id,
+        anchor: null,
+        body: "Keep this private context",
+        role: "user",
+        parentId: null,
+        githubDraft: false,
+        publishedUrl: null,
+        createdAt: "2026-10-21T00:00:00Z",
+      },
+    ],
+  };
+  vi.spyOn(api, "open").mockResolvedValue(cached);
+  let finish: (value: ReviewWorkspace) => void = () => {};
+  vi.spyOn(api, "sync").mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  vi.spyOn(api, "prefetch").mockResolvedValue(true);
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    await screen.findByRole("button", { name: /Review with private progress/ }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Mark code reviewed" }),
+  );
+  expect(screen.getByRole("button", { name: "Code reviewed" })).toBeTruthy();
+  await act(async () =>
+    finish({
+      ...cached,
+      notes: [],
+      progress: structuredClone(workspace.progress),
+      checks: "All checks passed",
+    }),
+  );
+  expect(screen.getByRole("button", { name: "Code reviewed" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: /^PR chat/ }));
+  expect(await screen.findByText("Keep this private context")).toBeTruthy();
 });

@@ -11,6 +11,8 @@ fn main() {
             "pin_repository",
             "pin_pull",
             "open_pull",
+            "prefetch_pull",
+            "sync_pull",
             "open_saved_review",
             "hunk_context",
             "check_pull",

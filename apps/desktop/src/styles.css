@@ -2407,3 +2407,10 @@
     font-size: 12px;
   }
 }
+
+.review-sync-status {
+  color: var(--muted);
+  font-size: 11px;
+  max-width: 150px;
+  text-align: right;
+}

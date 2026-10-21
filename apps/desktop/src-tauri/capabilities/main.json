@@ -14,6 +14,8 @@
     "allow-pin-repository",
     "allow-pin-pull",
     "allow-open-pull",
+    "allow-prefetch-pull",
+    "allow-sync-pull",
     "allow-open-saved-review",
     "allow-hunk-context",
     "core:window:allow-destroy",

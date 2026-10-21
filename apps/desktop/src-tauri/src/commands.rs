@@ -99,6 +99,18 @@ pub async fn open_pull(
         .map_err(error)
 }
 #[tauri::command]
+pub async fn sync_pull(
+    service: State<'_, Arc<Service>>,
+    repository: String,
+    number: u32,
+) -> Output<ReviewWorkspace> {
+    service.sync_pull(&repository, number).await.map_err(error)
+}
+#[tauri::command]
+pub async fn prefetch_pull(service: State<'_, Arc<Service>>, pull: PullRequest) -> Output<bool> {
+    service.prefetch_pull(&pull).await.map_err(error)
+}
+#[tauri::command]
 pub fn open_saved_review(
     service: State<'_, Arc<Service>>,
     snapshot_id: String,

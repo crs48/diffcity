@@ -328,3 +328,29 @@ Inline comment buttons now precede the line numbers in unified and split diffs. 
 - [x] Production WebKit verifies left-side placement, selected-button visibility, forward Shift-click ranges, reverse dragging on deleted lines, Shift-arrow keyboard ranges, inline focus, and expanded-context alignment in both layouts. Light/dark axe WCAG A/AA checks report no violations.
 
 - [x] The range toolbar action is also left-aligned. Native verification Shift-selects migration lines 1–2, opens the left gutter comment, and focuses an inline composer with the complete range. All eight private notes remain unchanged. Installed executable SHA-256: `7a921e2440b8c84d1e746cacbabb6ff743f47f67da98634b06f794bbf15d5345`.
+
+
+## Cached review loading and background preparation
+
+Opening a previously captured PR now reads SQLite immediately, including saved guides, notes, discussion, check results, and progress. A cold open captures code first; the selected review then refreshes GitHub metadata, comments, and checks independently. Directory discovery no longer blocks restoration of the last review. Previous-revision lookup reads a single ID instead of decoding every stored diff.
+
+```mermaid
+flowchart LR
+  Inbox[Full inbox] --> Eligible[Your PRs, requested reviews, assigned PRs]
+  Eligible --> Queue[One background download at a time]
+  Queue --> Cache[Local snapshot and discussion cache]
+  Click[Open PR] --> Cache
+  Cache --> Render[Render saved review immediately]
+  Render --> Sync[Refresh GitHub in background]
+  Sync --> Same[Same revision: update comments and checks]
+  Sync --> New[New revision: offer explicit switch]
+  New --> Progress[Transfer latest review marks when opened]
+```
+
+The prefetch queue includes drafts and prioritizes authored PRs, then requested reviews, then assignments, ordered by recent updates. It operates across repo/account filters, skips the active review and hidden windows, refreshes changed heads/base commits/updated timestamps, and uses a five-minute freshness window with failure backoff. A foreground open cancels speculative work; per-PR locks prevent overlapping captures from replacing each other. No Codex inference or GitHub writes occur during preparation.
+
+Background capture preserves revision-specific notes and guides, never writes back existing progress, and defers progress transfer until the new revision is opened. Intermediate prefetched revisions without review progress are skipped during transfer. Stale async responses are ignored after navigation; new revisions never replace code under the reader.
+
+- [x] Regression coverage verifies offline cached opens while a network lock is held, interruption and foreground priority, revision freshness, progress transfer at open time, queue membership/order/deduplication/backoff, slow GitHub responses, rapid switching, and restoration before directory discovery completes.
+- [ ] Final type/lint/build checks and production browser verification.
+- [ ] Install and verify the native app against live GitHub reviews.

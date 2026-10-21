@@ -9,6 +9,7 @@ mod github_lists;
 pub mod migrations;
 mod models;
 mod pins;
+mod review_cache;
 pub mod service;
 pub mod text_diff;
 
@@ -36,6 +37,8 @@ pub fn run() {
             commands::pin_repository,
             commands::pin_pull,
             commands::open_pull,
+            commands::prefetch_pull,
+            commands::sync_pull,
             commands::open_saved_review,
             commands::hunk_context,
             commands::check_pull,
