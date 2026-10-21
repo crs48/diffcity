@@ -163,7 +163,7 @@ it("moves a sample review down and back up without publishing or changing real i
   ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Open in GitHub" })).toBeNull();
   await user.click(
-    screen.getByRole("button", { name: "Finish review", exact: true }),
+    screen.getByRole("button", { name: "Finish review" }),
   );
   const dialog = screen.getByRole("dialog");
   await user.type(
@@ -201,7 +201,7 @@ it("persists display choices and keeps older and other-author completions in His
   await user.click(await screen.findByRole("button", { name: "Sample inbox" }));
   await screen.findByRole("button", { name: /Completed four days ago/ });
   await user.click(
-    screen.getByRole("button", { name: "History", exact: true }),
+    screen.getByRole("button", { name: "History" }),
   );
   await screen.findByRole("button", { name: /Another author's merged PR/ });
   await user.click(screen.getByRole("button", { name: /All pull requests/ }));
