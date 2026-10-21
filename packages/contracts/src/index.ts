@@ -1,8 +1,11 @@
 // Generated from Rust contracts. Run pnpm contracts; do not edit.
 export type Settings = { repositories: Array<string>, codexPath: string | null, ghPath: string | null, model: string | null, theme: string, locale: string, completedDays: number, };
 export type Connection = { connected: boolean, identity: string, executable: string, detail: string, };
-export type Model = { id: string, name: string, isDefault: boolean, };
-export type Bootstrap = { settings: Settings, github: Connection, codex: Connection, models: Array<Model>, pulls: Array<PullRequest>, dataDirectory: string, schemaVersion: number, directory: RepositoryDirectory, pins: Pins, };
+export type Model = { id: string, name: string, isDefault: boolean, description: string, reasoningEfforts: Array<ReasoningOption>, defaultReasoningEffort: string | null, };
+export type ReasoningOption = { effort: string, description: string, };
+export type ModelPreference = { provider: string, model: string, reasoningEffort: string | null, };
+export type ModelCatalog = { connection: Connection, models: Array<Model>, };
+export type Bootstrap = { settings: Settings, github: Connection, codex: Connection, models: Array<Model>, modelPreference: ModelPreference, pulls: Array<PullRequest>, dataDirectory: string, schemaVersion: number, directory: RepositoryDirectory, pins: Pins, };
 export type Pins = { repositories: Array<string>, pulls: Array<PullRequest>, };
 export type Repository = { id: string, fullName: string, private: boolean, description: string, updatedAt: string | null, pushedAt: string | null, };
 export type RepositoryDirectory = { repositories: Array<Repository>, organizations: Array<string>, syncError: string | null, };

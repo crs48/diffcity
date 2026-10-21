@@ -48,6 +48,20 @@ pub fn save_settings(service: State<'_, Arc<Service>>, settings: Settings) -> Ou
     service.settings(settings).map_err(error)
 }
 #[tauri::command]
+pub async fn model_catalog(service: State<'_, Arc<Service>>) -> Output<ModelCatalog> {
+    service.model_catalog().await.map_err(error)
+}
+#[tauri::command]
+pub async fn save_model_preference(
+    service: State<'_, Arc<Service>>,
+    preference: ModelPreference,
+) -> Output<ModelPreference> {
+    service
+        .save_model_preference(preference)
+        .await
+        .map_err(error)
+}
+#[tauri::command]
 pub fn pin_repository(
     service: State<'_, Arc<Service>>,
     repository: String,

@@ -185,6 +185,11 @@ describe("multi-line review", () => {
             pins: { repositories: [], pulls: [] },
             directory: { repositories: [], organizations: [], syncError: null },
             models: [],
+            modelPreference: {
+              provider: "codex",
+              model: "gpt-6-astra",
+              reasoningEffort: "xhigh",
+            },
             pulls: [],
             dataDirectory: "test-data",
           };
@@ -252,8 +257,7 @@ describe("multi-line review", () => {
       name: "Inline comment or Codex question",
     });
     await waitFor(() => expect(document.activeElement).toBe(composer));
-    await user.type(
-      composer,
+    await user.paste(
       "Will these two migration statements work with existing rows?",
     );
     await user.click(screen.getByRole("button", { name: "Save comment" }));
@@ -309,7 +313,7 @@ describe("multi-line review", () => {
       })[0],
     );
     await waitFor(() => expect(document.activeElement).toBe(composer));
-    await user.type(composer, "Keep this unfinished inline thought.");
+    await user.paste("Keep this unfinished inline thought.");
     await user.click(screen.getByRole("tab", { name: /Overview/ }));
     await user.click(screen.getByRole("tab", { name: "Guide" }));
     expect(
@@ -319,12 +323,12 @@ describe("multi-line review", () => {
         }) as HTMLTextAreaElement
       ).value,
     ).toBe("Keep this unfinished inline thought.");
-    await user.type(
+    await user.click(
       within(chat).getByRole("textbox", {
         name: "Message to Codex about this PR",
       }),
-      "How does that affect the rest of the PR?",
     );
+    await user.paste("How does that affect the rest of the PR?");
     await user.click(within(chat).getByRole("button", { name: "Ask Codex" }));
     await waitFor(() => expect(asked).toHaveLength(2));
     expect(asked[1].anchor).toBeNull();

@@ -26,13 +26,15 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 
 ## Review a PR
 
-1. Open **Connections** to confirm the local GitHub and Codex accounts. Executable paths and the model can be changed there.
+1. Open **Connections** to confirm the local GitHub and Codex accounts. Executable paths can be changed there. Use **Model** near the bottom of the left sidebar to choose your default model and reasoning level.
 2. Your organizations and accessible repos appear automatically. Your personal account stays first; other accounts sort by their latest PR or repo activity. Accounts with no known updates in the last 30 days fold behind an expandable count; your selected account stays visible. Use the account rail and **Repo** filter to narrow the inbox, or open a GitHub PR URL directly. Your open PRs (including drafts) appear first, followed by requested reviews, assigned work, and other open PRs. **History** shows closed and merged PRs.
 3. Click **Review with Codex**. Open the completed guide when ready; it does not move your reading position while generation runs.
 4. Work through actual code in the guide. Migration, authorization, API-contract, and localization-contract signals set attention floors. Findings have separate severity labels. Expand routine groups whenever you want; acknowledged summaries and deferred code are counted separately from reviewed code.
 5. Drag across line numbers, click then Shift-click, or use Shift + Up/Down from a focused line number to select a range. Choose **Comment on lines** to leave a private note or **Ask Codex**. Saved comments also have **Ask Codex about this comment**. Comments and streamed Codex replies appear directly beneath the selected code. **PR chat** shows the same messages, with code references that jump back to their inline threads. Ask broader questions there, or choose **Continue in PR chat** to retain a thread’s code context. Selection stays within one diff hunk and one side; drafts survive guide navigation. Choose **Prepare GitHub draft** for feedback you want to publish; you can edit that draft.
 6. **Finish review** shows coverage and the exact selected drafts. Publish a comment, approval, or change request as supported by GitHub; your own PR only permits a comment.
 7. New code appears as an update banner. Loading it preserves review marks only for uniquely matching unchanged hunks. Earlier notes stay attached to their original code and can be reopened with **Open previous revision**.
+
+**Choose a model:** The default is **Codex · GPT-6 Astra · Extra high**. The Model panel lists models and reasoning levels available through your local Codex login. Save a choice for future guided reviews, inline replies, and PR chat. Changing it leaves an active request unchanged. Existing explicit choices from Connections are retained; unavailable selections are shown with an explanation instead of silently falling back.
 
 **Scan PR status:** Cards use green open, gray draft, purple merged, and red closed icons. Status overlays and labeled badges distinguish reviews, approvals, changes requested, checks, conflicts, blocked merges, and branches behind their base. Repo, author, source/target branch, and update age stay visible; diff counts appear when available. The sample inbox includes varied status combinations.
 

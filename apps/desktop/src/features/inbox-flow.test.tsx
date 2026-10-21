@@ -132,6 +132,11 @@ beforeEach(() => {
             detail: "Fixture",
           },
           models: [],
+          modelPreference: {
+            provider: "codex",
+            model: "gpt-6-astra",
+            reasoningEffort: "xhigh",
+          },
           pulls: connected ? [] : livePulls,
           pins: structuredClone(pins),
           directory: {

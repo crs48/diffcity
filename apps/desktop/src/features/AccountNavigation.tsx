@@ -9,11 +9,13 @@ import {
   RefreshCw,
   Pin,
   Settings2,
+  Cpu,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PinToggle } from "../ui/PinToggle";
 import { groupAccountOwners, sameLogin } from "../lib/inbox";
 import type { Bootstrap } from "../lib/api";
+import { defaultModelPreference, effortLabel } from "../lib/models";
 
 function RailButton({
   label,
@@ -23,6 +25,7 @@ function RailButton({
   controls,
   id,
   hidden,
+  disabled,
   onPress,
   children,
 }: {
@@ -33,6 +36,7 @@ function RailButton({
   controls?: string;
   id?: string;
   hidden?: boolean;
+  disabled?: boolean;
   onPress: () => void;
   children: ReactNode;
 }) {
@@ -46,6 +50,7 @@ function RailButton({
         aria-controls={controls}
         id={id}
         hidden={hidden}
+        isDisabled={disabled}
         onPress={onPress}
       >
         {children}
@@ -86,6 +91,8 @@ export function AccountNavigation({
   onSamples,
   onExample,
   onConnections,
+  onModel,
+  modelOpen,
 }: {
   owners: string[];
   activity: ReadonlyMap<string, number>;
@@ -97,8 +104,15 @@ export function AccountNavigation({
   onSamples: () => void;
   onExample: () => void;
   onConnections: () => void;
+  onModel: () => void;
+  modelOpen: boolean;
 }) {
   const { t } = useTranslation();
+  const preference = data?.modelPreference ?? defaultModelPreference;
+  const modelName =
+    data?.models.find((model) => model.id === preference.model)?.name ??
+    preference.model;
+  const modelDetail = `Codex · ${modelName} · ${t(preference.reasoningEffort ? effortLabel(preference.reasoningEffort) : "Model default")}`;
   const [showInactive, setShowInactive] = useState(false);
   const { visible, inactive } = groupAccountOwners(
     owners,
@@ -189,6 +203,18 @@ export function AccountNavigation({
         <RefreshCw size={19} aria-hidden="true" />
       </RailButton>
       <div className="rail-bottom">
+        <RailButton
+          label={t("Model")}
+          detail={modelDetail}
+          selected={modelOpen}
+          disabled={!data}
+          onPress={onModel}
+        >
+          <span className="rail-model">
+            <Cpu size={18} aria-hidden="true" />
+            <span>{t("Model")}</span>
+          </span>
+        </RailButton>
         <RailButton
           label={t("Sample inbox")}
           selected={samples}

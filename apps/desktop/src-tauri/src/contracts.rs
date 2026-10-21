@@ -38,6 +38,41 @@ pub struct Model {
     pub id: String,
     pub name: String,
     pub is_default: bool,
+    pub description: String,
+    pub reasoning_efforts: Vec<ReasoningOption>,
+    pub default_reasoning_effort: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ReasoningOption {
+    pub effort: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelPreference {
+    pub provider: String,
+    pub model: String,
+    pub reasoning_effort: Option<String>,
+}
+
+impl Default for ModelPreference {
+    fn default() -> Self {
+        Self {
+            provider: "codex".into(),
+            model: "gpt-6-astra".into(),
+            reasoning_effort: Some("xhigh".into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelCatalog {
+    pub connection: Connection,
+    pub models: Vec<Model>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -47,6 +82,7 @@ pub struct Bootstrap {
     pub github: Connection,
     pub codex: Connection,
     pub models: Vec<Model>,
+    pub model_preference: ModelPreference,
     pub pulls: Vec<PullRequest>,
     pub data_directory: String,
     pub schema_version: u32,

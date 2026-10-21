@@ -1,5 +1,5 @@
 use crate::{
-    contracts::{Connection, Model, Settings},
+    contracts::{Connection, Model, ModelPreference, ReasoningOption, Settings},
     github::executable,
 };
 use anyhow::{Context, Result, bail};
@@ -54,7 +54,7 @@ pub struct Rpc {
 }
 pub struct TurnRequest<'a> {
     pub cwd: &'a Path,
-    pub model: Option<&'a str>,
+    pub preference: &'a ModelPreference,
     pub instructions: &'a str,
     pub prompt: &'a str,
     pub schema: Option<Value>,
@@ -166,23 +166,29 @@ impl Rpc {
             .as_str()
             .unwrap_or("Local Codex account")
             .to_string();
-        let models = self.request("model/list", json!({})).await?;
-        let models = models["data"]
-            .as_array()
-            .context("Codex returned no model catalog")?
-            .iter()
-            .map(|v| Model {
-                id: v["model"]
-                    .as_str()
-                    .or_else(|| v["id"].as_str())
-                    .unwrap_or("")
-                    .into(),
-                name: v["displayName"].as_str().unwrap_or("Codex").into(),
-                is_default: v["isDefault"].as_bool().unwrap_or(false),
-            })
-            .filter(|m| !m.id.is_empty())
-            .collect();
+        let models = self.models().await?;
         Ok((identity, models))
+    }
+    pub async fn models(&mut self) -> Result<Vec<Model>> {
+        let mut models = Vec::new();
+        let mut cursors = std::collections::HashSet::new();
+        let mut cursor: Option<String> = None;
+        loop {
+            let page = self
+                .request(
+                    "model/list",
+                    json!({"limit":100,"includeHidden":false,"cursor":cursor}),
+                )
+                .await?;
+            models.extend(parse_models(&page)?);
+            cursor = page["nextCursor"].as_str().map(str::to_owned);
+            let Some(next) = &cursor else {
+                return Ok(models);
+            };
+            if !cursors.insert(next.clone()) || cursors.len() >= 100 {
+                bail!("Codex model catalog pagination did not finish");
+            }
+        }
     }
     pub async fn turn(
         &mut self,
@@ -192,11 +198,18 @@ impl Rpc {
     ) -> Result<(String, String)> {
         let TurnRequest {
             cwd,
-            model,
+            preference,
             instructions,
             prompt,
             schema,
         } = request;
+        let models = self.models().await?;
+        let selected = crate::models::validate_preference(preference, &models)?;
+        let model = preference.model.as_str();
+        let effort = preference
+            .reasoning_effort
+            .as_deref()
+            .or(selected.default_reasoning_effort.as_deref());
         let config = self
             .request("config/read", json!({"includeLayers":false}))
             .await?;
@@ -214,12 +227,13 @@ impl Rpc {
             .as_str()
             .context("Codex returned no thread ID")?
             .to_string();
-        let chosen = thread["model"]
-            .as_str()
-            .or(model)
-            .unwrap_or("default")
-            .to_string();
-        let mut params = json!({"threadId":thread_id,"input":[{"type":"text","text":prompt}],"sandboxPolicy":{"type":"readOnly","networkAccess":false},"approvalPolicy":"never","effort":"medium"});
+        let chosen = thread["model"].as_str().unwrap_or(model).to_string();
+        if chosen != model {
+            bail!(
+                "Codex selected {chosen} instead of {model}. Refresh Model settings before trying again."
+            );
+        }
+        let mut params = json!({"threadId":thread_id,"input":[{"type":"text","text":prompt}],"sandboxPolicy":{"type":"readOnly","networkAccess":false},"approvalPolicy":"never","effort":effort});
         if let Some(schema) = schema {
             params["outputSchema"] = schema;
         }
@@ -280,4 +294,130 @@ pub async fn connection(settings: &Settings, cwd: &Path) -> Result<(Connection, 
         },
         models,
     ))
+}
+
+fn parse_models(page: &Value) -> Result<Vec<Model>> {
+    Ok(page["data"]
+        .as_array()
+        .context("Codex returned no model catalog")?
+        .iter()
+        .filter(|v| v["hidden"].as_bool() != Some(true))
+        .filter_map(|v| {
+            let id = v["model"].as_str().or_else(|| v["id"].as_str())?;
+            if id.is_empty() {
+                return None;
+            }
+            Some(Model {
+                id: id.into(),
+                name: v["displayName"]
+                    .as_str()
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or(id)
+                    .into(),
+                is_default: v["isDefault"].as_bool().unwrap_or(false),
+                description: v["description"].as_str().unwrap_or("").into(),
+                default_reasoning_effort: v["defaultReasoningEffort"].as_str().map(str::to_owned),
+                reasoning_efforts: v["supportedReasoningEfforts"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|option| {
+                        Some(ReasoningOption {
+                            effort: option["reasoningEffort"]
+                                .as_str()
+                                .filter(|s| !s.is_empty())?
+                                .into(),
+                            description: option["description"].as_str().unwrap_or("").into(),
+                        })
+                    })
+                    .collect(),
+            })
+        })
+        .collect())
+}
+
+#[cfg(all(test, unix))]
+pub(crate) fn fake_binary(root: &Path) -> String {
+    use std::os::unix::fs::PermissionsExt;
+    let path = root.join("codex-fixture");
+    std::fs::write(
+        &path,
+        include_str!("../../../../tests/fixtures/codex-models.py"),
+    )
+    .unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+    path.to_string_lossy().into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn catalog_keeps_advertised_efforts_and_skips_hidden_or_invalid_models() {
+        let models = parse_models(&json!({"data":[
+            {"model":"visible", "supportedReasoningEfforts":[{"reasoningEffort":"future-effort","description":"New level"}]},
+            {"model":"hidden", "hidden":true}, {"model":""}, {}
+        ]})).unwrap();
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].name, "visible");
+        assert_eq!(models[0].reasoning_efforts[0].effort, "future-effort");
+        assert!(models[0].default_reasoning_effort.is_none());
+        assert!(parse_models(&json!({})).is_err());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn selected_model_and_effort_reach_codex_after_catalog_pagination() {
+        let root = tempfile::tempdir().unwrap();
+        let binary = fake_binary(root.path());
+        for preference in [
+            ModelPreference::default(),
+            ModelPreference {
+                model: "gpt-6-luna".into(),
+                reasoning_effort: Some("low".into()),
+                ..ModelPreference::default()
+            },
+        ] {
+            let mut rpc = Rpc::spawn(&binary, root.path()).await.unwrap();
+            let (_tx, rx) = watch::channel(false);
+            let (answer, model) = rpc
+                .turn(
+                    TurnRequest {
+                        cwd: root.path(),
+                        preference: &preference,
+                        instructions: "Fixture",
+                        prompt: "Fixture",
+                        schema: None,
+                    },
+                    rx,
+                    |_, _| {},
+                )
+                .await
+                .unwrap();
+            assert_eq!(answer, "Fixture answer");
+            assert_eq!(model, preference.model);
+            let requests: Vec<Value> = std::fs::read_to_string(root.path().join("requests.jsonl"))
+                .unwrap()
+                .lines()
+                .map(|line| serde_json::from_str(line).unwrap())
+                .collect();
+            let thread = requests
+                .iter()
+                .rfind(|r| r["method"] == "thread/start")
+                .unwrap();
+            let turn = requests
+                .iter()
+                .rfind(|r| r["method"] == "turn/start")
+                .unwrap();
+            assert_eq!(thread["params"]["model"], preference.model);
+            assert_eq!(
+                turn["params"]["effort"],
+                preference.reasoning_effort.unwrap()
+            );
+            assert_eq!(turn["params"]["approvalPolicy"], "never");
+            assert_eq!(turn["params"]["sandboxPolicy"]["type"], "readOnly");
+            assert!(requests.iter().any(|r| r["params"]["cursor"] == "next"));
+        }
+    }
 }

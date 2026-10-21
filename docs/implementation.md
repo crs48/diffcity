@@ -275,3 +275,24 @@ Cards show the full repo identity, author, source/target branch, and localized r
 - [x] Production WebKit verifies all six color families, merged/closed icons, keyboard pinning and restored focus, search, narrow layout, and light/dark axe WCAG A/AA checks. The 23 local inbox samples now include varied status combinations.
 - [x] The installed production app displays live check and merge badges in the organization inbox, with purple merged and red closed icons verified in sample History. All eight original notes remain byte-for-byte unchanged at schema 3.
 - [x] [Rich-card CI](https://github.com/crs48/diffcity/actions/runs/39646986589) passes on `3a57306`. The installed executable matches the packaged build, SHA-256 `efcb39111ddab0c913b4b8e2b93936b221eb4f6330eeb39013d9be3b46f628d7`.
+
+
+## Default model and reasoning
+
+The **Model** tab in the account rail opens an accessible selector for the default provider, model, and reasoning choice. Codex is the first supported provider. New or previously unselected installs default to `gpt-6-astra` with `xhigh` reasoning; legacy explicit model choices retain their previous Medium reasoning until changed.
+
+```mermaid
+flowchart LR
+  Catalog[Local Codex model/list] --> Picker[Model and supported reasoning levels]
+  Picker --> Saved[Independent SQLite model preference]
+  Saved --> Run[Capture choice when request starts]
+  Run --> Validate[Validate against current catalog]
+  Validate --> Guide[Guided review]
+  Validate --> Chat[Inline replies and PR chat]
+```
+
+The provider/model/effort preference has a dedicated document and command, so connection or appearance saves cannot overwrite it. Codex config files remain untouched. The [Codex App Server model catalog](https://learn.chatgpt.com/docs/app-server#list-models-modellist) supplies model descriptions, supported reasoning levels, defaults, and pagination. Both saving and running validate the choice; unsupported combinations fail explicitly. Switching models preserves a compatible reasoning choice, otherwise selects the advertised default and announces the adjustment. A model-default reasoning choice follows the selected model. Changes apply to the next request, preserving active runs.
+
+- [x] 61 Rust tests and 52 frontend tests pass. Coverage includes legacy defaults, independent persistence, failed saves, catalog pagination, the actual model/effort sent to Codex, unsupported choices, and accessible picker interactions. Type checking, ESLint, Clippy, and formatting pass.
+- [x] Live Codex discovery returns seven models and confirms Astra/Extra high. An isolated smoke run persists the selection across restart, produces a three-section guided review, and answers a sample PR question using the saved default.
+- [x] Production WebKit checks model switching, effort adjustment, failed-save recovery, refresh, persistence, Escape/focus return, narrow layout, and light/dark axe WCAG A/AA. The multiline discussion regression uses user paste events for longer comments to avoid per-character timing sensitivity while retaining focus, anchoring, and mirroring assertions.

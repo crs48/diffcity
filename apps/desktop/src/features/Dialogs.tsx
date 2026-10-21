@@ -99,23 +99,6 @@ export function Connections({
           />
         </label>
         <label>
-          {t("Review model")}{" "}
-          <select
-            value={settings.model ?? ""}
-            onChange={(e) =>
-              setSettings({ ...settings, model: e.target.value || null })
-            }
-          >
-            <option value="">{t("Codex account default")} </option>
-            {data.models.map((m) => (
-              <option value={m.id} key={m.id}>
-                {m.name}
-                {m.isDefault ? " · default" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
           {t("Language")}{" "}
           <select
             value={settings.locale || "en"}

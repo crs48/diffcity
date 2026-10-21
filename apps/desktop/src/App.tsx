@@ -48,6 +48,8 @@ import { ConversationContext } from "./features/conversation";
 import { useNoteComposer } from "./features/useNoteComposer";
 import { Connections, Finish } from "./features/Dialogs";
 import { DisplaySettings } from "./features/DisplaySettings";
+import { ModelSettings } from "./features/ModelSettings";
+import { defaultModelPreference } from "./lib/models";
 import { AccountNavigation, RepoFilter } from "./features/AccountNavigation";
 import { PullList } from "./features/PullList";
 import {
@@ -100,7 +102,7 @@ export default function App() {
   const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
   const [dialog, setDialog] = useState<
-    "connections" | "finish" | "display" | null
+    "connections" | "finish" | "display" | "model" | null
   >(null);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting your workspace…");
@@ -638,6 +640,8 @@ export default function App() {
         onSamples={() => void exploreInbox()}
         onExample={() => void sample()}
         onConnections={() => setDialog("connections")}
+        onModel={() => setDialog("model")}
+        modelOpen={dialog === "model"}
       />
       {inboxVisible && (
         <aside className="inbox-pane" aria-label={t("Pull request inbox")}>
@@ -1254,6 +1258,33 @@ export default function App() {
               current ? { ...current, settings } : current,
             );
             if (data.github.connected) await refresh();
+          }}
+        />
+      )}
+      {dialog === "model" && data && (
+        <ModelSettings
+          preference={data.modelPreference ?? defaultModelPreference}
+          models={data.models}
+          connection={data.codex}
+          onClose={() => setDialog(null)}
+          onRefresh={async () => {
+            const catalog = await api.models();
+            setData((current) =>
+              current
+                ? {
+                    ...current,
+                    codex: catalog.connection,
+                    models: catalog.models,
+                  }
+                : current,
+            );
+            return catalog;
+          }}
+          onSave={async (preference) => {
+            const modelPreference = await api.modelPreference(preference);
+            setData((current) =>
+              current ? { ...current, modelPreference } : current,
+            );
           }}
         />
       )}

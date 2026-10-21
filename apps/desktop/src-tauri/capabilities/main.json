@@ -9,6 +9,8 @@
     "allow-list-pull-history",
     "allow-refresh-directory",
     "allow-save-settings",
+    "allow-model-catalog",
+    "allow-save-model-preference",
     "allow-pin-repository",
     "allow-pin-pull",
     "allow-open-pull",

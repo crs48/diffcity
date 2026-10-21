@@ -68,6 +68,11 @@ beforeEach(() => {
             detail: "Offline fixture",
           },
           models: [],
+          modelPreference: {
+            provider: "codex",
+            model: "gpt-6-astra",
+            reasoningEffort: "xhigh",
+          },
           pulls: [],
           pins: { repositories: [], pulls: [] },
           directory: {

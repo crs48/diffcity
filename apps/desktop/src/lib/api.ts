@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Bootstrap,
+  ModelCatalog,
+  ModelPreference,
   Pins,
   Settings,
   RepositoryDirectory,
@@ -17,6 +19,9 @@ import type {
 export type * from "../../../../packages/contracts/src";
 export const api = {
   bootstrap: () => invoke<Bootstrap>("bootstrap"),
+  models: () => invoke<ModelCatalog>("model_catalog"),
+  modelPreference: (preference: ModelPreference) =>
+    invoke<ModelPreference>("save_model_preference", { preference }),
   inbox: () => invoke<InboxResult>("refresh_inbox"),
   history: (repository: string | null, page = 1, owner: string | null = null) =>
     invoke<PullPage>("list_pull_history", { repository, page, owner }),

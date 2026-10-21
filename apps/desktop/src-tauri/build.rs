@@ -6,6 +6,8 @@ fn main() {
             "list_pull_history",
             "refresh_directory",
             "save_settings",
+            "model_catalog",
+            "save_model_preference",
             "pin_repository",
             "pin_pull",
             "open_pull",
