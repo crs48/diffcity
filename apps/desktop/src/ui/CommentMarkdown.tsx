@@ -80,7 +80,7 @@ function commentMarkup({ prefix, task }: { prefix: string; task: string }) {
 
 export const CommentMarkdown = memo(function CommentMarkdown({
   body,
-  diagrams = false,
+  diagrams = true,
 }: {
   body: string;
   diagrams?: boolean;

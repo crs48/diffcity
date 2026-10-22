@@ -15,6 +15,12 @@ import { api, type Note, type ReviewWorkspace } from "../lib/api";
 import fixture from "../../../../tests/fixtures/review-workspace.json";
 import "../i18n";
 
+vi.mock("./MermaidDiagram", () => ({
+  MermaidDiagram: ({ source }: { source: string }) => (
+    <figure aria-label="Code diagram">{source}</figure>
+  ),
+}));
+
 const body = `## Review findings
 
 First line
@@ -238,3 +244,99 @@ describe("GitHub flavored comment Markdown", () => {
     ).toBe("SELECT *\n");
   });
 });
+
+it.each([false, true])(
+  "renders local and GitHub comment diagrams with inline=%s, deferring live replies until complete",
+  async (inline) => {
+    const workspace = structuredClone(fixture) as ReviewWorkspace;
+    const body = "```mermaid\nflowchart TD\n A --> B\n```";
+    const question: Note = {
+      id: "question",
+      snapshotId: workspace.snapshot.id,
+      role: "user",
+      body,
+      anchor: null,
+      parentId: null,
+      githubDraft: false,
+      publishedUrl: null,
+      createdAt: "2026-10-22T00:00:00Z",
+    };
+    const answer: Note = {
+      ...question,
+      id: "answer",
+      role: "assistant",
+      parentId: question.id,
+    };
+    const conversation = {
+      workspace,
+      isBusy: () => true,
+      runs: [
+        {
+          id: "run",
+          snapshotId: question.snapshotId,
+          kind: "question",
+          question,
+          preference: {
+            provider: "claude",
+            model: "claude-fable-5",
+            reasoningEffort: "high",
+          },
+          phase: "working",
+          text: "Responding…",
+          stream: "```mermaid\nflowchart LR\n C -->",
+        },
+      ],
+    } as unknown as Conversation;
+    const remote = {
+      id: "github",
+      author: "reviewer",
+      body,
+      path: null,
+      line: null,
+      side: null,
+      commit: null,
+      url: "https://github.com/crs48/diffcity/pull/2#issuecomment-1",
+      createdAt: "2026-10-22T00:01:00Z",
+    };
+    const { container, rerender } = render(
+      <ReviewMessages
+        notes={[question, answer]}
+        remote={[remote]}
+        conversation={conversation}
+        inline={inline}
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("figure", { name: "Code diagram" }),
+      ).toHaveLength(3),
+    );
+    expect(container.querySelector(".streaming pre code")?.textContent).toBe(
+      "flowchart LR\n C -->\n",
+    );
+    const completed = {
+      ...answer,
+      id: "completed",
+      body: "```mermaid\nflowchart LR\n C --> D\n```",
+    };
+    rerender(
+      <ReviewMessages
+        notes={[question, answer, completed]}
+        remote={[remote]}
+        conversation={{ ...conversation, runs: [] }}
+        inline={inline}
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("figure", { name: "Code diagram" }),
+      ).toHaveLength(4),
+    );
+    expect(
+      screen.getAllByRole("figure", { name: "Code diagram" }).at(-2)
+        ?.textContent,
+    ).toBe("flowchart LR\n C --> D");
+    expect(question.body).toBe(body);
+    expect(remote.body).toBe(body);
+  },
+);

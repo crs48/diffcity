@@ -185,7 +185,9 @@ function RunReply({
           {t(run.phase === "cancelled" ? "Cancelled" : run.text)}
         </span>
       </div>
-      {run.stream && <CommentMarkdown body={run.stream} />}
+      {run.stream && (
+        <CommentMarkdown body={run.stream} diagrams={!isActiveRun(run)} />
+      )}
       <Button
         className="text-button"
         isDisabled={run.phase === "cancelling"}

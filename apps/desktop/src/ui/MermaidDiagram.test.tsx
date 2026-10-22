@@ -11,16 +11,14 @@ afterEach(() => {
   delete document.documentElement.dataset.theme;
 });
 
-it("renders opted-in fences, preserves ordinary code, and adapts to theme changes", async () => {
+it("renders fences by default, preserves ordinary code, and adapts to theme changes", async () => {
   vi.mocked(renderDiagram).mockResolvedValue({
     url: "data:image/svg+xml,<svg/>",
     description: "Request enters the store",
   });
   const body =
     "```mermaid\nflowchart TD\n A --> B\n```\n\n```ts\nconst x = 1\n```";
-  const { container, rerender } = render(
-    <CommentMarkdown body={body} diagrams />,
-  );
+  const { container, rerender } = render(<CommentMarkdown body={body} />);
   await screen.findByRole("img", { name: "Request enters the store" });
   expect(container.querySelector("pre code.language-ts")).toBeTruthy();
   expect(container.querySelector("pre figure")).toBeNull();
@@ -37,7 +35,7 @@ it("renders opted-in fences, preserves ordinary code, and adapts to theme change
       true,
     ),
   );
-  rerender(<CommentMarkdown body={body} />);
+  rerender(<CommentMarkdown body={body} diagrams={false} />);
   expect(screen.queryByRole("img")).toBeNull();
   expect(container.querySelector("code.language-mermaid")).toBeTruthy();
 });

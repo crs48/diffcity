@@ -10,7 +10,7 @@ export function renderDiagram(source: string, dark: boolean) {
   const cached = cache.get(key);
   if (cached) return cached;
   const result = queue.then(async () => {
-    // Guides are data, not renderer configuration or external resource requests.
+    // Markdown is data, not renderer configuration or external resource requests.
     if (
       source.length > 20_000 ||
       /^\s*---|%%\{|<\/?(?:script|img|image|iframe|style|link|object|foreignObject)\b|@\s*import|url\s*\(|@\{[^}]*\b(?:img|icon)\s*:/im.test(
