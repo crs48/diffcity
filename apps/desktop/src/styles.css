@@ -2715,20 +2715,10 @@
 
 @layer components {
   .inbox-scope {
-    display: flex;
-    gap: 4px;
-    padding: 8px 14px;
+    margin: 8px 14px;
   }
   .scope-button {
     flex: 1;
-    padding: 7px 10px;
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    background: var(--surface);
-  }
-  .scope-button[aria-pressed="true"] {
-    background: var(--text);
-    color: var(--bg);
   }
   .history-status {
     padding: 10px 16px;
@@ -3476,7 +3466,8 @@
 .review-scope-toolbar {
   justify-content: space-between;
 }
-.review-scope-options {
+.review-scope-options,
+.inbox-scope {
   display: flex;
   gap: 2px;
   padding: 3px;
@@ -3484,7 +3475,8 @@
   background: var(--bg);
   border: 1px solid var(--border);
 }
-.review-scope-options button {
+.review-scope-options button,
+.inbox-scope button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3496,13 +3488,15 @@
   color: var(--muted);
   font-size: 12px;
 }
-.review-scope-options button[aria-pressed="true"] {
+.review-scope-options button[aria-pressed="true"],
+.inbox-scope button[aria-pressed="true"] {
   color: var(--text);
   background: var(--surface);
   box-shadow: 0 1px 3px #0002;
   font-weight: 650;
 }
-.review-scope-options button[disabled] {
+.review-scope-options button[disabled],
+.inbox-scope button[disabled] {
   opacity: 0.55;
 }
 .review-scope-detail {
