@@ -505,7 +505,7 @@ The installed production executable matches the packaged bundle (SHA-256: `264d3
 
 Consecutive hunks from the same file share one sticky title and collapse control in Guide and Files. The guide's order is preserved, including intentional revisits to a file in separate chapters. A fresh line-selection request reopens its file. Collapsing while deep inside a file keeps the header reachable, and the next header replaces it when the previous file leaves the viewport.
 
-A single bounded canvas in a separate right rail represents the active file's captured diff and expanded context. It appears only when that file is taller than the viewport. Green, red, and neutral bands summarize additions, deletions, and unchanged code; unloaded source is not invented. Drawing happens when the active file, theme, or canvas dimensions change. Ordinary scrolling updates only the viewport marker and accessible slider value, without painting the canvas or rerendering the review document. A layout registry handles source registration and context changes without scanning thousands of mounted rows each frame.
+A single bounded canvas overlays the editor's right edge and represents the active file's captured diff and expanded context. It appears only when that file is taller than the viewport. Green, red, and neutral bands summarize additions, deletions, and unchanged code; unloaded source is not invented. Drawing happens when the active file, theme, or canvas dimensions change. Ordinary scrolling updates only the viewport marker and accessible slider value, without painting the canvas or rerendering the review document. A layout registry handles source registration and context changes without scanning thousands of mounted rows each frame.
 
 ```mermaid
 flowchart LR
@@ -541,3 +541,11 @@ Selected ranges show one gutter comment button on their last line. Earlier selec
 - [x] Production WebKit verifies one final-row button, preserved full-range discussion anchors, and stable gutter alignment in unified and split views.
 - [x] Native verification selects lines 360–366 in `policies-0.ts`: only line 366 has a range-comment icon, and its inline editor identifies the full range. The empty test composer is closed without saving a note or publishing a comment.
 - [x] [CI passes on cfcf1a8](https://github.com/crs48/diffcity/actions/runs/39704448989), including 76 Rust and 92 frontend tests, generated contracts, formatting, types, lint, Clippy, and desktop packaging.
+
+## Minimap overlay and horizontal clearance
+
+The minimap is absolutely positioned inside the review canvas, below the sticky file title and inset from the viewport scrollbars. It no longer consumes a flex column or changes code width/wrapping when it appears. Only the visible map receives pointer events. The review panel keeps a fixed content width and adds end padding outside that content box: 108 px on desktop, 64 px in narrow windows. This provides horizontal panning room beneath the overlay using the existing review scrollbar. Inline scroll padding reveals focused controls without a nested scroller.
+
+- [x] Production WebKit verifies identical editor and file widths with/without the map, horizontal clearance, and no nested or window-level overflow in unified/split views at 1440 px and 720 px.
+- [x] Click, drag, keyboard navigation, sticky titles, collapse, hiding for short files, and zero canvas repaints during ordinary scrolling still pass. Light/dark/narrow axe WCAG A/AA checks pass; focusing an inline close control pans it clear of the overlay.
+- [ ] Install and verify the overlay in the native app, preserving private notes and saved preferences.

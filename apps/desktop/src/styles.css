@@ -919,27 +919,47 @@
     overflow: auto;
     overscroll-behavior: contain;
     scroll-padding-top: 64px;
+    scroll-padding-inline-end: var(--minimap-clearance);
   }
   .review-canvas {
+    --minimap-width: 92px;
+    --minimap-clearance: 0px;
+    position: relative;
     display: flex;
     flex: 1;
     min-width: 0;
     min-height: 0;
   }
+  .review-canvas:has(.file-minimap) {
+    --minimap-clearance: calc(var(--minimap-width) + 16px);
+  }
+  .review-canvas .review-panel {
+    /* Keep the content box unchanged; padding supplies panning room beneath
+       the overlay without shrinking code or adding another scroll container. */
+    box-sizing: content-box;
+    width: 100%;
+    padding-inline-end: var(--minimap-clearance);
+  }
   #review-minimap-host {
-    flex: 0 0 auto;
+    position: absolute;
+    inset: 56px 12px 18px auto;
+    z-index: 4;
+    width: var(--minimap-width);
     min-height: 0;
+    pointer-events: none;
   }
   .file-minimap {
-    width: 92px;
+    width: 100%;
     height: 100%;
     max-height: 660px;
     padding: 10px 8px 16px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    border-left: 1px solid var(--border);
-    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    pointer-events: auto;
   }
   .minimap-label {
     font-size: 10px;
@@ -977,8 +997,10 @@
     will-change: transform;
   }
   @media (max-width: 900px) {
+    .review-canvas {
+      --minimap-width: 48px;
+    }
     .file-minimap {
-      width: 48px;
       padding-inline: 6px;
     }
   }
