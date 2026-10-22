@@ -24,11 +24,11 @@ pub fn validate_preference<'a>(
     preference: &ModelPreference,
     models: &'a [Model],
 ) -> Result<&'a Model> {
-    if preference.provider != "codex" {
-        bail!("This version supports Codex. Choose Codex in Model settings.");
+    if !matches!(preference.provider.as_str(), "codex" | "claude") {
+        bail!("Choose Codex or Claude in Model settings.");
     }
     let model = models.iter().find(|m| m.id == preference.model)
-        .with_context(|| format!("{} is not available through your local Codex. Refresh the models or choose another model in Model settings.", preference.model))?;
+        .with_context(|| format!("{} is not available through this provider. Refresh the models or choose another model in Model settings.", preference.model))?;
     if let Some(effort) = &preference.reasoning_effort
         && !model
             .reasoning_efforts
@@ -45,11 +45,16 @@ pub fn validate_preference<'a>(
 
 impl Service {
     pub async fn model_catalog(&self) -> Result<ModelCatalog> {
-        let (connection, models) = codex::connection(
-            &self.store.settings()?,
-            &self.store.directory.join("review-context"),
-        )
-        .await?;
+        self.provider_catalog("codex").await
+    }
+    pub async fn provider_catalog(&self, provider: &str) -> Result<ModelCatalog> {
+        let settings = self.store.settings()?;
+        let directory = self.store.directory.join("review-context");
+        let (connection, models) = match provider {
+            "codex" => codex::connection(&settings, &directory).await?,
+            "claude" => crate::claude::connection(&settings, &directory).await?,
+            _ => bail!("Unknown AI provider"),
+        };
         Ok(ModelCatalog { connection, models })
     }
 
@@ -57,7 +62,7 @@ impl Service {
         &self,
         preference: ModelPreference,
     ) -> Result<ModelPreference> {
-        let catalog = self.model_catalog().await?;
+        let catalog = self.provider_catalog(&preference.provider).await?;
         validate_preference(&preference, &catalog.models)?;
         self.store.put("model-preference", "main", &preference)?;
         Ok(preference)

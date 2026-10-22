@@ -90,8 +90,14 @@ pub fn save_settings(service: State<'_, Arc<Service>>, settings: Settings) -> Ou
     service.settings(settings).map_err(error)
 }
 #[tauri::command]
-pub async fn model_catalog(service: State<'_, Arc<Service>>) -> Output<ModelCatalog> {
-    service.model_catalog().await.map_err(error)
+pub async fn model_catalog(
+    service: State<'_, Arc<Service>>,
+    provider: Option<String>,
+) -> Output<ModelCatalog> {
+    service
+        .provider_catalog(provider.as_deref().unwrap_or("codex"))
+        .await
+        .map_err(error)
 }
 #[tauri::command]
 pub async fn save_model_preference(
@@ -190,9 +196,10 @@ pub async fn analyze(
     app: tauri::AppHandle,
     snapshot_id: String,
     run_id: String,
+    preference: Option<ModelPreference>,
 ) -> Output<Guide> {
     service
-        .analyze(&snapshot_id, &run_id, emitter(app))
+        .analyze_with_preference(&snapshot_id, &run_id, preference, emitter(app))
         .await
         .map_err(error)
 }
@@ -237,11 +244,7 @@ pub fn sample_review(service: State<'_, Arc<Service>>) -> Output<ReviewWorkspace
         .store
         .put("snapshot", &snapshot.id, &snapshot)
         .map_err(error)?;
-    let guide = service
-        .store
-        .get("guide", &snapshot.id)
-        .map_err(error)?
-        .unwrap_or(sample);
+    let guide = service.store.current_guide(sample).map_err(error)?;
     Ok(ReviewWorkspace {
         notes: service.store.notes(&snapshot.id).map_err(error)?,
         progress: service
@@ -311,4 +314,20 @@ mod external_link_tests {
             assert!(external_web_url(url).is_err(), "{url}");
         }
     }
+}
+
+#[tauri::command]
+pub fn guide_versions(
+    service: State<'_, Arc<Service>>,
+    snapshot_id: String,
+) -> Output<Vec<GuideVersion>> {
+    service.guide_versions(&snapshot_id).map_err(error)
+}
+#[tauri::command]
+pub fn select_guide(
+    service: State<'_, Arc<Service>>,
+    snapshot_id: String,
+    guide_id: String,
+) -> Output<ReviewWorkspace> {
+    service.select_guide(&snapshot_id, &guide_id).map_err(error)
 }

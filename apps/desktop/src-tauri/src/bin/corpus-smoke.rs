@@ -158,7 +158,7 @@ async fn main() -> Result<()> {
                 start_line: 2,
                 line: 3,
             };
-            let question = service.save_note(Note { id: String::new(), snapshot_id: id.clone(), anchor: Some(anchor.clone()), body: "Explain the existing-row and data-loss risks of these two lines. What safe rollout would you use?".into(), role: "user".into(), parent_id: None, github_draft: false, published_url: None, created_at: String::new() })?;
+            let question = service.save_note(Note { model: None, id: String::new(), snapshot_id: id.clone(), anchor: Some(anchor.clone()), body: "Explain the existing-row and data-loss risks of these two lines. What safe rollout would you use?".into(), role: "user".into(), parent_id: None, github_draft: false, published_url: None, created_at: String::new() })?;
             let answer = service
                 .ask(
                     &id,

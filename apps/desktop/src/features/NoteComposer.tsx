@@ -54,15 +54,15 @@ export function NoteComposer({
           textOnly
             ? t("Follow-up about selected code")
             : inline
-              ? t("Inline comment or Codex question")
-              : t("Message to Codex about this PR")
+              ? t("Inline comment or AI question")
+              : t("Message to AI about this PR")
         }
         placeholder={
           textOnly
             ? t("Ask a follow-up about this selection…")
             : inline
-              ? t("Comment on this code or ask Codex…")
-              : t("Discuss this PR with Codex…")
+              ? t("Comment on this code or ask AI…")
+              : t("Discuss this PR with AI…")
         }
         value={state.draft.body}
         onChange={(e) => state.change(e.target.value)}
@@ -78,7 +78,7 @@ export function NoteComposer({
         ) : editing ? (
           t("GitHub draft · not published")
         ) : (
-          t("Private · shared with this PR’s Codex conversation")
+          t("Private · shared with this PR’s AI conversation")
         )}
       </div>
       <div className="composer-actions">
@@ -97,7 +97,7 @@ export function NoteComposer({
           onPress={() => void state.submit(onAsk).catch(onError)}
         >
           <Send size={13} />
-          {t("Ask Codex")}{" "}
+          {t("Ask AI")}{" "}
         </Button>
       </div>
     </div>

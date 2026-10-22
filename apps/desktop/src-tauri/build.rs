@@ -23,6 +23,8 @@ fn main() {
             "delete_note",
             "save_progress",
             "analyze",
+            "guide_versions",
+            "select_guide",
             "ask_codex",
             "cancel_codex",
             "publish_review",

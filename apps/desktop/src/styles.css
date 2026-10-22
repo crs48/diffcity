@@ -3227,3 +3227,37 @@
 .inline-thread > .selection-quote {
   margin: 10px 14px;
 }
+
+/* A compact saved-guide picker stays outside the shared review scroller. */
+.guide-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+  flex-shrink: 0;
+}
+.guide-switcher label {
+  min-width: 0;
+  flex: 1;
+}
+.guide-switcher select {
+  width: 100%;
+  max-width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+.guide-count {
+  white-space: nowrap;
+  font-size: 11px;
+}
+@media (max-width: 760px) {
+  .guide-count {
+    display: none;
+  }
+  .guide-switcher {
+    padding-inline: 10px;
+  }
+}

@@ -40,6 +40,7 @@ import {
   type Anchor,
   type Bootstrap,
   type Guide,
+  type ModelPreference,
   type Note,
   type PullRequest,
   type ReviewProgress,
@@ -57,6 +58,7 @@ import { ConversationContext } from "./features/conversation";
 import { useNoteComposer } from "./features/useNoteComposer";
 import { Connections, Finish } from "./features/Dialogs";
 import { DisplaySettings } from "./features/DisplaySettings";
+import { GuideSwitcher } from "./features/GuideSwitcher";
 import { ModelSettings } from "./features/ModelSettings";
 import { defaultModelPreference } from "./lib/models";
 import { AccountNavigation, RepoFilter } from "./features/AccountNavigation";
@@ -117,7 +119,7 @@ export default function App() {
     if (reviewScroll.current) reviewScroll.current.scrollTop = 0;
   }, [mode, workspace?.snapshot.id]);
   const [dialog, setDialog] = useState<
-    "connections" | "finish" | "display" | "model" | null
+    "connections" | "finish" | "display" | "model" | "new-guide" | null
   >(null);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting your workspace…");
@@ -580,21 +582,52 @@ export default function App() {
       setDiscussion(true);
     }
   };
+  const guideSelection = useRef(false);
+  const [guideChanging, setGuideChanging] = useState(false);
+  const progressWrites = useRef<Promise<unknown>>(Promise.resolve());
   const progress = (p: ReviewProgress) => {
-    if (!workspace) return;
+    if (!workspace || guideSelection.current) return;
     setWorkspace((w) => (w ? { ...w, progress: p } : w));
-    void api.progress(workspace.snapshot.id, p).catch(onError);
+    progressWrites.current = progressWrites.current
+      .then(() => api.progress(workspace.snapshot.id, p))
+      .catch(onError);
   };
-  const analyze = async () => {
+  const selectGuide = async (guideId: string) => {
+    if (!workspace || guideSelection.current) return;
+    const snapshotId = workspace.snapshot.id;
+    guideSelection.current = true;
+    setGuideChanging(true);
+    try {
+      await flush();
+      await progressWrites.current;
+      const selected = await api.selectGuide(snapshotId, guideId);
+      if (current.current?.snapshot.id !== snapshotId) return;
+      setWorkspace((w) =>
+        w?.snapshot.id === snapshotId
+          ? { ...w, guide: selected.guide, progress: selected.progress }
+          : w,
+      );
+      setMode("guide");
+      if (pendingGuide?.id === guideId) setPendingGuide(null);
+    } finally {
+      guideSelection.current = false;
+      setGuideChanging(false);
+    }
+  };
+  const refreshModels = useCallback(
+    (provider: string) => api.models(provider),
+    [],
+  );
+  const analyze = async (preference: ModelPreference) => {
     if (!workspace) return;
     const id = crypto.randomUUID();
     setRun(id);
-    setRunText("Starting Codex review…");
+    setRunText(`Starting ${preference.model} review…`);
     setStream("");
     setError("");
     try {
       await flush();
-      const guide = await api.analyze(workspace.snapshot.id, id);
+      const guide = await api.analyze(workspace.snapshot.id, id, preference);
       if (current.current?.snapshot.id === guide.snapshotId)
         setPendingGuide(guide);
     } catch (e) {
@@ -608,7 +641,7 @@ export default function App() {
     setRun(id);
     setActiveQuestion(note);
     setStream("");
-    setRunText("Asking Codex…");
+    setRunText("Asking your AI agent…");
     setError("");
     try {
       await flush();
@@ -1091,8 +1124,8 @@ export default function App() {
               key={`${workspace.snapshot.id}/${mode}`}
               workspace={workspace}
               viewport={reviewScroll}
-              disabled={loading || !!run || !data?.codex.connected}
-              onAnalyze={() => void analyze()}
+              disabled={loading || guideChanging || !!run || !data}
+              onAnalyze={() => setDialog("new-guide")}
             />
             <div className="workspace-tabs">
               <TabList aria-label={t("Review views")}>
@@ -1135,6 +1168,15 @@ export default function App() {
                 {t("PR chat")} <span>{workspace.notes.length}</span>
               </Button>
             </div>
+            {mode === "guide" && (
+              <GuideSwitcher
+                key={workspace.snapshot.id}
+                guide={workspace.guide}
+                pendingId={pendingGuide?.id}
+                disabled={loading || guideChanging || !!run}
+                onSelect={selectGuide}
+              />
+            )}
             {run && (
               <div className="run-banner">
                 <LoaderCircle size={14} className="spin" />
@@ -1152,21 +1194,10 @@ export default function App() {
                 <Sparkles size={15} />
                 <span>{t("Your guided review is ready.")} </span>
                 <Button
+                  isDisabled={guideChanging || !!run}
                   onPress={() => {
-                    const nextProgress = {
-                      ...workspace.progress,
-                      activeSection: null,
-                    };
-                    setWorkspace({
-                      ...workspace,
-                      guide: pendingGuide,
-                      progress: nextProgress,
-                    });
-                    void api
-                      .progress(workspace.snapshot.id, nextProgress)
-                      .catch(onError);
-                    setMode("guide");
-                    setPendingGuide(null);
+                    if (pendingGuide.id)
+                      void selectGuide(pendingGuide.id).catch(onError);
                   }}
                 >
                   {t("Open updated guide")} <ArrowRight size={13} />
@@ -1223,7 +1254,7 @@ export default function App() {
                         {pull?.state !== "open" && (
                           <div className="history-status">
                             {t(
-                              "Historical review: code, private comments, and Codex are available. GitHub publication requires an open PR.",
+                              "Historical review: code, private comments, and AI chat are available. GitHub publication requires an open PR.",
                             )}
                           </div>
                         )}
@@ -1339,7 +1370,7 @@ export default function App() {
               </span>
               <span>
                 <MessageSquare size={14} />
-                {t("Think alongside Codex")}{" "}
+                {t("Think alongside your AI agent")}{" "}
               </span>
               <span>
                 <Github size={14} />
@@ -1365,33 +1396,27 @@ export default function App() {
           }}
         />
       )}
-      {dialog === "model" && data && (
-        <ModelSettings
-          preference={data.modelPreference ?? defaultModelPreference}
-          models={data.models}
-          connection={data.codex}
-          onClose={() => setDialog(null)}
-          onRefresh={async () => {
-            const catalog = await api.models();
-            setData((current) =>
-              current
-                ? {
-                    ...current,
-                    codex: catalog.connection,
-                    models: catalog.models,
-                  }
-                : current,
-            );
-            return catalog;
-          }}
-          onSave={async (preference) => {
-            const modelPreference = await api.modelPreference(preference);
-            setData((current) =>
-              current ? { ...current, modelPreference } : current,
-            );
-          }}
-        />
-      )}
+      {(dialog === "model" || (dialog === "new-guide" && workspace)) &&
+        data && (
+          <ModelSettings
+            preference={data.modelPreference ?? defaultModelPreference}
+            purpose={dialog === "new-guide" ? "guide" : "default"}
+            models={data.models}
+            connection={data.codex}
+            onClose={() => setDialog(null)}
+            onRefresh={refreshModels}
+            onSave={async (preference) => {
+              if (dialog === "new-guide") {
+                void analyze(preference);
+                return;
+              }
+              const modelPreference = await api.modelPreference(preference);
+              setData((current) =>
+                current ? { ...current, modelPreference } : current,
+              );
+            }}
+          />
+        )}
       {dialog === "connections" && data && (
         <Connections
           data={data}

@@ -408,7 +408,7 @@ describe("multi-line review", () => {
       await screen.findByRole("button", { name: "Comment on lines 1–2" }),
     );
     const composer = screen.getByRole("textbox", {
-      name: "Inline comment or Codex question",
+      name: "Inline comment or AI question",
     });
     await waitFor(() => expect(document.activeElement).toBe(composer));
     await user.paste(
@@ -417,7 +417,7 @@ describe("multi-line review", () => {
     await user.click(screen.getByRole("button", { name: "Save comment" }));
     await user.click(
       await screen.findByRole("button", {
-        name: "Ask Codex about this comment",
+        name: "Ask AI about this comment",
       }),
     );
     const thread = screen.getByRole("region", {
@@ -425,12 +425,12 @@ describe("multi-line review", () => {
     });
     expect(screen.queryByRole("complementary", { name: "PR chat" })).toBeNull();
     expect(
-      within(thread).getByLabelText("Codex response in progress"),
+      within(thread).getByLabelText("AI response in progress"),
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /^PR chat/ }));
     const chat = screen.getByRole("complementary", { name: "PR chat" });
     expect(
-      within(chat).getByLabelText("Codex response in progress"),
+      within(chat).getByLabelText("AI response in progress"),
     ).toBeTruthy();
     expect(asked).toHaveLength(1);
     expect(asked[0].anchor).toMatchObject({
@@ -439,7 +439,7 @@ describe("multi-line review", () => {
       line: 2,
     });
     expect(asked[0].githubDraft).toBe(false);
-    // Changing the selection while Codex is running must not move its response.
+    // Changing the selection while AI is running must not move its response.
     fireEvent.click(first, { detail: 0 });
     reply!({
       ...asked[0],
@@ -485,17 +485,17 @@ describe("multi-line review", () => {
     expect(
       (
         screen.getByRole("textbox", {
-          name: "Inline comment or Codex question",
+          name: "Inline comment or AI question",
         }) as HTMLTextAreaElement
       ).value,
     ).toBe("Keep this unfinished inline thought.");
     await user.click(
       within(chat).getByRole("textbox", {
-        name: "Message to Codex about this PR",
+        name: "Message to AI about this PR",
       }),
     );
     await user.paste("How does that affect the rest of the PR?");
-    await user.click(within(chat).getByRole("button", { name: "Ask Codex" }));
+    await user.click(within(chat).getByRole("button", { name: "Ask AI" }));
     await waitFor(() => expect(asked).toHaveLength(2));
     expect(asked[1].anchor).toBeNull();
     reply!({
@@ -523,7 +523,7 @@ describe("multi-line review", () => {
     );
     expect(
       within(screen.getByRole("dialog", { name: "Finish review" })).getByText(
-        "No drafts selected. Private notes and Codex conversations are not included.",
+        "No drafts selected. Private notes and AI conversations are not included.",
       ),
     ).toBeTruthy();
   });

@@ -99,7 +99,7 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
               className="text-button inline-reply"
               onPress={() => c.openInline(thread.anchor)}
             >
-              {t("Reply or ask Codex")}{" "}
+              {t("Reply or ask AI")}{" "}
             </Button>
           )}
         </>

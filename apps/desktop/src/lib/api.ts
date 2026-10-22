@@ -16,6 +16,7 @@ import type {
   ReviewComparison,
   Note,
   Guide,
+  GuideVersion,
   ReviewProgress,
   PublishRequest,
   PublishResult,
@@ -23,7 +24,8 @@ import type {
 export type * from "../../../../packages/contracts/src";
 export const api = {
   bootstrap: () => invoke<Bootstrap>("bootstrap"),
-  models: () => invoke<ModelCatalog>("model_catalog"),
+  models: (provider = "codex") =>
+    invoke<ModelCatalog>("model_catalog", { provider }),
   modelPreference: (preference: ModelPreference) =>
     invoke<ModelPreference>("save_model_preference", { preference }),
   inbox: () => invoke<InboxResult>("refresh_inbox"),
@@ -64,8 +66,12 @@ export const api = {
   deleteNote: (id: string) => invoke<void>("delete_note", { id }),
   progress: (snapshotId: string, progress: ReviewProgress) =>
     invoke<ReviewProgress>("save_progress", { snapshotId, progress }),
-  analyze: (snapshotId: string, runId: string) =>
-    invoke<Guide>("analyze", { snapshotId, runId }),
+  guides: (snapshotId: string) =>
+    invoke<GuideVersion[]>("guide_versions", { snapshotId }),
+  selectGuide: (snapshotId: string, guideId: string) =>
+    invoke<ReviewWorkspace>("select_guide", { snapshotId, guideId }),
+  analyze: (snapshotId: string, runId: string, preference?: ModelPreference) =>
+    invoke<Guide>("analyze", { snapshotId, runId, preference }),
   ask: (snapshotId: string, noteId: string, runId: string) =>
     invoke<Note>("ask_codex", { snapshotId, noteId, runId }),
   cancel: () => invoke<void>("cancel_codex"),

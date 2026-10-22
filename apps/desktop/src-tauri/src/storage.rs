@@ -75,6 +75,20 @@ impl Store {
             .map(|s| Ok(serde_json::from_str(&s?)?))
             .collect()
     }
+    pub fn snapshot_documents<T: DeserializeOwned>(
+        &self,
+        kind: &str,
+        snapshot: &str,
+    ) -> Result<Vec<T>> {
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        let mut stmt = db.prepare("SELECT value FROM documents WHERE kind=?1 AND json_extract(value,'$.snapshotId')=?2 ORDER BY updated DESC, key")?;
+        stmt.query_map(params![kind, snapshot], |r| r.get::<_, String>(0))?
+            .map(|s| Ok(serde_json::from_str(&s?)?))
+            .collect()
+    }
     pub fn batch(&self, documents: &[(&str, &str, serde_json::Value)]) -> Result<()> {
         let mut db = self
             .connection

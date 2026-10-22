@@ -58,6 +58,7 @@ async fn main() -> Result<()> {
         "Guide used a different model"
     );
     let note = service.save_note(Note {
+        model: None,
         id: String::new(),
         snapshot_id: snapshot.id.clone(),
         anchor: None,

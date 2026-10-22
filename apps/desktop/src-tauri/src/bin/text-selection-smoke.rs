@@ -34,6 +34,7 @@ async fn main() -> Result<()> {
         "For this same selected helper, does seven days mean calendar days or elapsed hours? Keep the answer brief.",
     ].into_iter().enumerate() {
         let question = service.save_note(Note {
+            model: None,
             id: String::new(), snapshot_id: snapshot.id.clone(), anchor: Some(anchor.clone()),
             body: body.into(), role: "user".into(), parent_id: None,
             github_draft: false, published_url: None, created_at: String::new(),

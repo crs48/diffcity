@@ -131,6 +131,7 @@ mod tests {
     }
     fn note(snapshot: &Snapshot, anchor: Anchor) -> Note {
         Note {
+            model: None,
             id: String::new(),
             snapshot_id: snapshot.id.clone(),
             anchor: Some(anchor),

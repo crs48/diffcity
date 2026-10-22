@@ -1,5 +1,5 @@
 // Generated from Rust contracts. Run pnpm contracts; do not edit.
-export type Settings = { repositories: Array<string>, codexPath: string | null, ghPath: string | null, model: string | null, theme: string, locale: string, completedDays: number, };
+export type Settings = { repositories: Array<string>, codexPath: string | null, claudePath?: string, ghPath: string | null, model: string | null, theme: string, locale: string, completedDays: number, };
 export type Connection = { connected: boolean, identity: string, executable: string, detail: string, };
 export type Model = { id: string, name: string, isDefault: boolean, description: string, reasoningEfforts: Array<ReasoningOption>, defaultReasoningEffort: string | null, };
 export type ReasoningOption = { effort: string, description: string, };
@@ -27,8 +27,9 @@ export type Anchor = { textSelection?: TextSelection, hunkId: string, path: stri
 export type TextSelection = { snapshotId: string, startColumn: number, endColumn: number, text: string, };
 export type Finding = { title: string, body: string, severity: string, anchor: Anchor, };
 export type GuideSection = { id: string, title: string, summary: string, explanation: string, attention: Attention, category: string, reason: string, hunkIds: Array<string>, unavailablePaths: Array<string>, questions: Array<string>, findings: Array<Finding>, assessed: boolean, foldable: boolean, };
-export type Guide = { snapshotId: string, summary: string, sections: Array<GuideSection>, source: string, model: string, generatedAt: string, limitations: Array<string>, policyVersion: number, };
-export type Note = { id: string, snapshotId: string, anchor: Anchor | null, body: string, role: string, parentId: string | null, githubDraft: boolean, publishedUrl: string | null, createdAt: string, };
+export type Guide = { id?: string, reasoningEffort?: string, snapshotId: string, summary: string, sections: Array<GuideSection>, source: string, model: string, generatedAt: string, limitations: Array<string>, policyVersion: number, };
+export type GuideVersion = { id: string, source: string, model: string, reasoningEffort: string | null, generatedAt: string, sectionCount: number, };
+export type Note = { model?: ModelPreference, id: string, snapshotId: string, anchor: Anchor | null, body: string, role: string, parentId: string | null, githubDraft: boolean, publishedUrl: string | null, createdAt: string, };
 export type ReviewProgress = { reviewed: Array<string>, acknowledged: Array<string>, deferred: Array<string>, expanded: Array<string>, activeSection: string | null, };
 export type RemoteComment = { id: string, author: string, body: string, path: string | null, line: number | null, side: Side | null, commit: string | null, url: string, createdAt: string, };
 export type ReviewWorkspace = { snapshot: Snapshot, guide: Guide, notes: Array<Note>, progress: ReviewProgress, comments: Array<RemoteComment>, checks: string, previousSnapshotId: string | null, changedHunks: Array<string>, syncError: string | null, };

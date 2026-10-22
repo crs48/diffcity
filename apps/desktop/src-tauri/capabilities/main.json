@@ -27,6 +27,8 @@
     "allow-delete-note",
     "allow-save-progress",
     "allow-analyze",
+    "allow-guide-versions",
+    "allow-select-guide",
     "allow-ask-codex",
     "allow-cancel-codex",
     "allow-publish-review",

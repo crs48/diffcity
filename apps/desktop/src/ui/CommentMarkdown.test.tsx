@@ -199,9 +199,7 @@ describe("GitHub flavored comment Markdown", () => {
     expect(screen.getAllByRole("table")).toHaveLength(3);
     await userEvent
       .setup()
-      .click(
-        screen.getByRole("button", { name: "Ask Codex about this comment" }),
-      );
+      .click(screen.getByRole("button", { name: "Ask AI about this comment" }));
     await waitFor(() => expect(ask).toHaveBeenCalledExactlyOnceWith(note));
     expect(note.body).toBe(body);
     rerender(
@@ -213,9 +211,8 @@ describe("GitHub flavored comment Markdown", () => {
       />,
     );
     expect(
-      screen
-        .getByLabelText("Codex response in progress")
-        .querySelector("pre code")?.textContent,
+      screen.getByLabelText("AI response in progress").querySelector("pre code")
+        ?.textContent,
     ).toBe("SELECT *\n");
   });
 });

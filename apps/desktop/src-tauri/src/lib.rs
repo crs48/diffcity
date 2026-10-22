@@ -1,3 +1,4 @@
+pub mod claude;
 pub mod codex;
 mod commands;
 mod context;
@@ -7,10 +8,12 @@ pub mod fixtures;
 pub mod github;
 mod github_lists;
 pub mod guide;
+mod guide_history;
 mod guide_prompt;
 pub mod migrations;
 mod models;
 mod pins;
+mod providers;
 mod review_cache;
 mod review_comparison;
 pub mod service;
@@ -53,6 +56,8 @@ pub fn run() {
             commands::delete_note,
             commands::save_progress,
             commands::analyze,
+            commands::guide_versions,
+            commands::select_guide,
             commands::ask_codex,
             commands::cancel_codex,
             commands::publish_review,

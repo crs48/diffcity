@@ -45,7 +45,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
         </Button>
       </header>
       <div className="discussion-context">
-        <span>{t("One conversation with Codex across this review.")} </span>
+        <span>{t("One conversation with AI across this review.")} </span>
         {anchor ? (
           <>
             <SelectionQuote anchor={anchor} compact />

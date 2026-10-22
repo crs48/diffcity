@@ -99,6 +99,30 @@ export function Connections({
             }
           />
         </label>
+        <div className="connection-card">
+          <Sparkles size={20} aria-hidden="true" />
+          <div>
+            <h3>Claude Code</h3>
+            <p>
+              {t(
+                "Uses your existing Claude Code login. Choose Claude in Model settings or when creating a guide.",
+              )}
+            </p>
+          </div>
+        </div>
+        <label>
+          {t("Claude executable")}
+          <input
+            placeholder="~/.local/bin/claude"
+            value={settings.claudePath ?? ""}
+            onChange={(e) =>
+              setSettings({
+                ...settings,
+                claudePath: e.target.value || undefined,
+              })
+            }
+          />
+        </label>
         <label>
           {t("Language")}{" "}
           <select
@@ -308,7 +332,7 @@ export function Finish({
         ) : (
           <p className="muted">
             {t(
-              "No drafts selected. Private notes and Codex conversations are not included.",
+              "No drafts selected. Private notes and AI conversations are not included.",
             )}{" "}
           </p>
         )}

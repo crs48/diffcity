@@ -29,6 +29,9 @@ pub struct ReviewComparison {
 pub struct Settings {
     pub repositories: Vec<String>,
     pub codex_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub claude_path: Option<String>,
     pub gh_path: Option<String>,
     pub model: Option<String>,
     pub theme: String,
@@ -337,6 +340,12 @@ pub struct GuideSection {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Guide {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub reasoning_effort: Option<String>,
     pub snapshot_id: String,
     pub summary: String,
     pub sections: Vec<GuideSection>,
@@ -347,9 +356,24 @@ pub struct Guide {
     pub policy_version: u32,
 }
 
+/// Lightweight history entry; guide bodies are loaded only when selected.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct GuideVersion {
+    pub id: String,
+    pub source: String,
+    pub model: String,
+    pub reasoning_effort: Option<String>,
+    pub generated_at: String,
+    pub section_count: usize,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub model: Option<ModelPreference>,
     pub id: String,
     pub snapshot_id: String,
     pub anchor: Option<Anchor>,

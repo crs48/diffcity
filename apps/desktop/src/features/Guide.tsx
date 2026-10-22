@@ -180,6 +180,7 @@ export function GuideView({
       onReveal={() => setFileQuery("")}
     >
       <GuideFlow
+        key={w.guide.id ?? w.guide.generatedAt}
         workspace={w}
         selection={selection}
         onDiscuss={onDiscuss}

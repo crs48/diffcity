@@ -45,7 +45,11 @@ export function ReviewMessages({
                 ) : (
                   <MessageSquare size={12} />
                 )}
-                {n.role === "assistant" ? "Codex" : t("You")}
+                {n.role === "assistant"
+                  ? n.model
+                    ? `${n.model.provider === "claude" ? "Claude" : "Codex"} · ${n.model.model}`
+                    : "Codex"
+                  : t("You")}
                 {n.githubDraft && (
                   <span className="draft-tag">{t("GitHub draft")} </span>
                 )}
@@ -84,7 +88,7 @@ export function ReviewMessages({
                     {t(
                       n.anchor?.textSelection
                         ? "Ask again about this selection"
-                        : "Ask Codex about this comment",
+                        : "Ask AI about this comment",
                     )}{" "}
                   </Button>
                 )}
@@ -138,10 +142,10 @@ export function ReviewMessages({
       {streaming && (
         <article
           className="message assistant streaming"
-          aria-label={t("Codex response in progress")}
+          aria-label={t("AI response in progress")}
         >
           <div className="message-label">
-            <Sparkles size={12} /> Codex{" "}
+            <Sparkles size={12} /> AI{" "}
             <span className="muted">{t("Responding…")} </span>
           </div>
           {c.stream ? (
@@ -153,8 +157,8 @@ export function ReviewMessages({
       )}
       <span className="sr-only" role="status">
         {streaming
-          ? t("Codex is responding.")
-          : `${notes.filter((n) => n.role === "assistant").length} Codex replies in this conversation.`}
+          ? t("AI is responding.")
+          : `${notes.filter((n) => n.role === "assistant").length} AI replies in this conversation.`}
       </span>
     </>
   );

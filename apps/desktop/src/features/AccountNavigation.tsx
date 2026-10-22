@@ -112,7 +112,7 @@ export function AccountNavigation({
   const modelName =
     data?.models.find((model) => model.id === preference.model)?.name ??
     preference.model;
-  const modelDetail = `Codex · ${modelName} · ${t(preference.reasoningEffort ? effortLabel(preference.reasoningEffort) : "Model default")}`;
+  const modelDetail = `${preference.provider === "claude" ? "Claude" : "Codex"} · ${modelName} · ${t(preference.reasoningEffort ? effortLabel(preference.reasoningEffort) : "Model default")}`;
   const [showInactive, setShowInactive] = useState(false);
   const { visible, inactive } = groupAccountOwners(
     owners,

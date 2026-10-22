@@ -184,7 +184,7 @@ export function GuideFlow(props: Props) {
             <h3>{t("Guide not generated yet")}</h3>
             <p>
               {t(
-                "Choose Review with Codex for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.",
+                "Choose New guide for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.",
               )}
             </p>
             <CommentMarkdown
@@ -202,13 +202,14 @@ export function GuideFlow(props: Props) {
             diagrams
           />
         )}
-        {w.guide.source === "codex" && w.guide.policyVersion < 3 && (
-          <p className="muted">
-            {t(
-              "This saved guide uses the earlier brief format. Choose Review again for a full overview with diagrams where helpful.",
-            )}
-          </p>
-        )}
+        {["codex", "claude"].includes(w.guide.source) &&
+          w.guide.policyVersion < 3 && (
+            <p className="muted">
+              {t(
+                "This saved guide uses the earlier brief format. Choose New guide for a full overview with diagrams where helpful.",
+              )}
+            </p>
+          )}
         {sections.length > 0 && (
           <Button
             className="secondary overview-start"
@@ -246,11 +247,11 @@ export function GuideFlow(props: Props) {
         <div className="guide-footer">
           <Sparkles size={14} />
           <span>
-            {w.guide.source === "codex"
+            {["codex", "claude"].includes(w.guide.source)
               ? `Reviewed with ${w.guide.model}`
               : w.guide.source === "sample"
                 ? "Sample guide · illustrative data"
-                : "Run Codex for a guided code review"}
+                : "Create a guide with Codex or Claude"}
           </span>
           <span>
             {counts.reviewed}/{counts.total} {t("hunks reviewed ·")}{" "}

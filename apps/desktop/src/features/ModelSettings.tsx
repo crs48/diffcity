@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Cpu, LoaderCircle, RefreshCw, X } from "lucide-react";
 import { AppDialog } from "../ui/AppDialog";
@@ -12,39 +12,95 @@ import { chooseModel, effortLabel } from "../lib/models";
 
 export function ModelSettings({
   preference,
-  models,
-  connection,
+  models: initialModels,
+  connection: initialConnection,
+  purpose = "default",
   onSave,
   onRefresh,
   onClose,
 }: {
   preference: ModelPreference;
+  purpose?: "default" | "guide";
   models: Model[];
   connection: Connection;
   onSave: (preference: ModelPreference) => Promise<void>;
-  onRefresh: () => Promise<ModelCatalog>;
+  onRefresh: (provider: string) => Promise<ModelCatalog>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState(preference);
-  const [busy, setBusy] = useState<"save" | "refresh" | null>(null);
+  const [catalog, setCatalog] = useState<ModelCatalog | null>(
+    preference.provider === "codex"
+      ? { models: initialModels, connection: initialConnection }
+      : null,
+  );
+  const [busy, setBusy] = useState<"save" | "refresh" | null>(
+    preference.provider === "codex" ? null : "refresh",
+  );
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const models = catalog?.models ?? [];
+  const connection = catalog?.connection ?? {
+    connected: false,
+    identity: "",
+    detail: "",
+    executable: "",
+  };
+  const providerName = value.provider === "claude" ? "Claude" : "Codex";
+  const title = purpose === "guide" ? "New guide" : "Default model";
+  useEffect(() => {
+    if (preference.provider === "codex") return;
+    let cancelled = false;
+    onRefresh(preference.provider)
+      .then((next) => {
+        if (!cancelled) setCatalog(next);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(String(e));
+      })
+      .finally(() => {
+        if (!cancelled) setBusy(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [onRefresh, preference.provider]);
+  const refresh = async (provider: string, changeProvider = false) => {
+    setBusy("refresh");
+    setError("");
+    setNotice("");
+    if (changeProvider) {
+      setCatalog(null);
+      setValue({
+        provider,
+        model: provider === "claude" ? "claude-fable-5" : "gpt-6-astra",
+        reasoningEffort: provider === "claude" ? "high" : "xhigh",
+      });
+    }
+    try {
+      const next = await onRefresh(provider);
+      setCatalog(next);
+      setNotice(t("Model list refreshed."));
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
   const selected = models.find((model) => model.id === value.model);
   const effort = selected?.reasoningEfforts.find(
     (option) => option.effort === value.reasoningEffort,
   );
   const supported =
     connection.connected &&
-    value.provider === "codex" &&
     !!selected &&
     (value.reasoningEffort === null || !!effort);
 
   return (
-    <AppDialog label={t("Default model")} onClose={onClose} busy={!!busy}>
+    <AppDialog label={t(title)} onClose={onClose} busy={!!busy}>
       <header>
         <Cpu size={19} aria-hidden="true" />
-        <h2>{t("Default model")}</h2>
+        <h2>{t(title)}</h2>
         <button
           className="icon-button"
           aria-label={t("Close model settings")}
@@ -55,16 +111,30 @@ export function ModelSettings({
         </button>
       </header>
       <div className="modal-content">
+        <label>
+          {t("Provider")}
+          <select
+            value={value.provider}
+            disabled={!!busy}
+            onChange={(event) => void refresh(event.target.value, true)}
+          >
+            <option value="codex">Codex</option>
+            <option value="claude">Claude Code</option>
+          </select>
+        </label>
         <div className="connection-card">
           <Cpu size={22} aria-hidden="true" />
           <div>
-            <h3>Codex</h3>
+            <h3>{providerName}</h3>
             <p>
-              {t(
-                connection.connected
-                  ? "Using your local Codex login"
-                  : "Connect Codex in Connections to choose a model.",
-              )}
+              {connection.connected
+                ? t("Using your local {{provider}} login", {
+                    provider:
+                      value.provider === "claude" ? "Claude Code" : "Codex",
+                  })
+                : t("Sign in to {{provider}}, then refresh models.", {
+                    provider: providerName,
+                  })}
             </p>
           </div>
           <span
@@ -74,7 +144,9 @@ export function ModelSettings({
         </div>
         <p className="muted" id="model-scope-help">
           {t(
-            "Applies to guided walkthroughs, inline replies, and PR chat. Changes take effect on your next request.",
+            purpose === "guide"
+              ? "Creates another guide for this revision. Your saved guides, comments, and default model stay available."
+              : "Applies to guided walkthroughs, inline replies, and PR chat. Changes take effect on your next request.",
           )}
         </p>
         <label>
@@ -113,7 +185,7 @@ export function ModelSettings({
         </label>
         <p id="model-description" className="muted">
           {selected?.description ||
-            t("Model availability follows your Codex account.")}
+            t("Model availability follows your selected account.")}
         </p>
         <label>
           {t("Reasoning")}
@@ -171,21 +243,7 @@ export function ModelSettings({
         )}
       </div>
       <footer>
-        <button
-          disabled={!!busy}
-          onClick={async () => {
-            setBusy("refresh");
-            setError("");
-            try {
-              await onRefresh();
-              setNotice(t("Model list refreshed."));
-            } catch (e) {
-              setError(String(e));
-            } finally {
-              setBusy(null);
-            }
-          }}
-        >
+        <button disabled={!!busy} onClick={() => void refresh(value.provider)}>
           <RefreshCw
             size={15}
             className={busy === "refresh" ? "spin" : ""}
@@ -214,7 +272,7 @@ export function ModelSettings({
           ) : (
             <Check size={15} aria-hidden="true" />
           )}
-          {t("Save default")}
+          {t(purpose === "guide" ? "Generate guide" : "Save default")}
         </button>
       </footer>
     </AppDialog>

@@ -175,3 +175,78 @@ it("allows the catalog default reasoning and closes with Escape", async () => {
   await user.keyboard("{Escape}");
   expect(callbacks.onClose).toHaveBeenCalled();
 });
+
+it("creates a guide with Claude without saving a different default", async () => {
+  const callbacks = props();
+  const claude: Model = {
+    ...models[0],
+    id: "claude-fable-5",
+    name: "Claude Fable 5",
+    reasoningEfforts: [{ effort: "high", description: "Deep review" }],
+    defaultReasoningEffort: "high",
+  };
+  callbacks.onRefresh.mockResolvedValue({ connection, models: [claude] });
+  const user = userEvent.setup();
+  render(<ModelSettings {...callbacks} purpose="guide" />);
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Provider" }),
+    "claude",
+  );
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Generate guide",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(callbacks.onRefresh).toHaveBeenCalledWith("claude");
+  expect(
+    (screen.getByRole("combobox", { name: "Model" }) as HTMLSelectElement)
+      .value,
+  ).toBe("claude-fable-5");
+  await user.click(screen.getByRole("button", { name: "Generate guide" }));
+  expect(callbacks.onSave).toHaveBeenCalledWith({
+    provider: "claude",
+    model: "claude-fable-5",
+    reasoningEffort: "high",
+  });
+  expect(callbacks.onClose).toHaveBeenCalledOnce();
+  expect(defaultModelPreference.model).toBe("gpt-6-astra");
+});
+
+it("shows a disconnected Claude account and lets the user return to Codex", async () => {
+  const callbacks = props();
+  callbacks.onRefresh
+    .mockRejectedValueOnce(new Error("Run claude auth login"))
+    .mockResolvedValue({ connection, models });
+  const user = userEvent.setup();
+  render(<ModelSettings {...callbacks} />);
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Provider" }),
+    "claude",
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("alert").textContent).toContain(
+      "claude auth login",
+    ),
+  );
+  expect(
+    (screen.getByRole("button", { name: "Save default" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Provider" }),
+    "codex",
+  );
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Save default",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+});

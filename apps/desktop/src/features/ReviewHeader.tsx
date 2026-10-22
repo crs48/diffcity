@@ -81,11 +81,7 @@ export function ReviewHeader({
         onPress={onAnalyze}
       >
         <Sparkles size={15} />
-        <span>
-          {workspace.guide.source === "codex"
-            ? t("Review again")
-            : t("Review with Codex")}
-        </span>
+        <span>{t("New guide")}</span>
       </Button>
     </div>
   );

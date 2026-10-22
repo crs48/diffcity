@@ -34,6 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Finding,
         GuideSection,
         Guide,
+        GuideVersion,
         Note,
         ReviewProgress,
         RemoteComment,
