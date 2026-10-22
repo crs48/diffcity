@@ -1367,7 +1367,6 @@
     white-space: nowrap;
   }
   .context-collapse {
-    margin-left: auto;
     white-space: nowrap;
     flex-shrink: 0;
   }
