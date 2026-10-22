@@ -1718,6 +1718,8 @@
   }
   .inline-thread {
     margin: 10px 12px 14px;
+    /* Keep prose near 90 characters, plus message padding and borders. */
+    max-width: calc(90ch + 32px);
     border: 1px solid var(--border);
     border-left: 3px solid var(--text);
     border-radius: 6px;
@@ -1726,6 +1728,7 @@
     min-width: 0;
     overflow: hidden;
     font-family: inherit;
+    font-size: 12px;
   }
   .inline-thread > header {
     display: flex;
