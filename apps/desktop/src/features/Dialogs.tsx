@@ -178,11 +178,13 @@ export function Finish({
   workspace: w,
   login,
   onPublished,
+  onCheckpoint,
   onClose,
 }: {
   workspace: ReviewWorkspace;
   login: string;
   onPublished: (r: PublishResult) => Promise<void>;
+  onCheckpoint: () => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -271,6 +273,33 @@ export function Finish({
             )}{" "}
           </p>
         )}
+        <div className="checkpoint-explanation">
+          <h3>{t("Keep a private review checkpoint")}</h3>
+          <p>
+            {t(
+              "Save this revision as your comparison point for the next update. This stays on your computer, leaves your notes and progress intact, and does not mark unread code as reviewed.",
+            )}
+          </p>
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                await api.checkpoint(w.snapshot.id);
+                onCheckpoint();
+              } catch (e) {
+                setError(String(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Check size={15} />
+            {t("Save review checkpoint")}
+          </button>
+        </div>
         <h3>{t("Selected GitHub drafts")} </h3>
         {drafts.length ? (
           drafts.map(renderDraft)

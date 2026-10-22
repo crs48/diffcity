@@ -368,6 +368,7 @@ impl Service {
     pub fn snapshot(&self, id: &str) -> Result<Snapshot> {
         self.store
             .get("snapshot", id)?
+            .or(self.store.get("comparison-snapshot", id)?)
             .context("This revision is no longer available locally")
     }
     pub(crate) fn previous_snapshot(&self, snapshot: &Snapshot) -> Result<Option<String>> {
@@ -602,6 +603,12 @@ impl Service {
         Ok(answer)
     }
     pub async fn publish(&self, request: PublishRequest) -> Result<PublishResult> {
+        anyhow::ensure!(
+            self.store
+                .get::<Snapshot>("comparison-snapshot", &request.snapshot_id)?
+                .is_none(),
+            "Open the full PR to publish comments with GitHub's original line coordinates"
+        );
         let _guard = self.publication.lock().await;
         let snapshot = self.snapshot(&request.snapshot_id)?;
         if fixtures::is_sample_repo(&snapshot.pull.repository) {
@@ -735,6 +742,14 @@ impl Service {
                 n.github_draft = false;
                 documents.push(("note", note_id.as_str(), serde_json::to_value(&n)?));
             }
+        }
+        let snapshot = self.snapshot(&request.snapshot_id)?;
+        let checkpoint_key = self.checkpoint_key(&snapshot)?;
+        if review["commit_id"] == snapshot.pull.head && review["submitted_at"].is_string() {
+            documents.push(("github-review-checkpoint", &checkpoint_key, json!({
+                "checkpoint": {"head": snapshot.pull.head, "reviewedAt": review["submitted_at"], "source": "github"},
+                "checked_at": chrono::Utc::now().to_rfc3339()
+            })));
         }
         self.store.batch(&documents)?;
         Ok(result)

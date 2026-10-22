@@ -499,7 +499,7 @@ impl GitHub {
         }
         String::from_utf8(bytes).context("File is binary or not UTF-8 text")
     }
-    async fn reconstruct_file(
+    pub(crate) async fn reconstruct_file(
         &self,
         repo: &str,
         base: &str,

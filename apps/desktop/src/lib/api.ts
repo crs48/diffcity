@@ -11,6 +11,9 @@ import type {
   PullRequest,
   PullPage,
   ReviewWorkspace,
+  ReviewBaseline,
+  ReviewCheckpoint,
+  ReviewComparison,
   Note,
   Guide,
   ReviewProgress,
@@ -40,6 +43,12 @@ export const api = {
   prefetch: (pull: PullRequest) => invoke<boolean>("prefetch_pull", { pull }),
   saved: (snapshotId: string) =>
     invoke<ReviewWorkspace>("open_saved_review", { snapshotId }),
+  baseline: (snapshotId: string, refresh = false) =>
+    invoke<ReviewBaseline>("review_baseline", { snapshotId, refresh }),
+  compare: (snapshotId: string, baseline: ReviewCheckpoint) =>
+    invoke<ReviewComparison>("compare_review", { snapshotId, baseline }),
+  checkpoint: (snapshotId: string) =>
+    invoke<ReviewCheckpoint>("save_review_checkpoint", { snapshotId }),
   context: (
     snapshotId: string,
     hunkId: string,

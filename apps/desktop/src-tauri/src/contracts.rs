@@ -1,6 +1,29 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+/// A human review boundary, never advanced by capture, prefetch, or AI analysis.
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewCheckpoint {
+    pub head: String,
+    pub reviewed_at: String,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewBaseline {
+    pub checkpoint: Option<ReviewCheckpoint>,
+    pub sync_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewComparison {
+    pub baseline: ReviewCheckpoint,
+    pub snapshot: Snapshot,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {

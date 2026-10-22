@@ -50,6 +50,7 @@ import {
 } from "./lib/api";
 import { newNote, parsePullUrl } from "./lib/review";
 import { GuideView } from "./features/Guide";
+import { ReviewScope } from "./features/ReviewScope";
 import { ReviewHeader } from "./features/ReviewHeader";
 import { Discussion } from "./features/Discussion";
 import { ConversationContext } from "./features/conversation";
@@ -130,6 +131,7 @@ export default function App() {
   const [stream, setStream] = useState("");
   const [pendingGuide, setPendingGuide] = useState<Guide | null>(null);
   const [newRevision, setNewRevision] = useState(false);
+  const [checkpointVersion, setCheckpointVersion] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const syncBusy = useRef(false);
   const [syncProgress, setSyncProgress] = useState<InboxSync | null>(null);
@@ -1181,41 +1183,49 @@ export default function App() {
                             )}
                           </div>
                         )}
-                        {workspace.previousSnapshotId && (
-                          <div className="update-banner">
-                            <span>
-                              {t(
-                                "Earlier notes and progress remain saved with their original code.",
-                              )}{" "}
-                            </span>
-                            <Button
-                              onPress={() =>
-                                void saved(workspace.previousSnapshotId!)
-                              }
-                            >
-                              {t("Open previous revision")}{" "}
-                            </Button>
-                          </div>
-                        )}
-                        {workspace.changedHunks.length > 0 && (
-                          <div className="update-banner">
-                            {workspace.changedHunks.length}
-                            {t(
-                              "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
-                            )}{" "}
-                          </div>
-                        )}
-
-                        <GuideView
-                          key={workspace.snapshot.id}
+                        <ReviewScope
+                          key={`${workspace.snapshot.id}/${mode}`}
                           workspace={workspace}
-                          selection={selection}
-                          onSelect={(a) => void select(a)}
-                          onDiscuss={(a) => void select(a, true)}
-                          onProgress={progress}
+                          refreshKey={checkpointVersion}
                           onFinish={() => void finish()}
-                          mode={mode}
-                        />
+                          onDiscuss={(a) => void select(a, true, true)}
+                        >
+                          {workspace.previousSnapshotId && (
+                            <div className="update-banner">
+                              <span>
+                                {t(
+                                  "Earlier notes and progress remain saved with their original code.",
+                                )}{" "}
+                              </span>
+                              <Button
+                                onPress={() =>
+                                  void saved(workspace.previousSnapshotId!)
+                                }
+                              >
+                                {t("Open previous revision")}{" "}
+                              </Button>
+                            </div>
+                          )}
+                          {workspace.changedHunks.length > 0 && (
+                            <div className="update-banner">
+                              {workspace.changedHunks.length}
+                              {t(
+                                "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
+                              )}{" "}
+                            </div>
+                          )}
+
+                          <GuideView
+                            key={workspace.snapshot.id}
+                            workspace={workspace}
+                            selection={selection}
+                            onSelect={(a) => void select(a)}
+                            onDiscuss={(a) => void select(a, true)}
+                            onProgress={progress}
+                            onFinish={() => void finish()}
+                            mode={mode}
+                          />
+                        </ReviewScope>
                       </TabPanel>
                     </div>
                     <div id="review-minimap-host" />
@@ -1353,7 +1363,12 @@ export default function App() {
           workspace={workspace}
           login={data?.github.identity || ""}
           onClose={() => setDialog(null)}
+          onCheckpoint={() => {
+            setCheckpointVersion((version) => version + 1);
+            setDialog(null);
+          }}
           onPublished={async () => {
+            setCheckpointVersion((version) => version + 1);
             await refresh();
             const w = await api.open(
               workspace.snapshot.pull.repository,

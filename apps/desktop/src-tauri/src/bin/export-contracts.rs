@@ -37,6 +37,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ReviewProgress,
         RemoteComment,
         ReviewWorkspace,
+        ReviewCheckpoint,
+        ReviewBaseline,
+        ReviewComparison,
         RunEvent,
         PublishRequest,
         PublishResult

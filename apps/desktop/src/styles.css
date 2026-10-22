@@ -3060,3 +3060,120 @@
     flex: 1;
   }
 }
+
+/* Review scope stays compact; comparison code uses the same document scroller. */
+.review-scope {
+  margin: 14px 24px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.review-scope-toolbar,
+.review-scope-detail,
+.since-review-counts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.review-scope-toolbar {
+  justify-content: space-between;
+}
+.review-scope-options {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 7px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.review-scope-options button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  padding: 7px 10px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+.review-scope-options button[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 1px 3px #0002;
+  font-weight: 650;
+}
+.review-scope-options button[disabled] {
+  opacity: 0.55;
+}
+.review-scope-detail {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 9px;
+  gap: 7px;
+}
+.review-scope-detail code {
+  font-size: 11px;
+}
+.review-scope-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex: 0 0 auto;
+}
+.review-scope-warning {
+  font-size: 12px;
+  margin-top: 8px;
+  color: var(--muted);
+}
+.since-review-heading {
+  padding: 28px 32px 4px;
+  max-width: 1000px;
+}
+.since-review-heading h2 {
+  margin: 8px 0;
+  font-size: 24px;
+  letter-spacing: -0.6px;
+}
+.since-review-heading p {
+  line-height: 1.6;
+}
+.since-review-heading .attention-note {
+  margin: 14px 0;
+}
+.since-review-counts {
+  font-size: 13px;
+}
+.comparison-empty {
+  padding: 44px 20px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  margin: 24px 0;
+}
+.checkpoint-explanation {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.checkpoint-explanation h3 {
+  margin-top: 0;
+}
+.checkpoint-explanation p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .review-scope {
+    margin: 10px 12px 0;
+  }
+  .since-review-heading {
+    padding: 22px 16px 4px;
+  }
+}

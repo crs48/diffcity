@@ -12,6 +12,7 @@ pub mod migrations;
 mod models;
 mod pins;
 mod review_cache;
+mod review_comparison;
 pub mod service;
 pub mod text_diff;
 
@@ -43,6 +44,9 @@ pub fn run() {
             commands::sync_pull,
             commands::open_saved_review,
             commands::hunk_context,
+            commands::review_baseline,
+            commands::compare_review,
+            commands::save_review_checkpoint,
             commands::check_pull,
             commands::save_note,
             commands::delete_note,

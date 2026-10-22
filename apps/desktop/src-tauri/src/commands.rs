@@ -3,6 +3,35 @@ use std::sync::Arc;
 use tauri::{Emitter, State};
 type Output<T> = Result<T, String>;
 #[tauri::command]
+pub async fn review_baseline(
+    service: State<'_, Arc<Service>>,
+    snapshot_id: String,
+    refresh: bool,
+) -> Output<ReviewBaseline> {
+    service
+        .review_baseline(&snapshot_id, refresh)
+        .await
+        .map_err(error)
+}
+#[tauri::command]
+pub async fn compare_review(
+    service: State<'_, Arc<Service>>,
+    snapshot_id: String,
+    baseline: ReviewCheckpoint,
+) -> Output<ReviewComparison> {
+    service
+        .compare_review(&snapshot_id, baseline)
+        .await
+        .map_err(error)
+}
+#[tauri::command]
+pub fn save_review_checkpoint(
+    service: State<'_, Arc<Service>>,
+    snapshot_id: String,
+) -> Output<ReviewCheckpoint> {
+    service.save_review_checkpoint(&snapshot_id).map_err(error)
+}
+#[tauri::command]
 pub async fn hunk_context(
     service: State<'_, Arc<Service>>,
     snapshot_id: String,
