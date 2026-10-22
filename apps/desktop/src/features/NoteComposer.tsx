@@ -9,6 +9,7 @@ import type { NoteComposerState } from "./useNoteComposer";
 export function NoteComposer({
   state,
   inline = false,
+  contextDescriptionId,
   busy,
   model,
   onAsk,
@@ -16,6 +17,7 @@ export function NoteComposer({
 }: {
   state: NoteComposerState;
   inline?: boolean;
+  contextDescriptionId?: string;
   busy: boolean;
   model?: string;
   onAsk: (note: Note) => Promise<void>;
@@ -52,6 +54,7 @@ export function NoteComposer({
     <div className="composer">
       <textarea
         ref={input}
+        aria-describedby={contextDescriptionId}
         aria-label={
           textOnly
             ? t("Follow-up about selected code")

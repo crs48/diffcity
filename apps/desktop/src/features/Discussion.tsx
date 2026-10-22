@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import "../i18n";
-import { Button } from "react-aria-components";
-import { Sparkles, X } from "lucide-react";
+import { Button, Tooltip, TooltipTrigger } from "react-aria-components";
+import { Reply, Sparkles, X } from "lucide-react";
 import { lineRange, sameAnchor } from "../lib/selection";
 import { threadTitle } from "../lib/threadTitle";
 import { useConversation } from "./conversation";
@@ -50,26 +50,6 @@ export function Discussion({ onClose }: { onClose: () => void }) {
           <X size={17} />
         </Button>
       </header>
-      <div className="discussion-context">
-        <span>{t("Independent conversations, shared PR context.")} </span>
-        {title && <strong className="discussion-title">{title}</strong>}
-        {anchor ? (
-          <>
-            <SelectionQuote anchor={anchor} compact />
-            <code>
-              {anchor.path} · {anchor.side === "LEFT" ? "Old" : "New"}{" "}
-              {lineRange(anchor)}
-            </code>
-            <Button className="text-button" onPress={() => c.openChat(null)}>
-              {t("Remove code context")}{" "}
-            </Button>
-          </>
-        ) : (
-          <span>
-            {t("Ask about the PR, or continue any inline discussion.")}{" "}
-          </span>
-        )}
-      </div>
       <div
         ref={messages}
         className="messages"
@@ -100,13 +80,67 @@ export function Discussion({ onClose }: { onClose: () => void }) {
           conversation={c}
         />
       </div>
-      <NoteComposer
-        state={c.chat}
-        busy={c.isBusy(c.chat.draft?.anchor ?? null)}
-        model={c.modelFor(c.chat.draft?.anchor ?? null).model}
-        onAsk={c.ask}
-        onError={c.onError}
-      />
+      <div className="discussion-compose">
+        <div
+          id="pr-chat-reply-context"
+          className="discussion-context"
+          role="group"
+          aria-label={t("Reply context")}
+        >
+          <div className="discussion-context-label">
+            <Reply size={14} aria-hidden />
+            <span>
+              {t(anchor ? "Replying to code" : "Replying to this PR")}
+            </span>
+            {anchor && (
+              <TooltipTrigger delay={300}>
+                <Button
+                  className="icon-button"
+                  aria-label={t("Remove code context")}
+                  onPress={() => c.openChat(null)}
+                >
+                  <X size={14} />
+                </Button>
+                <Tooltip className="rail-tooltip" placement="top">
+                  {t("Remove code context")}
+                </Tooltip>
+              </TooltipTrigger>
+            )}
+          </div>
+          {title && (
+            <strong className="discussion-title" title={title}>
+              {title}
+            </strong>
+          )}
+          {anchor ? (
+            <>
+              <code className="discussion-context-path" title={anchor.path}>
+                {anchor.path}
+              </code>
+              <span>
+                {anchor.side === "LEFT" ? "Old" : "New"} {lineRange(anchor)}
+              </span>
+              <SelectionQuote anchor={anchor} compact />
+            </>
+          ) : (
+            <code
+              className="discussion-context-path"
+              title={c.workspace.snapshot.pull.repository}
+            >
+              {c.workspace.snapshot.pull.repository} #
+              {c.workspace.snapshot.pull.number}
+            </code>
+          )}
+        </div>
+        <NoteComposer
+          state={c.chat}
+          contextDescriptionId="pr-chat-reply-context"
+          busy={c.isBusy(c.chat.draft?.anchor ?? null)}
+          model={c.modelFor(c.chat.draft?.anchor ?? null).model}
+          onAsk={c.ask}
+          onError={c.onError}
+        />
+      </div>
     </aside>
   );
 }

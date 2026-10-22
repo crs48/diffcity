@@ -515,5 +515,8 @@
   "Save private note": "Guardar nota privada",
   "Save GitHub draft": "Guardar borrador de GitHub",
   "Private AI conversation": "Conversación privada con IA",
-  "Ask AI about": "Preguntar a la IA sobre"
+  "Ask AI about": "Preguntar a la IA sobre",
+  "Reply context": "Contexto de la respuesta",
+  "Replying to code": "Respondiendo sobre el código",
+  "Replying to this PR": "Respondiendo sobre este PR"
 }

@@ -1804,8 +1804,10 @@
   }
   .discussion-title {
     display: block;
-    margin: 8px 0;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
   }
   .inline-thread > header .text-button {
     font-size: 12px;
@@ -1858,21 +1860,51 @@
     flex: 1;
     font-weight: 550;
   }
+  .discussion-compose {
+    flex-shrink: 0;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .discussion-compose > .composer {
+    padding: 0;
+    border-top: 0;
+  }
   .discussion-context {
-    padding: 13px 18px;
+    padding: 9px 11px;
+    margin-bottom: 8px;
     background: var(--subtle);
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    border-bottom: 1px solid var(--border);
+    gap: 4px;
+    border-left: 2px solid var(--muted);
+    border-radius: 4px;
   }
-  .discussion-context code {
+  .discussion-context-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+  .discussion-context-label > span {
+    flex: 1;
+  }
+  .discussion-context-label .icon-button {
+    width: 24px;
+    height: 24px;
+  }
+  .discussion-context-path {
     font-size: 12px;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .discussion-context span {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
+  }
+  .discussion-context .selection-quote {
+    margin: 4px 0 0;
+    padding: 6px 8px;
   }
   .messages {
     padding: 14px 17px;
@@ -1884,10 +1916,6 @@
   .messages:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: -3px;
-  }
-  .discussion > .discussion-context,
-  .discussion > .composer {
-    flex-shrink: 0;
   }
   .discussion .composer textarea {
     min-height: 64px;
