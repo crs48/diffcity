@@ -294,6 +294,10 @@ const DiffContent = memo(function DiffContent({
                 const chosen =
                   containsLine(selected, hunk, "LEFT", l.old) ||
                   containsLine(selected, hunk, "RIGHT", l.new);
+                const showComment =
+                  !chosen ||
+                  (activeRange?.side === "LEFT" ? l.old : l.new) ===
+                    activeRange?.line;
                 const annotated =
                   notes.some(
                     (n) =>
@@ -313,7 +317,7 @@ const DiffContent = memo(function DiffContent({
                     <div
                       className={`diff-line ${l.kind} ${chosen ? "selected" : ""}`}
                     >
-                      {line && (
+                      {line && showComment ? (
                         <button
                           className={`line-comment ${annotated ? "has-comment" : ""}`}
                           title={
@@ -332,6 +336,11 @@ const DiffContent = memo(function DiffContent({
                         >
                           <MessageSquare size={13} />
                         </button>
+                      ) : (
+                        <span
+                          className="line-comment-placeholder"
+                          aria-hidden="true"
+                        />
                       )}
                       <button {...lineControls(l.old, "LEFT")}>{l.old}</button>
                       <button {...lineControls(l.new, "RIGHT")}>{l.new}</button>

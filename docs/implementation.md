@@ -531,4 +531,12 @@ Virtual window visibility uses cached numeric bounds and one shared, frame-batch
 - [ ] Install and verify sticky headers and minimap navigation in the native app, preserving private notes and settings.
 - [x] [CI passes on a132122](https://github.com/crs48/diffcity/actions/runs/39703426638): 76 Rust and 90 frontend tests, contracts, types, formatting, ESLint, Clippy, and desktop packaging. The existing implementation PR describes sticky headers, minimap behavior, validation, and limits.
 
-The production bundle is ready (executable SHA-256: `1411feb9fe30b90b01d3fa2e12266418245b27ad313ca03b6af80be80de322b6`). Installation is pending a manual Mac unlock required by the computer-use tool; the running installed app has not been replaced. Take a fresh SQLite backup before installation and compare private notes, settings, and model preference afterward.
+The production bundle, including the single range-comment control below, is ready (executable SHA-256: `c459d0fd5218b183e78aec92db52431e8720777d016252bf396090b88b4b9ab1`). Installation is pending a manual Mac unlock required by the computer-use tool; the running installed app has not been replaced. Take a fresh SQLite backup before installation and compare private notes, settings, and model preference afterward.
+
+## Single comment control for selected ranges
+
+Selected ranges show one gutter comment button on their last line. Earlier selected rows retain empty gutter space, including on hover and keyboard focus, so code stays aligned without duplicate comment targets. The button opens a discussion for the entire range. Endpoint matching uses the selected old/new side, including backward selections and context rows whose old/new line numbers differ.
+
+- [x] 92 frontend tests, ESLint, formatting, types, and desktop production packaging pass.
+- [x] Production WebKit verifies one final-row button, preserved full-range discussion anchors, and stable gutter alignment in unified and split views.
+- [ ] Install alongside the sticky headers and minimap after the pending manual Mac unlock.

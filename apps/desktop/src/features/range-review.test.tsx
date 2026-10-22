@@ -183,14 +183,56 @@ describe("multi-line review", () => {
       expect(discuss).not.toHaveBeenCalled();
       expect(lineButton(11).getAttribute("aria-pressed")).toBe("true");
       expect(lineButton(13).getAttribute("aria-pressed")).toBe("true");
-      await user.click(
-        within(lineButton(13).closest(".diff-line") as HTMLElement).getByRole(
-          "button",
-          { name: `Discuss ${hunk.path} lines 11–13` },
-        ),
+      const comment = screen.getByRole("button", {
+        name: `Discuss ${hunk.path} lines 11–13`,
+      });
+      expect(comment.closest(".diff-line")).toBe(
+        lineButton(13).closest(".diff-line"),
       );
+      expect(region.querySelectorAll(".selected .line-comment")).toHaveLength(
+        1,
+      );
+      expect(
+        region.querySelectorAll(".selected .line-comment-placeholder"),
+      ).toHaveLength(2);
+      await user.click(comment);
       expect(discuss).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({ side: "RIGHT", startLine: 11, line: 13 }),
+      );
+    },
+  );
+
+  it.each([false, true])(
+    "shows the range comment on the last old line when selected backwards (split: %s)",
+    async (split) => {
+      const user = userEvent.setup();
+      const discuss = vi.fn();
+      const source: Hunk = {
+        ...hunk,
+        lines: [
+          { kind: "context", old: 10, new: 20, text: "first" },
+          { kind: "deletion", old: 11, new: null, text: "removed" },
+          { kind: "addition", old: null, new: 21, text: "added" },
+          { kind: "context", old: 12, new: 22, text: "last" },
+        ],
+      };
+      render(
+        <SelectionExample source={source} onDiscuss={discuss} split={split} />,
+      );
+      fireEvent.click(lineButton(12, true), { detail: 0 });
+      fireEvent.click(lineButton(10, true), { detail: 0, shiftKey: true });
+      const comment = screen.getByRole("button", {
+        name: `Discuss ${hunk.path} lines 10–12`,
+      });
+      expect(comment.closest(".diff-line")).toBe(
+        lineButton(12, true).closest(".diff-line"),
+      );
+      expect(
+        screen.getByRole("region").querySelectorAll(".selected .line-comment"),
+      ).toHaveLength(1);
+      await user.click(comment);
+      expect(discuss).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ side: "LEFT", startLine: 10, line: 12 }),
       );
     },
   );
@@ -253,9 +295,9 @@ describe("multi-line review", () => {
     fireEvent.pointerMove(region, { pointerId: 1, clientY: 37 });
     fireEvent.pointerUp(region, { pointerId: 1, clientY: 37 });
     await user.click(
-      screen.getAllByRole("button", {
+      screen.getByRole("button", {
         name: `Discuss ${hunk.path} lines 11–12`,
-      })[0],
+      }),
     );
     expect(discuss).toHaveBeenCalledWith(
       expect.objectContaining({ side: "LEFT", startLine: 11, line: 12 }),
