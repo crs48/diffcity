@@ -208,6 +208,7 @@ fn changed_content_loses_progress_but_unchanged_code_keeps_it() {
 fn private_notes_never_enter_publication_payload() {
     let s = snapshot();
     let mut n = Note {
+        thread_title: None,
         model: None,
         id: "private".into(),
         snapshot_id: s.id.clone(),
@@ -252,6 +253,7 @@ fn multiline_deletion_uses_left_source_coordinates() {
         .remove(0);
     s.files[0].hunks = vec![h.clone()];
     let n = Note {
+        thread_title: None,
         model: None,
         id: "draft".into(),
         snapshot_id: s.id.clone(),
@@ -330,6 +332,7 @@ fn earlier_revision_notes_can_be_reopened_without_changing_latest() {
     service.store.put("latest", &key, &second.id).unwrap();
     let note = service
         .save_note(Note {
+            thread_title: None,
             model: None,
             id: String::new(),
             snapshot_id: first.id.clone(),

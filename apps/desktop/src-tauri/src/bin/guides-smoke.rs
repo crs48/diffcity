@@ -99,6 +99,7 @@ async fn main() -> Result<()> {
         })
         .await?;
     let question = service.save_note(Note {
+        thread_title: None,
         model: None,
         id: String::new(),
         snapshot_id: snapshot.id.clone(),

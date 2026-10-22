@@ -373,6 +373,9 @@ pub struct GuideVersion {
 pub struct Note {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
+    pub thread_title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     pub model: Option<ModelPreference>,
     pub id: String,
     pub snapshot_id: String,

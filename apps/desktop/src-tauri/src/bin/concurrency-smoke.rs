@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
     ];
     let questions: Vec<_> = snapshot.files.iter().take(3).enumerate().map(|(i,file)| {
         let hunk = &file.hunks[0];
-        service.save_note(Note {
+        service.save_note(Note { thread_title: None,
             id: String::new(), snapshot_id: snapshot.id.clone(),
             anchor: Some(Anchor {hunk_id:hunk.id.clone(),path:file.path.clone(),side:Side::RIGHT,start_line:1,line:1,text_selection:None}),
             body:format!("In two sentences, explain this line and its main review concern. This is independent conversation {}.",i+1),

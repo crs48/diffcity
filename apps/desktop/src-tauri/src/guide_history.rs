@@ -116,6 +116,7 @@ mod tests {
         );
         let note = service
             .save_note(Note {
+                thread_title: None,
                 model: None,
                 id: String::new(),
                 snapshot_id: snapshot.id.clone(),

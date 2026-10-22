@@ -20,6 +20,7 @@ mod review_comparison;
 pub mod service;
 pub mod text_diff;
 mod text_selection;
+mod thread_title;
 
 use std::sync::Arc;
 use tauri::Manager;
