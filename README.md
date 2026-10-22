@@ -24,7 +24,7 @@ Development and production app builds explicitly target Apple silicon (`aarch64-
 
 If `rustc -vV` reports `host: x86_64-apple-darwin` on an ARM Mac, use the native compiler for this checkout with `rustup toolchain install 1.97.1-aarch64-apple-darwin --component rustfmt --component clippy` followed by `rustup override set 1.97.1-aarch64-apple-darwin`. This leaves other repositories' toolchains unchanged. The explicit app target and bundle check are still required; a successful build alone does not establish its architecture.
 
-The local build is unsigned for distribution. Signing, notarization, automatic updates, and a public release remain separate release work. Intel-only and universal release packages are not currently produced.
+Local builds use ad-hoc code signing, and `pnpm desktop:verify` also verifies the complete bundle signature. Developer ID signing, notarization, automatic updates, and a public release remain separate release work. Intel-only and universal release packages are not currently produced.
 
 If Connections reports a network timeout while `gh api user` succeeds, inspect any per-application network-filter prompt for the installed app. A CLI login succeeding does not establish that a newly built executable has network access. The full error appears in Connections; private drafts remain local.
 

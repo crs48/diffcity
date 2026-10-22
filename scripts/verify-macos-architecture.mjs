@@ -51,10 +51,14 @@ if (
 ) {
   const bundle = resolve(process.argv[2] ?? defaultBundle);
   const binaries = verifyMacArchitecture(bundle);
+  execFileSync("codesign", ["--verify", "--deep", "--strict", bundle], {
+    stdio: "inherit",
+  });
   console.log(
     `Verified Apple silicon support in ${binaries.length} Mach-O binary/binaries: ${bundle}`,
   );
   binaries.forEach(({ path, architectures }) =>
     console.log(`  ${relative(bundle, path)}: ${architectures.join(", ")}`),
   );
+  console.log("Bundle signature verified.");
 }

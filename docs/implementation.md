@@ -552,3 +552,16 @@ The minimap is absolutely positioned inside the review canvas, below the sticky 
 - [x] [CI passes on 56dedbc](https://github.com/crs48/diffcity/actions/runs/39708081394): 76 Rust and 92 frontend tests, generated contracts, formatting, types, lint, Clippy, and packaging.
 
 Native horizontal-wheel/keyboard verification was interrupted by the Mac locking. The installed overlay is visually verified; horizontal clearance and focused-control reveal are verified in production WebKit, including actual long wrapped text moving clear of the map.
+
+## Native Apple silicon packaging
+
+The installed overlay executable was Intel-only (`x86_64`). The local rustup default host was `x86_64-apple-darwin`, so the architecture-neutral `1.97.1` pin selected an Intel compiler despite the Mac and Node running ARM. Previous CI used an ARM runner and therefore did not reproduce the local packaging mistake. Binary identity comparisons did not establish architecture.
+
+Development and release commands now explicitly pass `--target aarch64-apple-darwin`, and the pinned toolchain includes that target. A checkout-specific rustup override selects the native compiler locally without changing other repositories. The canonical app path is now `target/aarch64-apple-darwin/release/bundle/macos/diffcity.app`; the native test harness uses the corresponding debug path.
+
+`pnpm desktop:build` runs an architecture and signature gate after packaging. It walks all bundled files, follows internal framework symlinks, rejects escaping symlinks, and requires an ARM slice in every Mach-O image plus the main executable. The local bundle uses ad-hoc signing and must pass deep, strict codesign verification. Developer ID signing and notarization remain release work. CI requires an ARM runner and tests the gate with actual ARM, universal, Intel-only, and mixed-architecture helper fixtures.
+
+- [x] All 10 packaged executables are `arm64`; the signed bundle passes strict verification.
+- [x] All 76 Rust tests pass under the native ARM toolchain. Four packaging regressions pass, including rejection of an Intel helper in an otherwise ARM app.
+- [x] The configured GitHub CLI and resolved Codex CLI executable are both `arm64`. ARM connection checks reach Codex and enumerate seven models. `gh api user` succeeds; the app's GitHub API connection timed out twice, so live app-level GitHub connectivity is not claimed by this check.
+- [ ] Replace the installed Intel build and verify native launch after the pending manual Mac unlock. Preserve private notes and saved settings using a fresh SQLite backup.
