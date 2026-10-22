@@ -1,10 +1,19 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  Children,
+  Fragment,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Button } from "react-aria-components";
 import { ChevronDown, ChevronRight, FileCode2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Anchor, ChangedFile, Hunk } from "../lib/api";
 import { useConversation } from "./conversation";
 import { followScrollTarget } from "../lib/scrollTarget";
+import { contextAfter, contextBefore, sharedContext } from "../lib/contextGaps";
+import { ContextGap } from "./ContextGap";
 
 /** One header for consecutive hunks of a file, preserving the guide's reading order. */
 export function FileDiff({
@@ -12,11 +21,15 @@ export function FileDiff({
   hunks,
   selection,
   children,
+  snapshotId,
+  split = false,
 }: {
   file: ChangedFile;
   hunks: Hunk[];
   selection: Anchor | null;
   children: ReactNode;
+  snapshotId?: string;
+  split?: boolean;
 }) {
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
@@ -119,7 +132,34 @@ export function FileDiff({
           <span className="removed mono">−{counts.deletions}</span>
         )}
       </div>
-      {!collapsed && children}
+      {!collapsed &&
+        (snapshotId
+          ? Children.toArray(children).map((child, index) => {
+              const hunk = hunks[index];
+              if (!hunk) return child;
+              const sharedBefore = sharedContext(hunks[index - 1], hunk, file);
+              const sharedAfter = sharedContext(hunk, hunks[index + 1], file);
+              return (
+                <Fragment key={hunk.id}>
+                  {!sharedBefore && (
+                    <ContextGap
+                      key={`${snapshotId}/${hunk.id}/before`}
+                      gap={contextBefore(hunk, file)}
+                      snapshotId={snapshotId}
+                      split={split}
+                    />
+                  )}
+                  {child}
+                  <ContextGap
+                    key={`${snapshotId}/${hunk.id}/after/${sharedAfter?.below?.id ?? ""}`}
+                    gap={sharedAfter ?? contextAfter(hunk, file)}
+                    snapshotId={snapshotId}
+                    split={split}
+                  />
+                </Fragment>
+              );
+            })
+          : children)}
     </div>
   );
 }

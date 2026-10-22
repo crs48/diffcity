@@ -82,8 +82,9 @@ export function ReviewCode({
       const match = pending.current;
       if (!match) return;
       const file = [
-        ...(root.current?.querySelectorAll<HTMLElement>("[data-hunk-id]") ??
-          []),
+        ...(root.current?.querySelectorAll<HTMLElement>(
+          ".diff-file[data-hunk-id]",
+        ) ?? []),
       ].find((element) => element.dataset.hunkId === match.anchor.hunkId);
       const row = file?.querySelector<HTMLElement>(
         `[data-code-index="${match.codeIndex}"]`,

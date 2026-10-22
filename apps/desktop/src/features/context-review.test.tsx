@@ -93,8 +93,8 @@ describe("expanded review code", () => {
     expect(await screen.findByText("before 50")).toBeTruthy();
     expect(request.mock.calls).toEqual([
       ["snapshot", hunk.id, 25, 0],
-      ["snapshot", hunk.id, 25, 25],
-      ["snapshot", hunk.id, 50, 25],
+      ["snapshot", hunk.id, 0, 25],
+      ["snapshot", hunk.id, 50, 0],
     ]);
     for (const context of screen.getAllByRole("region", {
       name: "Unchanged surrounding code",
@@ -103,7 +103,9 @@ describe("expanded review code", () => {
     expect(
       screen.getByRole("button", { name: "Select src/review.ts line 100" }),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Collapse context" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Collapse context" })[0],
+    );
     expect(screen.queryByText("before 50")).toBeNull();
     expect(screen.getByText("newValue")).toBeTruthy();
   });
@@ -128,15 +130,14 @@ describe("expanded review code", () => {
       screen.getByRole("button", { name: "Show 25 lines above" }),
     );
     expect(
-      await screen.findByText("No more unchanged lines above this hunk."),
-    ).toBeTruthy();
+      screen.queryByRole("button", { name: "Show 25 lines above" }),
+    ).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Show 25 lines below" }),
+    );
     expect(
-      (
-        screen.getByRole("button", {
-          name: "Show 25 lines below",
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+      screen.queryByRole("button", { name: "Show 25 lines below" }),
+    ).toBeNull();
   });
 });

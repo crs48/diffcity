@@ -473,5 +473,12 @@
   "Show referenced lines": "Mostrar líneas referenciadas",
   "Code explanation": "Explicación del código",
   "Read all code notes ({{count}})": "Leer todas las notas de código ({{count}})",
-  "Review outline, {{current}} of {{total}} sections": "Índice de revisión, {{current}} de {{total}} secciones"
+  "Review outline, {{current}} of {{total}} sections": "Índice de revisión, {{current}} de {{total}} secciones",
+  "Show {{count}} lines above_one": "Mostrar {{count}} línea anterior",
+  "Show {{count}} lines above_other": "Mostrar {{count}} líneas anteriores",
+  "Show {{count}} lines below_one": "Mostrar {{count}} línea siguiente",
+  "Show {{count}} lines below_other": "Mostrar {{count}} líneas siguientes",
+  "{{count}} hidden lines_one": "{{count}} línea oculta",
+  "{{count}} hidden lines_other": "{{count}} líneas ocultas",
+  "More unchanged lines": "Más líneas sin cambios"
 }

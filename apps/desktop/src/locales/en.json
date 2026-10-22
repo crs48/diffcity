@@ -473,5 +473,12 @@
   "Show referenced lines": "Show referenced lines",
   "Code explanation": "Code explanation",
   "Read all code notes ({{count}})": "Read all code notes ({{count}})",
-  "Review outline, {{current}} of {{total}} sections": "Review outline, {{current}} of {{total}} sections"
+  "Review outline, {{current}} of {{total}} sections": "Review outline, {{current}} of {{total}} sections",
+  "Show {{count}} lines above_one": "Show {{count}} line above",
+  "Show {{count}} lines above_other": "Show {{count}} lines above",
+  "Show {{count}} lines below_one": "Show {{count}} line below",
+  "Show {{count}} lines below_other": "Show {{count}} lines below",
+  "{{count}} hidden lines_one": "{{count}} hidden line",
+  "{{count}} hidden lines_other": "{{count}} hidden lines",
+  "More unchanged lines": "More unchanged lines"
 }

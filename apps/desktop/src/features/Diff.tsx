@@ -10,6 +10,7 @@ import {
 import { Button } from "react-aria-components";
 import type {
   Anchor,
+  ChangedFile,
   GuideAnnotation,
   Hunk,
   Note,
@@ -21,8 +22,8 @@ import { useLineSelection } from "./useLineSelection";
 import { anchorKey, diffRows } from "../lib/diffRows";
 import { InlineDiscussion } from "./InlineDiscussion";
 import { useConversation } from "./conversation";
-import { useHunkContext } from "./useHunkContext";
-import { ContextLines } from "./ContextLines";
+import { ContextGap } from "./ContextGap";
+import { contextBefore, contextAfter } from "../lib/contextGaps";
 import { DIFF_CHUNK_SIZE, DiffChunks, rowAtOffset } from "./DiffChunks";
 import { codeTextProps } from "../lib/textSelection";
 
@@ -34,7 +35,8 @@ const NO_ANNOTATIONS: GuideAnnotation[] = [];
 type DiffProps = {
   annotations?: GuideAnnotation[];
   hunk: Hunk;
-  file?: { status: string; previousPath: string | null };
+  file?: Pick<ChangedFile, "status" | "previousPath"> &
+    Partial<Pick<ChangedFile, "hunks">>;
   selection: Anchor | null;
   onSelect: (anchor: Anchor) => void;
   onDiscuss?: (anchor: Anchor) => void;
@@ -43,6 +45,7 @@ type DiffProps = {
   split: boolean;
   snapshotId?: string;
   hideFileHeader?: boolean;
+  hideContext?: boolean;
 };
 
 // Conversation updates reach inline threads directly; unchanged code does not need
@@ -96,6 +99,7 @@ const DiffContent = memo(function DiffContent({
   composerFocus,
   hasConversation,
   hideFileHeader,
+  hideContext,
 }: DiffProps & {
   editing: Anchor | null;
   composerFocus: number;
@@ -113,7 +117,9 @@ const DiffContent = memo(function DiffContent({
       ),
     [hunk, notes, comments, editing, hasConversation],
   );
-  const context = useHunkContext(snapshotId, hunk.id);
+  const contextFile = file?.hunks
+    ? { status: file.status, hunks: file.hunks }
+    : undefined;
   const expansionKey = `${composerFocus}/${selection?.hunkId === hunk.id ? anchorKey(selection) : ""}`;
   const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const collapsed = collapsedAt === expansionKey;
@@ -200,63 +206,30 @@ const DiffContent = memo(function DiffContent({
       )}
       {!collapsed && (
         <>
-          <div className="hunk-header">{hunk.header}</div>
-          {snapshotId && (
-            <div className="context-controls">
-              <Button
-                className="text-button"
-                isDisabled={
-                  context.busy || context.context?.beforeRemaining === 0
-                }
-                onPress={() => void context.expand("before")}
-              >
-                {t("Show 25 lines above")}
-              </Button>
-              {context.context?.beforeRemaining === 0 && (
-                <span role="status">
-                  {t("No more unchanged lines above this hunk.")}
-                </span>
-              )}
-              {!!(
-                context.context?.before.length || context.context?.after.length
-              ) && (
+          {snapshotId && !hideContext && (
+            <ContextGap
+              key={`${snapshotId}/${hunk.id}/before`}
+              gap={contextBefore(hunk, contextFile)}
+              snapshotId={snapshotId}
+              split={split}
+            />
+          )}
+          {selection && activeRange && (
+            <div className="range-toolbar">
+              {activeRange && !interaction.dragging && (
                 <Button
-                  className="text-button"
-                  isDisabled={context.busy}
-                  onPress={context.collapse}
+                  className="secondary"
+                  onPress={() => onDiscuss(activeRange)}
                 >
-                  {t("Collapse context")}
+                  <MessageSquare size={13} />
+                  {t("Comment on")} {lineRange(activeRange)}
                 </Button>
               )}
-              <span className="muted">
-                {t(
-                  "Select text to ask AI. Line comments stay within the diff.",
-                )}
+              <span role="status" aria-live="polite">
+                {`${activeRange.side === "LEFT" ? "Old" : "New"} ${lineRange(activeRange)} selected`}
               </span>
             </div>
           )}
-          {context.error && (
-            <p className="context-error error-text" role="alert">
-              {context.error}
-            </p>
-          )}
-          <ContextLines lines={context.context?.before ?? []} split={split} />
-          <div className="range-toolbar">
-            {activeRange && !interaction.dragging && (
-              <Button
-                className="secondary"
-                onPress={() => onDiscuss(activeRange)}
-              >
-                <MessageSquare size={13} />
-                {t("Comment on")} {lineRange(activeRange)}
-              </Button>
-            )}
-            <span role="status" aria-live="polite">
-              {activeRange
-                ? `${activeRange.side === "LEFT" ? "Old" : "New"} ${lineRange(activeRange)} selected`
-                : "Drag line numbers or Shift-click to select a range"}
-            </span>
-          </div>
           <div
             ref={scroll}
             className={`diff-content ${split ? "split" : ""}`}
@@ -421,26 +394,13 @@ const DiffContent = memo(function DiffContent({
               }}
             />
           </div>
-          <ContextLines lines={context.context?.after ?? []} split={split} />
-          {snapshotId && (
-            <div className="context-controls">
-              <Button
-                className="text-button"
-                isDisabled={
-                  context.busy || context.context?.afterRemaining === 0
-                }
-                onPress={() => void context.expand("after")}
-              >
-                {t("Show 25 lines below")}
-              </Button>
-              <span role="status">
-                {context.busy
-                  ? t("Loading surrounding code…")
-                  : context.context?.afterRemaining === 0
-                    ? t("No more unchanged lines below this hunk.")
-                    : ""}
-              </span>
-            </div>
+          {snapshotId && !hideContext && (
+            <ContextGap
+              key={`${snapshotId}/${hunk.id}/after`}
+              gap={contextAfter(hunk, contextFile)}
+              snapshotId={snapshotId}
+              split={split}
+            />
           )}
         </>
       )}

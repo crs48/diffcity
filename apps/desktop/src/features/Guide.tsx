@@ -79,6 +79,7 @@ export function GuideView({
           split={split}
           snapshotId={w.snapshot.id}
           hideFileHeader
+          hideContext
         />
       )
     );
@@ -101,6 +102,8 @@ export function GuideView({
         file={group.file}
         hunks={group.ids.map((id) => hunks.get(id)!.hunk)}
         selection={selection}
+        snapshotId={w.snapshot.id}
+        split={split}
       >
         {group.ids.map((id) => renderHunk(id))}
       </FileDiff>
