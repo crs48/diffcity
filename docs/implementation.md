@@ -528,10 +528,10 @@ Virtual window visibility uses cached numeric bounds and one shared, frame-batch
 - [x] 90 frontend tests, types, ESLint, formatting, and production web build pass. Regressions cover multi-hunk collapse, same-anchor reopening, measured/virtual/context coordinates, shared scroll subscriptions, and newly visible code without an intersection notification.
 - [x] Production WebKit verifies sticky handoff between files, click/drag/keyboard minimap navigation, multi-hunk collapse, filtering/search, hidden maps for short files, and zero canvas repaints during ordinary scrolling. Light/dark/narrow axe WCAG A/AA checks pass.
 - [x] All 20 section jumps and random Files positions in the 19,890-line fixture render visible blocks. Multiline drafts, mirrored long replies, expanded context, text selection, full-code mode, and independent chat regressions pass. A local scripted 90-frame run measures an 18 ms median and 23 ms p95, with 2 frames over 50 ms and 4,271 DOM elements; these are fixture measurements, not guaranteed native FPS.
-- [ ] Install and verify sticky headers and minimap navigation in the native app, preserving private notes and settings.
+- [x] Install and verify sticky headers and minimap navigation in the native app, preserving private notes and settings. Real GitHub test PR #3 verifies a midpoint minimap jump, keyboard navigation to the file end, title/map handoff from `policies-0.ts` to `policies-1.ts`, and collapse/reopen from the pinned title.
 - [x] [CI passes on a132122](https://github.com/crs48/diffcity/actions/runs/39703426638): 76 Rust and 90 frontend tests, contracts, types, formatting, ESLint, Clippy, and desktop packaging. The existing implementation PR describes sticky headers, minimap behavior, validation, and limits.
 
-The production bundle, including the single range-comment control below, is ready (executable SHA-256: `c459d0fd5218b183e78aec92db52431e8720777d016252bf396090b88b4b9ab1`). Installation is pending a manual Mac unlock required by the computer-use tool; the running installed app has not been replaced. Take a fresh SQLite backup before installation and compare private notes, settings, and model preference afterward.
+The production bundle, including the single range-comment control below, is installed and running (executable SHA-256: `c459d0fd5218b183e78aec92db52431e8720777d016252bf396090b88b4b9ab1`). All 10 private notes, saved settings, and the model preference match the fresh pre-install SQLite backup byte for byte. The installed executable matches the packaged bundle.
 
 ## Single comment control for selected ranges
 
@@ -539,4 +539,5 @@ Selected ranges show one gutter comment button on their last line. Earlier selec
 
 - [x] 92 frontend tests, ESLint, formatting, types, and desktop production packaging pass.
 - [x] Production WebKit verifies one final-row button, preserved full-range discussion anchors, and stable gutter alignment in unified and split views.
-- [ ] Install alongside the sticky headers and minimap after the pending manual Mac unlock.
+- [x] Native verification selects lines 360–366 in `policies-0.ts`: only line 366 has a range-comment icon, and its inline editor identifies the full range. The empty test composer is closed without saving a note or publishing a comment.
+- [x] [CI passes on cfcf1a8](https://github.com/crs48/diffcity/actions/runs/39704448989), including 76 Rust and 92 frontend tests, generated contracts, formatting, types, lint, Clippy, and desktop packaging.
