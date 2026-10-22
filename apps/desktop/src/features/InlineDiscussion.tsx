@@ -14,26 +14,43 @@ import { lineRange, sameAnchor } from "../lib/selection";
 import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { SelectionQuote } from "./SelectionQuote";
+import { threadTitle } from "../lib/threadTitle";
+import { followScrollTarget } from "../lib/scrollTarget";
 
 export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const { t } = useTranslation();
   const c = useConversation();
+  const root = useRef<HTMLElement>(null);
+  const header = useRef<HTMLElement>(null);
+  const keepHeader = useRef(false);
   const [collapsedAt, setCollapsedAt] = useState<number | null>(null);
   const focus = c?.inline.focus ?? 0;
   const collapsed = collapsedAt === focus;
+  useLayoutEffect(() => {
+    if (!collapsed || !keepHeader.current) return;
+    keepHeader.current = false;
+    const element = root.current;
+    const viewport = element?.closest<HTMLElement>("[data-review-scroll]");
+    if (element && viewport)
+      return followScrollTarget(viewport, element, () =>
+        header.current ? parseFloat(getComputedStyle(header.current).top) : 0,
+      );
+  }, [collapsed]);
   if (!c) return null;
   const active =
     c.inline.draft?.snapshotId === c.workspace.snapshot.id &&
     sameAnchor(c.inline.draft.anchor, thread.anchor);
   const label = `${thread.anchor.side === "LEFT" ? "Old" : "New"} ${lineRange(thread.anchor)}`;
+  const title = threadTitle(thread.notes, thread.remote, thread.anchor);
   return (
     <section
+      ref={root}
       className="inline-thread"
       aria-label={`Discussion for ${thread.anchor.path}, ${label}`}
     >
-      <header>
+      <header ref={header}>
         <Button
           className="icon-button"
           aria-label={t(
@@ -42,7 +59,19 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
               : "Collapse inline discussion",
           )}
           aria-expanded={!collapsed}
-          onPress={() => setCollapsedAt(collapsed ? null : focus)}
+          onPress={() => {
+            const viewport = root.current?.closest<HTMLElement>(
+              "[data-review-scroll]",
+            );
+            keepHeader.current =
+              !collapsed &&
+              !!viewport &&
+              !!header.current &&
+              root.current!.getBoundingClientRect().top <
+                viewport.getBoundingClientRect().top +
+                  parseFloat(getComputedStyle(header.current).top);
+            setCollapsedAt(collapsed ? null : focus);
+          }}
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </Button>
@@ -51,7 +80,10 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
         ) : (
           <MessageSquare size={14} />
         )}
-        <strong>{label}</strong>
+        <div className="inline-thread-heading">
+          <strong title={title || label}>{title || label}</strong>
+          {title && <span className="muted">{label}</span>}
+        </div>
         <Button
           className="text-button"
           onPress={() => c.openChat(thread.anchor)}

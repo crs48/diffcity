@@ -923,5 +923,9 @@ it("keeps review progress and saved private notes when background metadata arriv
   );
   expect(screen.getByRole("button", { name: "Code reviewed" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: /^PR chat/ }));
-  expect(await screen.findByText("Keep this private context")).toBeTruthy();
+  expect(
+    await screen.findByText("Keep this private context", {
+      selector: ".message p",
+    }),
+  ).toBeTruthy();
 });

@@ -9,6 +9,7 @@ import type { Note, RemoteComment } from "../lib/api";
 import { lineRange } from "../lib/selection";
 import type { Conversation } from "./conversation";
 import { SelectionQuote } from "./SelectionQuote";
+import { visibleReply } from "../lib/threadTitle";
 
 export function ReviewMessages({
   notes,
@@ -186,7 +187,10 @@ function RunReply({
         </span>
       </div>
       {run.stream && (
-        <CommentMarkdown body={run.stream} diagrams={!isActiveRun(run)} />
+        <CommentMarkdown
+          body={visibleReply(run.stream)}
+          diagrams={!isActiveRun(run)}
+        />
       )}
       <Button
         className="text-button"

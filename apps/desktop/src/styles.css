@@ -1726,11 +1726,18 @@
     background: var(--surface);
     color: var(--text);
     min-width: 0;
-    overflow: hidden;
+    overflow: clip;
     font-family: inherit;
     font-size: 12px;
   }
   .inline-thread > header {
+    position: sticky;
+    top: calc(
+      max(0px, var(--guide-inset, 16px) - 16px) +
+        var(--file-header-height, 52px)
+    );
+    z-index: 2;
+    background: var(--surface);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -1739,8 +1746,24 @@
     border-bottom: 1px solid var(--border);
     font-size: 12px;
   }
-  .inline-thread > header strong {
+  .inline-thread-heading {
     flex: 1;
+    min-width: 80px;
+    display: grid;
+    gap: 2px;
+  }
+  .inline-thread-heading strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .inline-thread-heading > span {
+    font-size: 11px;
+  }
+  .discussion-title {
+    display: block;
+    margin: 8px 0;
+    overflow-wrap: anywhere;
   }
   .inline-thread > header .text-button {
     font-size: 12px;

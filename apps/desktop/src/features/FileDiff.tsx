@@ -20,6 +20,20 @@ export function FileDiff({
 }) {
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
+  const header = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = header.current;
+    if (!element) return;
+    const measure = () =>
+      root.current?.style.setProperty(
+        "--file-header-height",
+        `${element.getBoundingClientRect().height}px`,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const conversation = useConversation();
   const selected =
     selection && hunks.some((h) => h.id === selection.hunkId)
@@ -64,7 +78,7 @@ export function FileDiff({
       data-file-path={file.path}
       data-file-collapsed={collapsed}
     >
-      <div className="file-bar">
+      <div className="file-bar" ref={header}>
         <Button
           className="icon-button"
           aria-label={t(

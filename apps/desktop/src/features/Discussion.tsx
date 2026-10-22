@@ -2,7 +2,8 @@ import { useTranslation } from "react-i18next";
 import "../i18n";
 import { Button } from "react-aria-components";
 import { Sparkles, X } from "lucide-react";
-import { lineRange } from "../lib/selection";
+import { lineRange, sameAnchor } from "../lib/selection";
+import { threadTitle } from "../lib/threadTitle";
 import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
@@ -21,6 +22,11 @@ export function Discussion({ onClose }: { onClose: () => void }) {
   }, [c?.workspace.notes, c?.workspace.comments, c?.runs]);
   if (!c) return null;
   const anchor = c.chat.draft?.anchor;
+  const title = threadTitle(
+    c.workspace.notes.filter((n) => sameAnchor(n.anchor, anchor ?? null)),
+    [],
+    anchor,
+  );
   return (
     <aside
       id="pr-chat"
@@ -46,6 +52,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
       </header>
       <div className="discussion-context">
         <span>{t("Independent conversations, shared PR context.")} </span>
+        {title && <strong className="discussion-title">{title}</strong>}
         {anchor ? (
           <>
             <SelectionQuote anchor={anchor} compact />

@@ -1,12 +1,24 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FileDiff } from "./FileDiff";
 import type { Anchor, ChangedFile } from "../lib/api";
 import "../i18n";
 
-afterEach(cleanup);
+beforeEach(() =>
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  ),
+);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 const file: ChangedFile = {
   path: "src/example.ts",
   previousPath: "src/old.ts",
