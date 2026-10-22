@@ -7,6 +7,21 @@ export function followScrollTarget(
   inset: () => number,
   settled: () => void = () => {},
 ) {
+  return followScrollOffset(
+    viewport,
+    () => (target.isConnected ? target.getBoundingClientRect().top : null),
+    inset,
+    settled,
+  );
+}
+
+/** A resolver can refine a virtual target once its actual row is mounted. */
+export function followScrollOffset(
+  viewport: HTMLElement,
+  targetY: () => number | null,
+  inset: () => number,
+  settled: () => void = () => {},
+) {
   let frame = 0;
   let remaining = 8;
   let stopped = false;
@@ -19,14 +34,12 @@ export function followScrollTarget(
     settled();
   };
   const align = () => {
-    if (!target.isConnected || !viewport.clientHeight) {
+    const y = targetY();
+    if (y === null || !viewport.clientHeight) {
       stop();
       return;
     }
-    const delta =
-      target.getBoundingClientRect().top -
-      viewport.getBoundingClientRect().top -
-      inset();
+    const delta = y - viewport.getBoundingClientRect().top - inset();
     if (Math.abs(delta) > 1)
       viewport.scrollTo({
         top: Math.max(0, viewport.scrollTop + delta),

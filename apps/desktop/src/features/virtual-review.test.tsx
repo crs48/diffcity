@@ -42,12 +42,15 @@ beforeEach(() => {
       const viewport = this.hasAttribute("data-review-scroll");
       const height = viewport
         ? 600
-        : this.classList.contains("diff-chunk-content")
-          ? this.children.length * 25
-          : Number.parseFloat(this.style.height) || 1600;
+        : this.classList.contains("diff-chunks")
+          ? this.children.length * 1600
+          : this.classList.contains("diff-chunk-content")
+            ? this.children.length * 25
+            : Number.parseFloat(this.style.height) || 1600;
       const top = viewport
         ? 0
-        : Number(chunk?.dataset.chunkIndex ?? 0) * 1600 -
+        : Number(scroll?.dataset.codeOffset ?? 0) +
+          Number(chunk?.dataset.chunkIndex ?? 0) * 1600 -
           (scroll?.scrollTop ?? 0);
       return {
         top,
@@ -71,10 +74,10 @@ afterEach(() => {
 });
 
 const items = Array.from({ length: 1000 }, (_, index) => index);
-const example = (all = false, selected = -1) => (
+const example = (all = false, selected = -1, offset = 0) => (
   <>
     <button>Outside code</button>
-    <div data-review-scroll>
+    <div data-review-scroll data-code-offset={offset}>
       <ReviewRenderingContext.Provider value={!all}>
         <DiffChunks
           items={items}
@@ -124,5 +127,26 @@ it("mounts a bounded window, retains focused and selected code, and restores all
     expect(
       container.querySelectorAll(".diff-chunk-content button").length,
     ).toBeLessThan(600),
+  );
+});
+
+it("loads a newly visible hunk when no intersection notification arrives", async () => {
+  const { container } = render(example(false, -1, 50000));
+  expect(screen.queryByRole("button", { name: "Line 1" })).toBeNull();
+  const viewport = container.querySelector<HTMLElement>(
+    "[data-review-scroll]",
+  )!;
+  viewport.scrollTop = 49500;
+  fireEvent.scroll(viewport);
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Line 1" })).toBeTruthy(),
+  );
+  expect(
+    container.querySelectorAll(".diff-chunk-content button").length,
+  ).toBeLessThan(400);
+  viewport.scrollTop = 90000;
+  fireEvent.scroll(viewport);
+  await waitFor(() =>
+    expect(container.querySelectorAll(".diff-chunk-content")).toHaveLength(0),
   );
 });

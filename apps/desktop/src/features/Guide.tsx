@@ -8,6 +8,7 @@ import { GuideFlow } from "./GuideFlow";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import type { Anchor, ReviewProgress, ReviewWorkspace } from "../lib/api";
 import { ReviewCode } from "./ReviewCode";
+import { FileDiff } from "./FileDiff";
 
 export function GuideView({
   workspace: w,
@@ -58,9 +59,33 @@ export function GuideView({
           comments={comments}
           split={split}
           snapshotId={w.snapshot.id}
+          hideFileHeader
         />
       )
     );
+  };
+  const renderHunks = (ids: string[]) => {
+    // Only group adjacent entries: the guide may revisit a file for a different concern.
+    const groups = ids.reduce<
+      Array<{ file: (typeof w.snapshot.files)[number]; ids: string[] }>
+    >((result, id) => {
+      const entry = hunks.get(id);
+      if (!entry) return result;
+      if (result.at(-1)?.file.path === entry.file.path)
+        result.at(-1)!.ids.push(id);
+      else result.push({ file: entry.file, ids: [id] });
+      return result;
+    }, []);
+    return groups.map((group) => (
+      <FileDiff
+        key={group.ids[0]}
+        file={group.file}
+        hunks={group.ids.map((id) => hunks.get(id)!.hunk)}
+        selection={selection}
+      >
+        {group.ids.map(renderHunk)}
+      </FileDiff>
+    ));
   };
   if (mode === "overview")
     return (
@@ -130,7 +155,7 @@ export function GuideView({
             )
             .map((f) => (
               <div key={f.path} className="file-group">
-                {f.hunks.map((h) => renderHunk(h.id))}
+                {renderHunks(f.hunks.map((h) => h.id))}
                 {f.unavailable && (
                   <div className="callout">
                     <FileCode2 size={16} />
@@ -160,7 +185,7 @@ export function GuideView({
         onDiscuss={onDiscuss}
         onProgress={onProgress}
         onFinish={onFinish}
-        renderHunk={renderHunk}
+        renderHunks={renderHunks}
         split={split}
         onSplit={() => setSplit(!split)}
       />

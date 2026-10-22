@@ -37,7 +37,7 @@ type Props = {
   onDiscuss: (anchor: Anchor) => void;
   onProgress: (progress: ReviewProgress) => void;
   onFinish: () => void;
-  renderHunk: (id: string) => ReactNode;
+  renderHunks: (ids: string[]) => ReactNode;
   split: boolean;
   onSplit: () => void;
 };
@@ -233,7 +233,7 @@ function GuideChapter({
   selection,
   onDiscuss,
   onProgress,
-  renderHunk,
+  renderHunks,
   split,
   onSplit,
 }: Props & {
@@ -407,7 +407,7 @@ function GuideChapter({
                 {t("Collapse changes")}
               </Button>
             </div>
-            {s.hunkIds.map(renderHunk)}
+            {renderHunks(s.hunkIds)}
           </>
         )}
         {s.findings.map((f, i) => (

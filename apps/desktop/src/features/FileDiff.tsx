@@ -1,0 +1,111 @@
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Button } from "react-aria-components";
+import { ChevronDown, ChevronRight, FileCode2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { Anchor, ChangedFile, Hunk } from "../lib/api";
+import { useConversation } from "./conversation";
+import { followScrollTarget } from "../lib/scrollTarget";
+
+/** One header for consecutive hunks of a file, preserving the guide's reading order. */
+export function FileDiff({
+  file,
+  hunks,
+  selection,
+  children,
+}: {
+  file: ChangedFile;
+  hunks: Hunk[];
+  selection: Anchor | null;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const root = useRef<HTMLDivElement>(null);
+  const conversation = useConversation();
+  const selected =
+    selection && hunks.some((h) => h.id === selection.hunkId)
+      ? selection
+      : null;
+  const editing = conversation?.inline.draft?.anchor;
+  const focus =
+    editing && hunks.some((h) => h.id === editing.hunkId)
+      ? conversation?.inline.focus
+      : 0;
+  const [closed, setClosed] = useState<{
+    selected: Anchor | null;
+    focus: number | undefined;
+  } | null>(null);
+  const collapsed =
+    !!closed && closed.selected === selected && closed.focus === focus;
+  const keepHeader = useRef(false);
+  const stopJump = useRef(() => {});
+  useLayoutEffect(() => {
+    if (!keepHeader.current || !collapsed) return;
+    keepHeader.current = false;
+    const fileElement = root.current;
+    const viewport = fileElement?.closest<HTMLElement>("[data-review-scroll]");
+    if (fileElement && viewport) {
+      stopJump.current = followScrollTarget(viewport, fileElement, () => 8);
+    }
+    return () => stopJump.current();
+  }, [collapsed]);
+  const counts = hunks
+    .flatMap((h) => h.lines)
+    .reduce(
+      (sum, line) => ({
+        additions: sum.additions + Number(line.kind === "addition"),
+        deletions: sum.deletions + Number(line.kind === "deletion"),
+      }),
+      { additions: 0, deletions: 0 },
+    );
+  return (
+    <div
+      ref={root}
+      className="diff-file-group"
+      data-file-path={file.path}
+      data-file-collapsed={collapsed}
+    >
+      <div className="file-bar">
+        <Button
+          className="icon-button"
+          aria-label={t(
+            collapsed ? "Expand file {{path}}" : "Collapse file {{path}}",
+            { path: file.path },
+          )}
+          aria-expanded={!collapsed}
+          onPress={() => {
+            const viewport = root.current?.closest<HTMLElement>(
+              "[data-review-scroll]",
+            );
+            keepHeader.current =
+              !collapsed &&
+              !!viewport &&
+              root.current!.getBoundingClientRect().top <
+                viewport.getBoundingClientRect().top;
+            setClosed(collapsed ? null : { selected, focus });
+          }}
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+        </Button>
+        <FileCode2 size={14} aria-hidden />
+        <span
+          title={
+            file.previousPath
+              ? `${file.previousPath} → ${file.path}`
+              : file.path
+          }
+        >
+          {file.previousPath && <>{file.previousPath} → </>}
+          {file.path}
+        </span>
+        <small className="file-status">{t(file.status)}</small>
+        {!!counts.additions && (
+          <span className="added mono">+{counts.additions}</span>
+        )}
+        {!!counts.deletions && (
+          <span className="removed mono">−{counts.deletions}</span>
+        )}
+      </div>
+      {!collapsed && children}
+    </div>
+  );
+}

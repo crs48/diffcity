@@ -28,6 +28,7 @@ type DiffProps = {
   comments: RemoteComment[];
   split: boolean;
   snapshotId?: string;
+  hideFileHeader?: boolean;
 };
 
 // Conversation updates reach inline threads directly; unchanged code does not need
@@ -79,6 +80,7 @@ const DiffContent = memo(function DiffContent({
   editing,
   composerFocus,
   hasConversation,
+  hideFileHeader,
 }: DiffProps & {
   editing: Anchor | null;
   composerFocus: number;
@@ -111,9 +113,13 @@ const DiffContent = memo(function DiffContent({
     [items],
   );
   const scrollToCode = (index: number) => {
-    scroll.current
-      ?.querySelector<HTMLElement>(`[data-code-index="${index}"]`)
-      ?.scrollIntoView({ block: "nearest" });
+    const row = scroll.current?.querySelector<HTMLElement>(
+      `[data-code-index="${index}"]`,
+    );
+    if (row) {
+      delete row.dataset.headerOccluded;
+      row.scrollIntoView({ block: "nearest" });
+    }
   };
   const interaction = useLineSelection(
     hunk,
@@ -147,29 +153,31 @@ const DiffContent = memo(function DiffContent({
   });
   return (
     <div className="diff-file" data-hunk-id={hunk.id}>
-      <div className="file-bar">
-        <Button
-          className="icon-button"
-          aria-label={t(
-            collapsed ? "Expand diff {{path}}" : "Collapse diff {{path}}",
-            { path: hunk.path },
-          )}
-          aria-expanded={!collapsed}
-          onPress={() => setCollapsedAt(collapsed ? null : expansionKey)}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-        </Button>
-        <FileCode2 size={14} />
-        <span>
-          {file?.previousPath && <>{file.previousPath} → </>}
-          {hunk.path}
-        </span>
-        {file && <small className="file-status">{t(file.status)}</small>}
-        <span className="muted mono">
-          {hunk.lines.filter((l) => l.kind === "addition").length > 0 &&
-            `+${hunk.lines.filter((l) => l.kind === "addition").length}`}
-        </span>
-      </div>
+      {!hideFileHeader && (
+        <div className="file-bar">
+          <Button
+            className="icon-button"
+            aria-label={t(
+              collapsed ? "Expand diff {{path}}" : "Collapse diff {{path}}",
+              { path: hunk.path },
+            )}
+            aria-expanded={!collapsed}
+            onPress={() => setCollapsedAt(collapsed ? null : expansionKey)}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+          </Button>
+          <FileCode2 size={14} />
+          <span>
+            {file?.previousPath && <>{file.previousPath} → </>}
+            {hunk.path}
+          </span>
+          {file && <small className="file-status">{t(file.status)}</small>}
+          <span className="muted mono">
+            {hunk.lines.filter((l) => l.kind === "addition").length > 0 &&
+              `+${hunk.lines.filter((l) => l.kind === "addition").length}`}
+          </span>
+        </div>
+      )}
       {!collapsed && (
         <>
           <div className="hunk-header">{hunk.header}</div>
@@ -240,6 +248,10 @@ const DiffContent = memo(function DiffContent({
           >
             <DiffChunks
               items={items}
+              minimapLines={hunk.lines}
+              lineIndex={(item) =>
+                item.kind === "code" ? item.codeIndex : null
+              }
               itemKey={(item) => item.key}
               startsChunk={(item) =>
                 item.kind === "code" && item.codeIndex % DIFF_CHUNK_SIZE === 0
@@ -266,6 +278,8 @@ const DiffContent = memo(function DiffContent({
                   "data-index": index,
                   "data-row-key": item.key,
                   "data-code-index":
+                    item.kind === "code" ? item.codeIndex : undefined,
+                  "data-map-line":
                     item.kind === "code" ? item.codeIndex : undefined,
                 };
                 if (item.kind === "thread")

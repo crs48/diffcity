@@ -500,3 +500,33 @@ Opening excludes GitHub capture and Codex generation; these are local browser-fi
 - [x] [CI passes on implementation commit 12a0b06](https://github.com/crs48/diffcity/actions/runs/39695349581): 76 Rust and 83 frontend tests, generated contracts, types, formatting, lint, Clippy, and production packaging.
 
 The installed production executable matches the packaged bundle (SHA-256: `264d35ca1082fe85aafff616193f50ef1b37686b589e445a3ef89986d040bc54`). All 10 private notes, saved settings, and the model preference match the fresh pre-install SQLite backup byte for byte. Native accessibility and screenshot checks confirm the visible search result, scrolling code, and section destination. [Validation documentation CI also passes on f5aa024](https://github.com/crs48/diffcity/actions/runs/39695759147).
+
+## Sticky file headers and minimap
+
+Consecutive hunks from the same file share one sticky title and collapse control in Guide and Files. The guide's order is preserved, including intentional revisits to a file in separate chapters. A fresh line-selection request reopens its file. Collapsing while deep inside a file keeps the header reachable, and the next header replaces it when the previous file leaves the viewport.
+
+A single bounded canvas in a separate right rail represents the active file's captured diff and expanded context. It appears only when that file is taller than the viewport. Green, red, and neutral bands summarize additions, deletions, and unchanged code; unloaded source is not invented. Drawing happens when the active file, theme, or canvas dimensions change. Ordinary scrolling updates only the viewport marker and accessible slider value, without painting the canvas or rerendering the review document. A layout registry handles source registration and context changes without scanning thousands of mounted rows each frame.
+
+```mermaid
+flowchart LR
+  Sources[Diff hunks and expanded context] --> Registry[File layout registry]
+  Registry --> Active[Current visible file]
+  Active --> Size{Taller than viewport?}
+  Size -- Yes --> Canvas[Bounded canvas and viewport marker]
+  Size -- No --> Hidden[Hide minimap]
+  Pointer[Click, drag, or keyboard] --> Position[Resolve code position]
+  Position --> Estimate[Virtual block estimate]
+  Estimate --> Measured[Refine with mounted row geometry]
+  Measured --> Scroll[Shared review scrollbar]
+  Scroll --> Active
+```
+
+Minimap navigation does not change comment anchors or review marks. It clamps the first/last page inside the selected file, refines virtual positions once code is mounted, and yields to subsequent user gestures. Source geometry accounts for wrapping and inline-discussion gaps. Keyboard users can use arrows, Page Up/Down, Home, and End; assistive technology receives a named vertical slider and percentage value. Partially obscured line controls under sticky headers do not leave small clickable slivers.
+
+Virtual window visibility uses cached numeric bounds and one shared, frame-batched scroll listener. This avoids a stale WebKit intersection notification at the lower edge of a file after a distant jump. Actual geometry is refreshed when a window enters/leaves its buffer or layout resizes.
+
+- [x] 90 frontend tests, types, ESLint, formatting, and production web build pass. Regressions cover multi-hunk collapse, same-anchor reopening, measured/virtual/context coordinates, shared scroll subscriptions, and newly visible code without an intersection notification.
+- [x] Production WebKit verifies sticky handoff between files, click/drag/keyboard minimap navigation, multi-hunk collapse, filtering/search, hidden maps for short files, and zero canvas repaints during ordinary scrolling. Light/dark/narrow axe WCAG A/AA checks pass.
+- [x] All 20 section jumps and random Files positions in the 19,890-line fixture render visible blocks. Multiline drafts, mirrored long replies, expanded context, text selection, full-code mode, and independent chat regressions pass. A local scripted 90-frame run measures an 18 ms median and 23 ms p95, with 2 frames over 50 ms and 4,271 DOM elements; these are fixture measurements, not guaranteed native FPS.
+- [ ] Install and verify sticky headers and minimap navigation in the native app, preserving private notes and settings.
+- [ ] Confirm implementation CI and update the existing pull request.

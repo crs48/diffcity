@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import type { Anchor, ChangedFile } from "../lib/api";
 import { findCode, type CodeMatch } from "../lib/codeSearch";
 import { followScrollTarget } from "../lib/scrollTarget";
+import { createFileNavigation, FileNavigationContext } from "./fileNavigation";
+import { FileMinimap } from "./FileMinimap";
 import {
   ReviewRenderingContext,
   VIRTUAL_REVIEW_THRESHOLD,
@@ -33,6 +35,7 @@ export function ReviewCode({
 }) {
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
+  const [navigation] = useState(createFileNavigation);
   const input = useRef<HTMLInputElement>(null);
   const [all, setAll] = useState(readPreference);
   const [query, setQuery] = useState("");
@@ -124,83 +127,86 @@ export function ReviewCode({
   }, []);
   return (
     <ReviewRenderingContext.Provider value={large && !all}>
-      <div className="review-code" ref={root}>
-        <div
-          className="review-code-tools"
-          role="search"
-          aria-label={t("Find in code")}
-        >
-          <Search size={14} aria-hidden />
-          <input
-            ref={input}
-            type="search"
-            value={query}
+      <FileNavigationContext.Provider value={navigation}>
+        <div className="review-code" ref={root}>
+          <div
+            className="review-code-tools"
+            role="search"
             aria-label={t("Find in code")}
-            placeholder={t("Find in code…")}
-            onChange={(event) => {
-              stopJump.current();
-              setQuery(event.target.value);
-              setIndex(-1);
-              pending.current = null;
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                reveal(event.shiftKey ? -1 : 1);
-              }
-            }}
-          />
-          <span className="code-search-count" role="status">
-            {query.trim() &&
-              t("{{current}} of {{total}} matching lines", {
-                current: index + 1,
-                total: matches.length,
-              })}
-          </span>
-          <Button
-            className="icon-button"
-            aria-label={t("Previous code match")}
-            isDisabled={!matches.length}
-            onPress={() => reveal(-1)}
           >
-            <ArrowUp size={14} />
-          </Button>
-          <Button
-            className="icon-button"
-            aria-label={t("Next code match")}
-            isDisabled={!matches.length}
-            onPress={() => reveal(1)}
-          >
-            <ArrowDown size={14} />
-          </Button>
-          {large && (
-            <Checkbox
-              className="render-all-code"
-              isSelected={all}
-              onChange={renderAll}
-              aria-describedby="render-all-code-help"
-            >
-              <span className="checkbox-indicator" aria-hidden />
-              {t("Render all code")}
-            </Checkbox>
-          )}
-          {large && (
-            <span id="render-all-code-help" className="sr-only">
-              {t(
-                "Enable for full-document screen-reader navigation and text selection. Large reviews otherwise load code as you scroll. Find in code searches every captured diff line.",
-              )}
+            <Search size={14} aria-hidden />
+            <input
+              ref={input}
+              type="search"
+              value={query}
+              aria-label={t("Find in code")}
+              placeholder={t("Find in code…")}
+              onChange={(event) => {
+                stopJump.current();
+                setQuery(event.target.value);
+                setIndex(-1);
+                pending.current = null;
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  reveal(event.shiftKey ? -1 : 1);
+                }
+              }}
+            />
+            <span className="code-search-count" role="status">
+              {query.trim() &&
+                t("{{current}} of {{total}} matching lines", {
+                  current: index + 1,
+                  total: matches.length,
+                })}
             </span>
-          )}
-        </div>
-        {index >= 0 && matches[index] && (
-          <div className="code-search-location" aria-live="polite">
-            {matches[index].anchor.path} ·{" "}
-            {matches[index].anchor.side === "LEFT" ? t("Old") : t("New")}{" "}
-            {t("line")} {matches[index].anchor.line}
+            <Button
+              className="icon-button"
+              aria-label={t("Previous code match")}
+              isDisabled={!matches.length}
+              onPress={() => reveal(-1)}
+            >
+              <ArrowUp size={14} />
+            </Button>
+            <Button
+              className="icon-button"
+              aria-label={t("Next code match")}
+              isDisabled={!matches.length}
+              onPress={() => reveal(1)}
+            >
+              <ArrowDown size={14} />
+            </Button>
+            {large && (
+              <Checkbox
+                className="render-all-code"
+                isSelected={all}
+                onChange={renderAll}
+                aria-describedby="render-all-code-help"
+              >
+                <span className="checkbox-indicator" aria-hidden />
+                {t("Render all code")}
+              </Checkbox>
+            )}
+            {large && (
+              <span id="render-all-code-help" className="sr-only">
+                {t(
+                  "Enable for full-document screen-reader navigation and text selection. Large reviews otherwise load code as you scroll. Find in code searches every captured diff line.",
+                )}
+              </span>
+            )}
           </div>
-        )}
-        {children}
-      </div>
+          {index >= 0 && matches[index] && (
+            <div className="code-search-location" aria-live="polite">
+              {matches[index].anchor.path} ·{" "}
+              {matches[index].anchor.side === "LEFT" ? t("Old") : t("New")}{" "}
+              {t("line")} {matches[index].anchor.line}
+            </div>
+          )}
+          {children}
+          <FileMinimap />
+        </div>
+      </FileNavigationContext.Provider>
     </ReviewRenderingContext.Provider>
   );
 }

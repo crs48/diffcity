@@ -367,5 +367,12 @@
   "Next code match": "Next code match",
   "Render all code": "Render all code",
   "Enable for full-document screen-reader navigation and text selection. Large reviews otherwise load code as you scroll. Find in code searches every captured diff line.": "Enable for full-document screen-reader navigation and text selection. Large reviews otherwise load code as you scroll. Find in code searches every captured diff line.",
-  "Load code block {{number}}": "Load code block {{number}}"
+  "Load code block {{number}}": "Load code block {{number}}",
+  "Expand file {{path}}": "Expand file {{path}}",
+  "Collapse file {{path}}": "Collapse file {{path}}",
+  "File minimap": "File minimap",
+  "Map": "Map",
+  "Code minimap for {{path}}": "Code minimap for {{path}}",
+  "{{percent}}% through displayed code": "{{percent}}% through displayed code",
+  "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown.": "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown."
 }

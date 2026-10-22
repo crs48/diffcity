@@ -367,5 +367,12 @@
   "Next code match": "Coincidencia siguiente",
   "Render all code": "Renderizar todo el código",
   "Enable for full-document screen-reader navigation and text selection. Large reviews otherwise load code as you scroll. Find in code searches every captured diff line.": "Activa esta opción para navegar por todo el documento con un lector de pantalla y seleccionar texto. De lo contrario, las revisiones grandes cargan el código al desplazarse. Buscar en el código examina todas las líneas capturadas del diff.",
-  "Load code block {{number}}": "Cargar bloque de código {{number}}"
+  "Load code block {{number}}": "Cargar bloque de código {{number}}",
+  "Expand file {{path}}": "Expandir archivo {{path}}",
+  "Collapse file {{path}}": "Contraer archivo {{path}}",
+  "File minimap": "Minimapa del archivo",
+  "Map": "Mapa",
+  "Code minimap for {{path}}": "Minimapa del código de {{path}}",
+  "{{percent}}% through displayed code": "{{percent}}% del código mostrado",
+  "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown.": "Haz clic o arrastra para navegar por el código mostrado. Usa las flechas, Re Pág, Av Pág, Inicio o Fin. El verde indica adiciones y el rojo eliminaciones. No se muestra el código fuente no cargado."
 }

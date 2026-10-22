@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -15,6 +16,9 @@ import {
 } from "@tanstack/react-virtual";
 import { useTranslation } from "react-i18next";
 import { useVirtualReview } from "./reviewRendering";
+import type { DiffLine } from "../lib/api";
+import { FileNavigationContext } from "./fileNavigation";
+import { observeReviewScroll } from "../lib/reviewViewport";
 
 // Stable code boundaries keep discussions from shifting later row identities.
 export const DIFF_CHUNK_SIZE = 64;
@@ -26,6 +30,8 @@ export function DiffChunks<T>({
   startsChunk = (_, index) => index % DIFF_CHUNK_SIZE === 0,
   keepItem = () => false,
   estimateItem = () => 25,
+  minimapLines,
+  lineIndex = (_, index) => index,
 }: {
   items: T[];
   render: (item: T, index: number) => ReactNode;
@@ -33,10 +39,20 @@ export function DiffChunks<T>({
   startsChunk?: (item: T, index: number) => boolean;
   keepItem?: (item: T) => boolean;
   estimateItem?: (item: T) => number;
+  minimapLines?: readonly DiffLine[];
+  lineIndex?: (item: T, index: number) => number | null;
 }) {
   const virtual = useVirtualReview();
   const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
+  const navigation = useContext(FileNavigationContext);
+  useLayoutEffect(() => {
+    if (root.current && minimapLines?.length && navigation)
+      return navigation.register({
+        element: root.current,
+        lines: minimapLines,
+      });
+  }, [minimapLines, navigation]);
   const sizes = useRef(new Map<string, number>());
   const [near, setNear] = useState(false);
   const [margin, setMargin] = useState(0);
@@ -139,30 +155,32 @@ export function DiffChunks<T>({
     const element = root.current;
     const viewport = element?.closest<HTMLElement>("[data-review-scroll]");
     if (!element || !viewport) return;
+    let region = { top: 0, bottom: 0, near: false };
     const measure = () => {
       const bounds = element.getBoundingClientRect();
       const view = viewport.getBoundingClientRect();
-      setMargin(viewport.scrollTop + bounds.top - view.top);
-      setNear(
-        bounds.bottom >= view.top - 2000 && bounds.top <= view.bottom + 2000,
-      );
+      const top = viewport.scrollTop + bounds.top - view.top;
+      const near =
+        bounds.bottom >= view.top - 2000 && bounds.top <= view.bottom + 2000;
+      region = { top, bottom: top + bounds.height, near };
+      setMargin(top);
+      setNear(near);
     };
     measure();
-    const intersection = new IntersectionObserver(
-      (entries) => setNear(entries[0].isIntersecting),
-      {
-        root: viewport,
-        rootMargin: "2000px 0px",
-      },
-    );
-    intersection.observe(element);
+    // Cached numeric bounds make offscreen checks cheap. IntersectionObserver
+    // can retain stale visibility at clipped/sticky file boundaries in WebKit.
+    const stopScroll = observeReviewScroll(viewport, (top, height) => {
+      const near =
+        region.bottom >= top - 2000 && region.top <= top + height + 2000;
+      if (near !== region.near) measure();
+    });
     const resize = new ResizeObserver(measure);
     resize.observe(viewport);
     resize.observe(element);
     const panel = element.closest(".review-panel, .review-code");
     if (panel) resize.observe(panel);
     return () => {
-      intersection.disconnect();
+      stopScroll();
       resize.disconnect();
     };
   }, [virtual]);
@@ -225,11 +243,19 @@ export function DiffChunks<T>({
     >
       {chunks.map((chunk, index) => {
         const visible = !virtual || mounted.has(index);
+        const lines = minimapLines
+          ? chunk.flatMap(({ item, index: rowIndex }) => {
+              const line = lineIndex(item, rowIndex);
+              return line === null ? [] : [line];
+            })
+          : [];
         return (
           <div
             className="diff-chunk"
             key={keys[index]}
             data-chunk-index={index}
+            data-map-start={lines[0]}
+            data-map-end={lines.at(-1)}
             style={visible ? undefined : { height: estimate(index) }}
           >
             {visible ? (

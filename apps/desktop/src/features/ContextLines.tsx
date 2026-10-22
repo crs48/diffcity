@@ -19,9 +19,14 @@ export function ContextLines({
     >
       <DiffChunks
         items={lines}
+        minimapLines={lines}
         itemKey={(line) => `${line.old}/${line.new}`}
-        render={(line) => (
-          <div className="diff-line context" key={`${line.old}/${line.new}`}>
+        render={(line, index) => (
+          <div
+            className="diff-line context"
+            data-map-line={index}
+            key={`${line.old}/${line.new}`}
+          >
             <span className="line-comment-placeholder" aria-hidden="true" />
             <span className="line-number">{line.old}</span>
             <span className="line-number">{line.new}</span>
