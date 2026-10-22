@@ -550,7 +550,7 @@ impl Service {
                     prompt: &prompt,
                     schema: Some(guide_schema()),
                 },
-                rx,
+                rx.clone(),
                 |phase, text| {
                     if phase != "stream" {
                         emit_event(phase, text);
@@ -564,6 +564,43 @@ impl Service {
         let proposal = serde_json::from_str(&answer)
             .context("AI output was not a valid guide; the previous guide is preserved")?;
         let mut guide = domain::validate_guide(&snapshot, proposal, &model, &input.supplied)?;
+        if let Some(annotations) = crate::guide_annotations::input(&snapshot, &guide) {
+            emit_event(
+                "annotating",
+                "Taking a closer look at important passages and adding line annotations…",
+            );
+            let directory = self.store.directory.join("review-context");
+            let result = crate::providers::turn(
+                &settings,
+                codex::TurnRequest {
+                    cwd: &directory,
+                    preference: &preference,
+                    instructions: crate::guide_annotations::INSTRUCTIONS,
+                    prompt: &annotations.prompt,
+                    schema: Some(crate::guide_annotations::schema()),
+                },
+                rx.clone(),
+                |phase, text| {
+                    if phase != "stream" {
+                        emit_event(phase, text);
+                    }
+                },
+            )
+            .await;
+            if *rx.borrow() {
+                bail!("Guide generation cancelled; the previous guide is preserved");
+            }
+            let result = result.and_then(|(answer, _)| {
+                crate::guide_annotations::apply(&snapshot, &mut guide, &annotations, &answer)
+            });
+            if result.is_err() {
+                guide.limitations.push("The focused annotation pass was unavailable. The complete first-pass guide is preserved; generate a new guide to retry line annotations.".into());
+            }
+        }
+        if *rx.borrow() {
+            bail!("Guide generation cancelled; the previous guide is preserved");
+        }
+        guide.policy_version = 4;
         for limitation in input.limitations {
             if !guide.limitations.contains(&limitation) {
                 guide.limitations.push(limitation);

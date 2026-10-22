@@ -317,9 +317,22 @@ pub struct Finding {
     pub anchor: Anchor,
 }
 
+/// Explanatory marginalia, separate from findings and user/GitHub comments.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct GuideAnnotation {
+    pub id: String,
+    pub title: String,
+    pub body: String,
+    pub anchor: Anchor,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct GuideSection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(optional, as = "Option<Vec<GuideAnnotation>>")]
+    pub annotations: Vec<GuideAnnotation>,
     pub id: String,
     pub title: String,
     pub summary: String,

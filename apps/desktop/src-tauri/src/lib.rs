@@ -9,6 +9,7 @@ pub mod fixtures;
 pub mod github;
 mod github_lists;
 pub mod guide;
+mod guide_annotations;
 mod guide_history;
 mod guide_prompt;
 pub mod migrations;

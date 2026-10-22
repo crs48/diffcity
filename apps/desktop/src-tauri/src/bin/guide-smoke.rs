@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
         )
         .await?;
     ensure!(
-        guide.source == "codex" && guide.policy_version == 3,
+        ["codex", "claude"].contains(&guide.source.as_str()) && guide.policy_version == 4,
         "Expected new live guide"
     );
     ensure!(
@@ -67,6 +67,10 @@ async fn main() -> Result<()> {
                 == total,
         "Expected exact stored hunk coverage"
     );
+    service.select_guide(
+        &workspace.snapshot.id,
+        guide.id.as_deref().context("Missing guide ID")?,
+    )?;
     let workspace = service.saved(&workspace.snapshot.id)?;
     std::fs::write(
         directory.join(format!("pr-{number}.json")),

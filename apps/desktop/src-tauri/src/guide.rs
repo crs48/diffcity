@@ -36,6 +36,7 @@ pub fn provisional_sections(snapshot: &Snapshot, excluded: &HashSet<String>) -> 
                 }
                 .to_string();
                 sections.push(GuideSection {
+                    annotations: vec![],
                     id: String::new(), title, summary: "Review these related changes together. Run Codex for an explanation grounded in the code.".into(),
                     explanation: String::new(), attention, category, reason, hunk_ids: vec![hunk.id.clone()], unavailable_paths: vec![],
                     questions: vec![], findings: vec![], assessed: false, foldable: false,
@@ -50,6 +51,7 @@ pub fn provisional_sections(snapshot: &Snapshot, excluded: &HashSet<String>) -> 
                 section.unavailable_paths.push(file.path.clone());
             } else {
                 sections.push(GuideSection {
+                    annotations: vec![],
                     id: String::new(), title: "Changes that need additional context".into(),
                     summary: "These files could not be captured as text. Inspect their limitations before finishing the review.".into(),
                     explanation: String::new(),
@@ -136,6 +138,7 @@ pub fn compact_sections(mut sections: Vec<GuideSection>) -> Vec<GuideSection> {
         earlier.unavailable_paths.extend(later.unavailable_paths);
         earlier.questions.extend(later.questions);
         earlier.findings.extend(later.findings);
+        earlier.annotations.extend(later.annotations);
         earlier.id = section_id(earlier);
     }
     sections

@@ -32,6 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Anchor,
         TextSelection,
         Finding,
+        GuideAnnotation,
         GuideSection,
         Guide,
         GuideVersion,

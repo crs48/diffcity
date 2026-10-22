@@ -321,6 +321,7 @@ pub fn validate_guide(
         reasons.dedup();
         categories.dedup();
         sections.push(GuideSection {
+            annotations: vec![],
             id,
             title: s.title,
             summary: s.summary,
