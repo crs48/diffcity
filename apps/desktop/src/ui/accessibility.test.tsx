@@ -172,9 +172,15 @@ describe("keyboard and assistive navigation", () => {
     expect(
       screen.getByRole("tab", { name: "Files" }).getAttribute("aria-selected"),
     ).toBe("true");
-    expect(screen.getByRole("tabpanel", { name: "Files" })).toBeTruthy();
+    const filesPanel = screen.getByRole("tabpanel", { name: "Files" });
+    expect(
+      screen.getByRole("tab", { name: "Files" }).getAttribute("aria-controls"),
+    ).toBe(filesPanel.id);
     await user.keyboard("{Home}");
     expect(guide.getAttribute("aria-selected")).toBe("true");
+    expect(guide.getAttribute("aria-controls")).toBe(
+      screen.getByRole("tabpanel", { name: "Guide" }).id,
+    );
     await user.click(screen.getByRole("button", { name: /Review outline/ }));
     const menu = screen.getByRole("menu", { name: /Review outline/ });
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(6);

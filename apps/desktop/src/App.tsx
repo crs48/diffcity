@@ -1219,7 +1219,7 @@ export default function App() {
                       className="review-scroll"
                       data-review-scroll
                     >
-                      <TabPanel id={mode} className="review-panel">
+                      <TabPanel key={mode} id={mode} className="review-panel">
                         {pull?.state !== "open" && (
                           <div className="history-status">
                             {t(
