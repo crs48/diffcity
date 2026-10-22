@@ -177,8 +177,8 @@ describe("keyboard and assistive navigation", () => {
     expect(guide.getAttribute("aria-selected")).toBe("true");
     await user.click(screen.getByRole("button", { name: /Review outline/ }));
     const menu = screen.getByRole("menu", { name: /Review outline/ });
-    expect(within(menu).getAllByRole("menuitem")).toHaveLength(5);
-    await user.keyboard("{Home}{ArrowDown}{Enter}");
+    expect(within(menu).getAllByRole("menuitem")).toHaveLength(6);
+    await user.keyboard("{Home}{ArrowDown}{ArrowDown}{Enter}");
     await waitFor(() =>
       expect(document.activeElement).toBe(
         screen.getByRole("heading", {

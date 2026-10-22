@@ -315,7 +315,7 @@
   },
   "guide": {
     "snapshotId": "demo-invitations-v1",
-    "summary": "Review team invitations and their expiry policy.",
+    "summary": "This change introduces team invitations with a seven-day lifetime, backed by a database deadline and new copy in English and French. The important review question is whether the new workflow preserves existing records and keeps each invitation inside its team.\n\n### How the change fits together\n\nThe migration adds `expires_at`; a helper calculates a deadline; a focused test checks the lifetime. The visible creation path does not yet call that helper or supply the required expiry. Documentation explains the Members-page workflow, while matching locale keys supply the interface text. These pieces support the same feature, but their failure modes differ.\n\n```mermaid\nflowchart TD\n  accTitle: Team invitation changes\n  accDescr: The migration requires expiry storage, but invitation creation omits the value. A separate helper and test define the seven-day lifetime. Documentation and translations describe the intended workflow.\n  A[Required expiry column] --> B[Creation omits expiry]\n  C[Seven-day deadline helper] --> D[Lifetime test]\n  B --> E[Workflow documentation]\n  B --> F[English and French copy]\n```\n\n### Behavior and compatibility\n\n| Area | Change | What to verify |\n| --- | --- | --- |\n| Existing data | A required expiry column is introduced | Populate deadlines before enforcing the constraint |\n| Team access | Lookup and creation form the invitation boundary | Scope the email lookup to the current team |\n| New invitations | A helper defines a seven-day deadline | Wire it into creation and verify acceptance rejects expired invitations |\n| User guidance | Documentation and translated copy describe the flow | Keep the promised lifetime consistent with behavior |\n\n### Where to focus\n\nStart with the database migration, then follow the team boundary through lookup and creation. These changes have the largest consequences if they are wrong. Next, read the expiry helper beside its test; finish with the documentation and localization updates.\n\nThe supplied lookup searches by email without tenant scope. The migration needs scrutiny on a database with existing rows. Both deserve attention before treating the feature as ready for deployment.\n\n### Evidence and open questions\n\nThe focused test demonstrates the intended seven-day calculation; it does **not** establish that expired invitations are rejected or that upgrades preserve existing data. No tests were executed for this illustrative guide, and unseen callers remain unassessed. The code chapters below keep these checks next to the relevant diff.\n",
     "sections": [
       {
         "id": "section-0",
@@ -397,7 +397,7 @@
     "model": "fixture",
     "generatedAt": "2026-10-20T12:00:00Z",
     "limitations": [],
-    "policyVersion": 1
+    "policyVersion": 3
   },
   "notes": [],
   "progress": {

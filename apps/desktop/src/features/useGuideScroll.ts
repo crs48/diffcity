@@ -46,11 +46,13 @@ export function useGuideScroll(
       const chapter = chapters.find((c) => c.dataset.guideSection === id);
       if (!chapter) return;
       stopJump();
-      settling = true;
       observed.current = id;
-      stopJump = followScrollTarget(viewport, chapter, topInset, () => {
-        settling = false;
-      });
+      settling = chapter !== chapters[0];
+      if (settling)
+        stopJump = followScrollTarget(viewport, chapter, topInset, () => {
+          settling = false;
+        });
+      else viewport.scrollTo({ top: 0, behavior: "instant" });
       if (focus)
         chapter
           .querySelector<HTMLElement>("h2")
@@ -91,7 +93,11 @@ export function useGuideScroll(
     measure();
     // Restore a chapter after parent layout effects have reset a changed view/revision.
     const restore = requestAnimationFrame(() => {
-      if (latest.current.activeId) move.current(latest.current.activeId, false);
+      if (
+        latest.current.activeId &&
+        latest.current.activeId !== chapters[0]?.dataset.guideSection
+      )
+        move.current(latest.current.activeId, false);
       else viewport.scrollTop = 0;
       schedule();
     });

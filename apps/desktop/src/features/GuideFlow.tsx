@@ -11,6 +11,7 @@ import {
 import {
   ArrowDown,
   ArrowUp,
+  BookOpen,
   Check,
   ChevronDown,
   ChevronsUpDown,
@@ -30,6 +31,8 @@ import { anchorKey } from "../lib/diffRows";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { useConversation } from "./conversation";
 import { useGuideScroll } from "./useGuideScroll";
+
+const OVERVIEW = "guide-overview";
 
 type Props = {
   workspace: ReviewWorkspace;
@@ -56,26 +59,16 @@ export function GuideFlow(props: Props) {
     );
   }, []);
   const sections = w.guide.sections;
-  const index = Math.max(
-    0,
-    sections.findIndex((s) => s.id === w.progress.activeSection),
-  );
+  const index = sections.findIndex((s) => s.id === w.progress.activeSection);
   const navigate = useGuideScroll(
     root,
-    sections.map((s) => s.id).join("/"),
-    w.progress.activeSection,
-    (id) => onProgress({ ...w.progress, activeSection: id }),
+    [OVERVIEW, ...sections.map((s) => s.id)].join("/"),
+    w.progress.activeSection ?? OVERVIEW,
+    (id) =>
+      onProgress({ ...w.progress, activeSection: id === OVERVIEW ? null : id }),
     !!navigationHost,
   );
   const counts = countProgress(w);
-  if (!sections.length)
-    return (
-      <div className="empty">
-        <FileCode2 size={30} />
-        <h2>{t("No reviewable text changes")}</h2>
-        <p>{t("Check the PR overview for details and capture limitations.")}</p>
-      </div>
-    );
   const navigation = (
     <nav
       className={`guide-navigation${navigationHost ? " docked" : ""}`}
@@ -84,14 +77,26 @@ export function GuideFlow(props: Props) {
       <MenuTrigger>
         <Button
           className="outline-toggle"
-          aria-label={t("Review outline, section {{current}} of {{total}}", {
-            current: index + 1,
-            total: sections.length,
-          })}
+          aria-label={
+            index < 0
+              ? t("Review outline, overview")
+              : t("Review outline, section {{current}} of {{total}}", {
+                  current: index + 1,
+                  total: sections.length,
+                })
+          }
         >
-          <span className="step-number">{index + 1}</span>
+          <span className="step-number">
+            {index < 0 ? <BookOpen size={16} aria-hidden /> : index + 1}
+          </span>
           <span>
-            {t("of")} {sections.length} {t("sections")}
+            {index < 0 ? (
+              t("Overview")
+            ) : (
+              <>
+                {t("of")} {sections.length} {t("sections")}
+              </>
+            )}
           </span>
           <ChevronDown size={14} aria-hidden />
         </Button>
@@ -103,6 +108,17 @@ export function GuideFlow(props: Props) {
               requestAnimationFrame(() => navigate(String(id)));
             }}
           >
+            <MenuItem
+              id={OVERVIEW}
+              textValue={t("PR overview")}
+              className={index < 0 ? "selected" : ""}
+            >
+              <BookOpen size={16} aria-hidden />
+              <span className="outline-title">
+                <strong>{t("PR overview")}</strong>
+                <small>{t("The story of this change")}</small>
+              </span>
+            </MenuItem>
             {sections.map((s, i) => (
               <MenuItem
                 id={s.id}
@@ -129,13 +145,15 @@ export function GuideFlow(props: Props) {
         </Popover>
       </MenuTrigger>
       <span className="guide-current-title" aria-hidden>
-        {sections[index].title}
+        {index < 0 ? w.snapshot.pull.title : sections[index].title}
       </span>
       <Button
         className="icon-button"
         aria-label={t("Previous section")}
-        isDisabled={index === 0}
-        onPress={() => navigate(sections[index - 1].id)}
+        isDisabled={index < 0}
+        onPress={() =>
+          navigate(index === 0 ? OVERVIEW : sections[index - 1].id)
+        }
       >
         <ArrowUp size={17} />
       </Button>
@@ -154,32 +172,61 @@ export function GuideFlow(props: Props) {
       {navigationHost ? createPortal(navigation, navigationHost) : navigation}
       <section
         className="guide-introduction"
-        aria-label={t("About this change")}
+        data-guide-section={OVERVIEW}
+        aria-labelledby="guide-overview-heading"
       >
-        <h2>
-          {t(
-            w.guide.source === "provisional"
-              ? "Guide not generated yet"
-              : "About this change",
-          )}
+        <div className="eyebrow">{t("The story of this change")}</div>
+        <h2 id="guide-overview-heading" tabIndex={-1}>
+          {t("PR overview")}
         </h2>
         {w.guide.source === "provisional" ? (
-          <p>
-            {t(
-              "These groups organize the diff only. Choose Review with Codex for an explanation of the behavior, design decisions, and what to verify.",
-            )}
-          </p>
+          <>
+            <h3>{t("Guide not generated yet")}</h3>
+            <p>
+              {t(
+                "Choose Review with Codex for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.",
+              )}
+            </p>
+            <CommentMarkdown
+              body={w.snapshot.pull.body || t("No description provided.")}
+              diagrams
+            />
+          </>
         ) : (
-          <CommentMarkdown body={w.guide.summary} />
+          <CommentMarkdown
+            body={
+              w.guide.summary ||
+              w.snapshot.pull.body ||
+              t("No description provided.")
+            }
+            diagrams
+          />
         )}
-        {w.guide.source === "codex" && w.guide.policyVersion < 2 && (
+        {w.guide.source === "codex" && w.guide.policyVersion < 3 && (
           <p className="muted">
             {t(
-              "This saved guide uses the earlier brief format. Choose Review again for a detailed walkthrough.",
+              "This saved guide uses the earlier brief format. Choose Review again for a full overview with diagrams where helpful.",
             )}
           </p>
         )}
+        {sections.length > 0 && (
+          <Button
+            className="secondary overview-start"
+            onPress={() => navigate(sections[0].id)}
+          >
+            {t("Start code walkthrough")} <ArrowDown size={16} aria-hidden />
+          </Button>
+        )}
       </section>
+      {!sections.length && (
+        <div className="empty">
+          <FileCode2 size={30} />
+          <h2>{t("No reviewable text changes")}</h2>
+          <p>
+            {t("Check the PR overview for details and capture limitations.")}
+          </p>
+        </div>
+      )}
       <div className="guide-chapters">
         {sections.map((section, i) => (
           <GuideChapter

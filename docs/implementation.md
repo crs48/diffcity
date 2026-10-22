@@ -567,3 +567,27 @@ Development and release commands now explicitly pass `--target aarch64-apple-dar
 - [x] Replace the installed Intel build and verify native launch after manual Mac unlock. The installed app opens the saved review for test PR #3 with its minimap and no Intel warning. A runtime process sample reports `Code Type: ARM64`; all 10 installed binaries pass the architecture gate and the copied bundle passes strict signature verification.
 - [x] All 10 private notes, saved settings, and the model preference match a fresh pre-install SQLite backup byte for byte. Installed executable SHA-256: `accbda3e52d8353191979b51e5aea41c1d97206472d2efca28b7f3f800ae6da6`.
 - [x] [Signed ARM packaging CI passes on 58af2a9](https://github.com/crs48/diffcity/actions/runs/39709382554), including the architecture fixtures, deep signature check, and existing Rust/frontend validation.
+
+## Rich guide overview
+
+Every guide begins with a full Markdown overview in the same scrolling document as its code chapters. It has its own outline destination, next/previous navigation, and a shortcut into the first code chapter. Opening a newly generated guide starts at the overview; reopening a saved review retains its chapter progress. Overview navigation uses the existing null active-section value, so saved data requires no migration and overview reading does not mark code reviewed.
+
+The version 3 Codex prompt and output schema request an evidence-grounded account of purpose, before/after behavior, cross-file flow, rollout concerns, test evidence, and the reading path. Substantial changes normally receive 300–600 words, with diagrams when helpful. Older guides preserve their summaries and offer regeneration. Before generation, the overview clearly labels the author's PR description as the available context. Guides with no text chapters still show their overview.
+
+```mermaid
+flowchart TD
+  Evidence[Captured PR evidence] --> Codex[Codex Markdown overview]
+  Codex --> Overview[Overview at the top of the review]
+  Overview --> Chapters[Risk-ordered code chapters]
+  Chapters --> Overview
+  Fence[Mermaid fence] --> Lazy[Lazy renderer with bounded cache]
+  Lazy --> Image[Theme-aware SVG image and accessible description]
+  Lazy --> Fallback[Readable source when rendering fails]
+```
+
+Mermaid loads only for overview diagram fences. Rendering is serialized, bounded to 20 KB/150 edges, cached for up to 32 source/theme combinations, and never triggered by ordinary scrolling. Strict rendering produces an isolated SVG image with natural dimensions, an accessible title/description, and expandable source. Configuration overrides and external-resource syntax are rejected. Invalid diagrams retain readable source without breaking the surrounding Markdown. GitHub comments and streaming chat keep their existing literal code-fence behavior.
+
+- [x] 98 frontend tests and 76 Rust tests pass. Types, ESLint, Clippy, formatting, and production builds pass. Regressions cover overview navigation, empty guides, legacy content, diagram theme changes, failed/stale results, and renderer bounds/resource rejection.
+- [x] Production WebKit renders actual Mermaid diagrams in light/dark modes at 1440 px and 720 px, with no nested vertical scroller or window overflow. Natural scrolling, outline jumps, first-chapter navigation, and return to the top all pass.
+- [ ] Verify a live Codex-generated overview and its persisted Markdown.
+- [ ] Install the ARM bundle and verify the native overview, preserving private notes and preferences after manual Mac unlock.

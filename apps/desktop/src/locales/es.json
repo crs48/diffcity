@@ -374,5 +374,15 @@
   "Map": "Mapa",
   "Code minimap for {{path}}": "Minimapa del código de {{path}}",
   "{{percent}}% through displayed code": "{{percent}}% del código mostrado",
-  "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown.": "Haz clic o arrastra para navegar por el código mostrado. Usa las flechas, Re Pág, Av Pág, Inicio o Fin. El verde indica adiciones y el rojo eliminaciones. No se muestra el código fuente no cargado."
+  "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown.": "Haz clic o arrastra para navegar por el código mostrado. Usa las flechas, Re Pág, Av Pág, Inicio o Fin. El verde indica adiciones y el rojo eliminaciones. No se muestra el código fuente no cargado.",
+  "PR overview": "Resumen del PR",
+  "The story of this change": "La historia de este cambio",
+  "Review outline, overview": "Índice de revisión, resumen",
+  "Start code walkthrough": "Comenzar el recorrido del código",
+  "Choose Review with Codex for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.": "Elige Revisar con Codex para obtener un resumen de los cambios y un recorrido guiado. La descripción del PR que aparece debajo fue escrita por su autor.",
+  "This saved guide uses the earlier brief format. Choose Review again for a full overview with diagrams where helpful.": "Esta guía guardada usa el formato breve anterior. Elige Revisar de nuevo para obtener un resumen completo con diagramas cuando sean útiles.",
+  "Change flow diagram": "Diagrama del flujo de cambios",
+  "Diagram could not be rendered. Its source is available below.": "No se pudo mostrar el diagrama. Su código fuente está disponible debajo.",
+  "Rendering diagram…": "Generando el diagrama…",
+  "Diagram source": "Código fuente del diagrama"
 }

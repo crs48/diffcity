@@ -876,7 +876,7 @@ pub fn guide_schema() -> Value {
         json!({"title":string(),"summary":described("Compact takeaway for the sticky annotation: one or two sentences explaining the outcome."),"explanation":described("Full Markdown walkthrough: why, before/after behavior, concrete flow through symbols and paths, design choices, and test evidence or gaps. Normally 2–5 focused paragraphs for substantive changes."),"attention":{"type":"string","enum":["high","standard","routine","needsAssessment"]},"category":string(),"reason":string(),"hunkIds":array(string()),"questions":array(described("A concrete reviewer check naming a scenario and expected behavior or evidence; not a claim that a test was run.")),"findings":array(finding)}),
     );
     object(
-        json!({"summary":described("PR orientation in 2–3 short paragraphs: problem, before/after behavior, how the main pieces cooperate, and key review concern."),"sections":{"type":"array","items":section,"maxItems":crate::guide::MAX_SECTIONS},"limitations":array(string())}),
+        json!({"summary":described("Full Markdown PR overview shown before code: purpose, before/after behavior, cross-file flow, risks and rollout, test evidence and gaps, and the reading path. Use headings, lists or tables as helpful; typically 300–600 words for a substantial PR. Include fenced mermaid diagrams with accTitle/accDescr when they clarify the supplied evidence. No HTML, images, links in diagrams, or Mermaid configuration."),"sections":{"type":"array","items":section,"maxItems":crate::guide::MAX_SECTIONS},"limitations":array(string())}),
     )
 }
 

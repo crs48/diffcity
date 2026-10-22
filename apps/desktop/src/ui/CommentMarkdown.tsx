@@ -1,15 +1,30 @@
 import { memo, useId, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import type { Root, RootContent } from "hast";
 import { api } from "../lib/api";
+import { MermaidDiagram } from "./MermaidDiagram";
 
 const plugins = [remarkGfm, remarkBreaks];
 const components = {
   // Preserve attachment descriptions without fetching unsolicited remote images.
   img: ({ alt }: { alt?: string }) => <span>{alt}</span>,
+};
+const diagramComponents: Components = {
+  ...components,
+  pre: ({ node, children }) => {
+    const code = node?.children[0];
+    if (
+      code?.type === "element" &&
+      code.tagName === "code" &&
+      Array.isArray(code.properties.className) &&
+      code.properties.className.includes("language-mermaid")
+    )
+      return <MermaidDiagram source={textContent(code).trim()} />;
+    return <pre>{children}</pre>;
+  },
 };
 
 function safeUrl(url: string) {
@@ -65,8 +80,10 @@ function commentMarkup({ prefix, task }: { prefix: string; task: string }) {
 
 export const CommentMarkdown = memo(function CommentMarkdown({
   body,
+  diagrams = false,
 }: {
   body: string;
+  diagrams?: boolean;
 }) {
   const { t } = useTranslation();
   const id = useId();
@@ -98,7 +115,7 @@ export const CommentMarkdown = memo(function CommentMarkdown({
           [commentMarkup, { prefix: `comment-${id}-`, task: t("Task") }],
         ]}
         remarkRehypeOptions={{ footnoteLabel: t("Footnotes") }}
-        components={components}
+        components={diagrams ? diagramComponents : components}
         urlTransform={safeUrl}
         skipHtml
       >

@@ -2784,20 +2784,47 @@
     margin-top: 10px;
   }
   .guide-introduction {
-    padding: 24px;
+    padding: 36px clamp(24px, 5vw, 72px) 48px;
     border-bottom: 1px solid var(--border);
     overflow-wrap: anywhere;
   }
-  .guide-introduction h2 {
-    font-size: 17px;
-    margin-bottom: 12px;
+  .guide-introduction > h2 {
+    font-size: 28px;
+    margin: 10px 0 28px;
+    letter-spacing: -0.025em;
   }
   .guide-introduction > p {
     font-size: 13px;
     line-height: 1.7;
     margin-top: 12px;
   }
-  .guide-introduction > .comment-markdown,
+  .guide-introduction > .comment-markdown {
+    max-width: 90ch;
+    font-size: 15px;
+    line-height: 1.8;
+    margin-top: 20px;
+  }
+  .overview-start {
+    margin-top: 28px;
+  }
+  .markdown-diagram {
+    margin: 24px 0;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  .markdown-diagram > img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto 16px;
+  }
+  .markdown-diagram summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12px;
+  }
   .chapter-context > .comment-markdown {
     max-width: 85ch;
     font-size: 13px;

@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
         )
         .await?;
     ensure!(
-        guide.source == "codex" && guide.policy_version == 2,
+        guide.source == "codex" && guide.policy_version == 3,
         "Expected new live guide"
     );
     ensure!(

@@ -12,6 +12,13 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { GuideView } from "./Guide";
 import type { ReviewWorkspace } from "../lib/api";
+vi.mock("../ui/mermaid", () => ({
+  renderDiagram: vi.fn().mockResolvedValue({
+    url: "data:image/svg+xml,<svg/>",
+    description: "Invitation flow",
+  }),
+}));
+
 import fixture from "../../../../tests/fixtures/review-workspace.json";
 
 beforeEach(() => {
@@ -19,6 +26,7 @@ beforeEach(() => {
     "ResizeObserver",
     class {
       observe() {}
+      unobserve() {}
       disconnect() {}
     },
   );
@@ -118,12 +126,12 @@ it("docks navigation outside the code viewport and jumps without covering the de
   await user.click(screen.getByRole("button", { name: "Next section" }));
   expect(viewport.scrollTop).toBe(984);
   expect(document.activeElement?.textContent).toBe(
-    fixture.guide.sections[1].title,
+    fixture.guide.sections[0].title,
   );
   fireEvent.wheel(viewport);
   viewport.scrollTop = 2050;
   fireEvent.scroll(viewport);
-  await screen.findByRole("button", { name: "Review outline, section 3 of 5" });
+  await screen.findByRole("button", { name: "Review outline, section 2 of 5" });
   expect(viewport.scrollTop).toBe(2050);
 });
 
@@ -136,7 +144,10 @@ it("keeps every chapter mounted while jumping and preserves independent reviewed
   const second = screen.getByRole("region", {
     name: fixture.guide.sections[1].title,
   });
-  expect(document.querySelectorAll("[data-guide-section]")).toHaveLength(5);
+  expect(document.querySelectorAll("[data-guide-section]")).toHaveLength(6);
+  await user.click(
+    screen.getByRole("button", { name: "Start code walkthrough" }),
+  );
   const firstDiff = first.querySelector("[data-code-index]");
   await user.click(
     within(first).getByRole("button", { name: "Mark code reviewed" }),
@@ -149,7 +160,7 @@ it("keeps every chapter mounted while jumping and preserves independent reviewed
   );
   expect(
     document.querySelector<HTMLElement>("[data-review-scroll]")!.scrollTop,
-  ).toBe(930);
+  ).toBe(1930);
   expect(first.querySelector("[data-code-index]")).toBe(firstDiff);
   expect(
     within(first).getByRole("button", { name: "Code reviewed" }),
@@ -174,12 +185,12 @@ it("tracks scrolling without resetting the viewport or moving keyboard focus", a
   focus.focus();
   viewport.scrollTop = 1050;
   fireEvent.scroll(viewport);
-  await screen.findByRole("button", { name: "Review outline, section 2 of 5" });
+  await screen.findByRole("button", { name: "Review outline, section 1 of 5" });
   expect(viewport.scrollTop).toBe(1050);
   expect(document.activeElement).toBe(focus);
   viewport.scrollTop = 3050;
   fireEvent.scroll(viewport);
-  await screen.findByRole("button", { name: "Review outline, section 4 of 5" });
+  await screen.findByRole("button", { name: "Review outline, section 3 of 5" });
   expect(viewport.scrollTop).toBe(3050);
   Object.defineProperty(viewport, "scrollHeight", { value: 4100 });
   viewport.scrollTop = 3500;
@@ -242,4 +253,45 @@ it("preserves legacy explanations and distinguishes provisional groups from gene
     screen.getByRole("heading", { name: "Guide not generated yet" }),
   ).toBeTruthy();
   expect(screen.queryByText(/earlier brief format/)).toBeNull();
+});
+
+it("starts with a rich overview and returns to it from the first code chapter", async () => {
+  const user = userEvent.setup();
+  mount();
+  await screen.findByRole("img", { name: "Invitation flow" });
+  const overview = screen.getByRole("region", { name: "PR overview" });
+  expect(within(overview).getByRole("table")).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Review outline, overview" }),
+  ).toBeTruthy();
+  expect(
+    document.querySelector<HTMLElement>("[data-review-scroll]")!.scrollTop,
+  ).toBe(0);
+  await user.click(screen.getByRole("button", { name: "Next section" }));
+  await screen.findByRole("button", { name: "Review outline, section 1 of 5" });
+  await user.click(screen.getByRole("button", { name: "Previous section" }));
+  expect(document.activeElement).toBe(
+    within(overview).getByRole("heading", { name: "PR overview" }),
+  );
+  expect(
+    document.querySelector<HTMLElement>("[data-review-scroll]")!.scrollTop,
+  ).toBe(0);
+  await user.click(
+    screen.getByRole("button", { name: "Review outline, overview" }),
+  );
+  expect(screen.getByRole("menuitem", { name: /^PR overview/ })).toBeTruthy();
+});
+
+it("retains an overview for guides with no text chapters", () => {
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  w.guide.sections = [];
+  mount(w);
+  expect(screen.getByRole("region", { name: "PR overview" })).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "No reviewable text changes" }),
+  ).toBeTruthy();
+  expect(
+    (screen.getByRole("button", { name: "Next section" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
 });

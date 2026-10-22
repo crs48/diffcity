@@ -374,5 +374,15 @@
   "Map": "Map",
   "Code minimap for {{path}}": "Code minimap for {{path}}",
   "{{percent}}% through displayed code": "{{percent}}% through displayed code",
-  "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown.": "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown."
+  "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown.": "Click or drag to navigate displayed code. Use arrow keys, Page Up, Page Down, Home, or End. Green marks additions; red marks deletions. Unloaded source is not shown.",
+  "PR overview": "PR overview",
+  "The story of this change": "The story of this change",
+  "Review outline, overview": "Review outline, overview",
+  "Start code walkthrough": "Start code walkthrough",
+  "Choose Review with Codex for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.": "Choose Review with Codex for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.",
+  "This saved guide uses the earlier brief format. Choose Review again for a full overview with diagrams where helpful.": "This saved guide uses the earlier brief format. Choose Review again for a full overview with diagrams where helpful.",
+  "Change flow diagram": "Change flow diagram",
+  "Diagram could not be rendered. Its source is available below.": "Diagram could not be rendered. Its source is available below.",
+  "Rendering diagram…": "Rendering diagram…",
+  "Diagram source": "Diagram source"
 }

@@ -358,7 +358,7 @@ pub fn validate_guide(
         model: model.into(),
         generated_at: chrono::Utc::now().to_rfc3339(),
         limitations,
-        policy_version: 2,
+        policy_version: 3,
     })
 }
 

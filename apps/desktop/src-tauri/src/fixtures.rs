@@ -77,7 +77,7 @@ pub fn sample() -> Result<(Snapshot, Guide)> {
     ))?;
     let sections: Vec<Value> = groups.into_iter().zip(walkthroughs).map(|((indices,title,attention,category,summary,reason), walkthrough)|json!({"title":title,"summary":summary,"explanation":walkthrough["explanation"],"attention":attention,"category":category,"reason":reason,"hunkIds":indices.into_iter().flat_map(|i|snapshot.files[i].hunks.iter().map(|h|h.id.clone())).collect::<Vec<_>>(),"questions":walkthrough["questions"],"findings":[]})).collect();
     let proposal = serde_json::from_value(
-        json!({"summary":"Introduce team invitations, their expiry policy, and supporting copy. Start with the migration and tenant boundary.","sections":sections,"limitations":["This sample guide is authored fixture data, not a live Codex result. Use Review with Codex to analyze it."]}),
+        json!({"summary":include_str!("../../../../tests/fixtures/invitations-overview.md"),"sections":sections,"limitations":["This sample guide is authored fixture data, not a live Codex result. Use Review with Codex to analyze it."]}),
     )?;
     let ids = snapshot
         .files

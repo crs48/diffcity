@@ -1108,24 +1108,19 @@ export default function App() {
                 <span>{t("Your guided review is ready.")} </span>
                 <Button
                   onPress={() => {
-                    const currentSection =
-                      workspace.guide.sections.find(
-                        (s) => s.id === workspace.progress.activeSection,
-                      ) || workspace.guide.sections[0];
-                    const nextSection =
-                      pendingGuide.sections.find((s) =>
-                        s.hunkIds.some((id) =>
-                          currentSection?.hunkIds.includes(id),
-                        ),
-                      ) || pendingGuide.sections[0];
+                    const nextProgress = {
+                      ...workspace.progress,
+                      activeSection: null,
+                    };
                     setWorkspace({
                       ...workspace,
                       guide: pendingGuide,
-                      progress: {
-                        ...workspace.progress,
-                        activeSection: nextSection?.id ?? null,
-                      },
+                      progress: nextProgress,
                     });
+                    void api
+                      .progress(workspace.snapshot.id, nextProgress)
+                      .catch(onError);
+                    setMode("guide");
                     setPendingGuide(null);
                   }}
                 >
