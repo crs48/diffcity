@@ -36,7 +36,7 @@ export function useGuideScroll(
       for (const chapter of chapters) {
         const annotation =
           chapter.querySelector<HTMLElement>(".guide-annotation");
-        if (annotation)
+        if (annotation && !annotation.classList.contains("guide-margin"))
           annotation.dataset.sticky = String(
             annotation.offsetHeight <= viewport.clientHeight - inset - 16,
           );

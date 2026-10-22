@@ -372,12 +372,7 @@ function GuideChapter({
       data-guide-section={s.id}
       aria-labelledby={titleId}
     >
-      <GuideMargin
-        notes={annotations}
-        title={s.title}
-        headingId={titleId}
-        onRead={readNote}
-      >
+      <GuideMargin notes={annotations} title={s.title} onRead={readNote}>
         <div className="chapter-number">
           {t("Section {{current}} of {{total}}", { current: index + 1, total })}
         </div>

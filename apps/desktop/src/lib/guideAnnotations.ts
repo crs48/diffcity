@@ -29,20 +29,24 @@ export function annotationLine(
   return `${a.side === "LEFT" ? old : next} ${a.startLine === a.line ? a.line : `${a.startLine}–${a.line}`}`;
 }
 
-/** Only boundary changes enter React; the push motion uses a DOM transform. */
-export function annotationPosition(
-  tops: number[],
-  readingY: number,
-  height: number,
+/** Each passage gets at least its full reading height, even when its anchor is
+ * close to another note or at the very end of a short file. The final passage
+ * extends the chapter when necessary; it never depends on that chapter's height. */
+export function annotationLayout(
+  passages: readonly { anchor: number; height: number }[],
+  codeHeight: number,
 ) {
-  const active = tops.reduce(
-    (found, top, index) => (top <= readingY ? index : found),
-    -1,
-  );
-  const distance = tops[active + 1] - readingY;
-  const push =
-    active < 0 || !Number.isFinite(distance)
-      ? 0
-      : Math.max(0, Math.min(height, height - distance));
-  return { active, push };
+  const tops = passages.reduce<number[]>((positions, passage, index) => {
+    const previousEnd = index
+      ? positions[index - 1] + passages[index - 1].height
+      : 0;
+    return [...positions, Math.max(previousEnd, passage.anchor)];
+  }, []);
+  return passages.map((passage, index) => ({
+    top: tops[index],
+    height: Math.max(
+      passage.height,
+      (tops[index + 1] ?? codeHeight) - tops[index],
+    ),
+  }));
 }

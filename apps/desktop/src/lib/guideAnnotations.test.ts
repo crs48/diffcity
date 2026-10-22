@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { annotationPosition, orderedAnnotations } from "./guideAnnotations";
+import { annotationLayout, orderedAnnotations } from "./guideAnnotations";
 import type { GuideAnnotation, ReviewWorkspace } from "./api";
 import fixture from "../../../../tests/fixtures/review-workspace.json";
 
@@ -32,12 +32,51 @@ it("follows guide reading order and old/new line coordinates rather than AI outp
   ).toEqual([]);
 });
 
-it("pushes the previous note out as the next passage approaches and reverses on upward scrolling", () => {
-  const tops = [100, 600, 1200];
-  expect(annotationPosition(tops, 0, 200)).toEqual({ active: -1, push: 0 });
-  expect(annotationPosition(tops, 100, 200)).toEqual({ active: 0, push: 0 });
-  expect(annotationPosition(tops, 500, 200)).toEqual({ active: 0, push: 100 });
-  expect(annotationPosition(tops, 600, 200)).toEqual({ active: 1, push: 0 });
-  expect(annotationPosition(tops, 300, 200)).toEqual({ active: 0, push: 0 });
-  expect(annotationPosition(tops, 2000, 200)).toEqual({ active: 2, push: 0 });
+it("keeps the last note fully readable after a short final file", () => {
+  const layout = annotationLayout(
+    [
+      { anchor: 0, height: 400 },
+      { anchor: 900, height: 500 },
+      { anchor: 1450, height: 1200 },
+    ],
+    1600,
+  );
+  expect(layout).toEqual([
+    { top: 0, height: 900 },
+    { top: 900, height: 550 },
+    { top: 1450, height: 1200 },
+  ]);
+  expect(layout.at(-1)!.top + layout.at(-1)!.height).toBe(2650);
+});
+
+it("never overlaps or clips nearby notes, including notes on the same line", () => {
+  const passages = [
+    { anchor: 0, height: 400 },
+    { anchor: 200, height: 1200 },
+    { anchor: 200, height: 600 },
+    { anchor: 500, height: 200 },
+  ];
+  const layout = annotationLayout(passages, 700);
+  expect(layout.map((p) => p.top)).toEqual([0, 400, 1600, 2200]);
+  layout.forEach((slot, i) =>
+    expect(slot.height).toBeGreaterThanOrEqual(passages[i].height),
+  );
+});
+
+it("lets short notes follow widely spaced code and recomputes after collapsing a file", () => {
+  expect(
+    annotationLayout(
+      [
+        { anchor: 0, height: 400 },
+        { anchor: 1500, height: 300 },
+      ],
+      4000,
+    ),
+  ).toEqual([
+    { top: 0, height: 1500 },
+    { top: 1500, height: 2500 },
+  ]);
+  expect(annotationLayout([{ anchor: 0, height: 400 }], 300)).toEqual([
+    { top: 0, height: 400 },
+  ]);
 });

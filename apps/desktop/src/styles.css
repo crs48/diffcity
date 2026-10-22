@@ -2832,12 +2832,18 @@
     width: 28px;
     height: 28px;
   }
-  .code-note-window {
-    overflow: clip;
-  }
-  .code-note-track {
+  .guide-annotation.guide-margin {
     position: relative;
-    transform: translateY(calc(-1 * var(--note-push, 0px)));
+    top: auto;
+  }
+  .code-note-slot {
+    position: relative;
+  }
+  .code-note-content {
+    position: sticky;
+    top: var(--note-inset, var(--guide-inset));
+    padding-bottom: 24px;
+    display: flow-root;
   }
   .code-note {
     padding: 0 0 22px;
@@ -2856,12 +2862,6 @@
   .code-note .comment-markdown {
     font-size: 12px;
     line-height: 1.75;
-  }
-  .code-note-incoming {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
   }
   .code-note-connector {
     position: absolute;
@@ -3057,7 +3057,8 @@
     font-size: 11px;
     margin: 18px 0 8px;
   }
-  .guide-annotation > .text-button {
+  .guide-annotation > .text-button,
+  .code-note-content > .text-button {
     padding-left: 0;
     text-align: left;
     min-height: 32px;
