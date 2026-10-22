@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type RefObject } from "react";
+import { Dialog, Popover } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { Check, Cpu, LoaderCircle, RefreshCw, X } from "lucide-react";
 import { AppDialog } from "../ui/AppDialog";
@@ -15,12 +16,14 @@ export function ModelSettings({
   models: initialModels,
   connection: initialConnection,
   purpose = "default",
+  triggerRef,
   onSave,
   onRefresh,
   onClose,
 }: {
   preference: ModelPreference;
   purpose?: "default" | "guide";
+  triggerRef?: RefObject<HTMLButtonElement | null>;
   models: Model[];
   connection: Connection;
   onSave: (preference: ModelPreference) => Promise<void>;
@@ -96,8 +99,8 @@ export function ModelSettings({
     !!selected &&
     (value.reasoningEffort === null || !!effort);
 
-  return (
-    <AppDialog label={t(title)} onClose={onClose} busy={!!busy}>
+  const content = (
+    <>
       <header>
         <Cpu size={19} aria-hidden="true" />
         <h2>{t(title)}</h2>
@@ -275,6 +278,35 @@ export function ModelSettings({
           {t(purpose === "guide" ? "Generate guide" : "Save default")}
         </button>
       </footer>
+    </>
+  );
+
+  return triggerRef ? (
+    <Popover
+      isOpen
+      triggerRef={triggerRef}
+      placement="right bottom"
+      offset={10}
+      containerPadding={12}
+      isKeyboardDismissDisabled={!!busy}
+      shouldCloseOnInteractOutside={() => !busy}
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose();
+      }}
+      className="model-popover"
+    >
+      <Dialog
+        id="model-settings"
+        aria-label={t(title)}
+        aria-busy={!!busy}
+        className="modal model-popover-dialog outline-none"
+      >
+        {content}
+      </Dialog>
+    </Popover>
+  ) : (
+    <AppDialog label={t(title)} onClose={onClose} busy={!!busy}>
+      {content}
     </AppDialog>
   );
 }

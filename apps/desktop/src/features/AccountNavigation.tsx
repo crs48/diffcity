@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import { Button, Tooltip, TooltipTrigger } from "react-aria-components";
 import {
   BookOpen,
@@ -15,7 +15,6 @@ import { useTranslation } from "react-i18next";
 import { PinToggle } from "../ui/PinToggle";
 import { groupAccountOwners, sameLogin } from "../lib/inbox";
 import type { Bootstrap } from "../lib/api";
-import { defaultModelPreference, effortLabel } from "../lib/models";
 
 function RailButton({
   label,
@@ -26,6 +25,8 @@ function RailButton({
   id,
   hidden,
   disabled,
+  buttonRef,
+  hasPopup,
   onPress,
   children,
 }: {
@@ -37,17 +38,21 @@ function RailButton({
   id?: string;
   hidden?: boolean;
   disabled?: boolean;
+  buttonRef?: RefObject<HTMLButtonElement | null>;
+  hasPopup?: "dialog";
   onPress: () => void;
   children: ReactNode;
 }) {
   return (
-    <TooltipTrigger delay={300}>
+    <TooltipTrigger delay={300} isDisabled={!!hasPopup && expanded}>
       <Button
+        ref={buttonRef}
         className="account-button"
         aria-label={label}
         aria-pressed={selected}
         aria-expanded={expanded}
         aria-controls={controls}
+        aria-haspopup={hasPopup}
         id={id}
         hidden={hidden}
         isDisabled={disabled}
@@ -93,6 +98,7 @@ export function AccountNavigation({
   onConnections,
   onModel,
   modelOpen,
+  modelTriggerRef,
 }: {
   owners: string[];
   activity: ReadonlyMap<string, number>;
@@ -106,13 +112,9 @@ export function AccountNavigation({
   onConnections: () => void;
   onModel: () => void;
   modelOpen: boolean;
+  modelTriggerRef: RefObject<HTMLButtonElement | null>;
 }) {
   const { t } = useTranslation();
-  const preference = data?.modelPreference ?? defaultModelPreference;
-  const modelName =
-    data?.models.find((model) => model.id === preference.model)?.name ??
-    preference.model;
-  const modelDetail = `${preference.provider === "claude" ? "Claude" : "Codex"} · ${modelName} · ${t(preference.reasoningEffort ? effortLabel(preference.reasoningEffort) : "Model default")}`;
   const [showInactive, setShowInactive] = useState(false);
   const { visible, inactive } = groupAccountOwners(
     owners,
@@ -205,15 +207,15 @@ export function AccountNavigation({
       <div className="rail-bottom">
         <RailButton
           label={t("Model")}
-          detail={modelDetail}
+          buttonRef={modelTriggerRef}
+          hasPopup="dialog"
+          expanded={modelOpen}
+          controls={modelOpen ? "model-settings" : undefined}
           selected={modelOpen}
           disabled={!data}
           onPress={onModel}
         >
-          <span className="rail-model">
-            <Cpu size={18} aria-hidden="true" />
-            <span>{t("Model")}</span>
-          </span>
+          <Cpu size={19} aria-hidden="true" />
         </RailButton>
         <RailButton
           label={t("Sample inbox")}

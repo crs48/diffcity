@@ -81,6 +81,7 @@ import "./styles.css";
 
 export default function App() {
   const { t } = useTranslation();
+  const modelTriggerRef = useRef<HTMLButtonElement>(null);
   const [inboxView, setInboxView] = useState<"open" | "history">("open");
   const [data, setData] = useState<Bootstrap | null>(null);
   const [pulls, setPulls] = useState<PullRequest[]>([]);
@@ -775,6 +776,7 @@ export default function App() {
         onConnections={() => setDialog("connections")}
         onModel={() => setDialog("model")}
         modelOpen={dialog === "model"}
+        modelTriggerRef={modelTriggerRef}
       />
       {inboxVisible && (
         <aside className="inbox-pane" aria-label={t("Pull request inbox")}>
@@ -1408,6 +1410,7 @@ export default function App() {
           <ModelSettings
             preference={data.modelPreference ?? defaultModelPreference}
             purpose={dialog === "new-guide" ? "guide" : "default"}
+            triggerRef={dialog === "model" ? modelTriggerRef : undefined}
             models={data.models}
             connection={data.codex}
             onClose={() => setDialog(null)}
