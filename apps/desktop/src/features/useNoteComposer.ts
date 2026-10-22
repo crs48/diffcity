@@ -64,11 +64,23 @@ export function useNoteComposer(
     setDraft(current.current.note);
     setSaved(current.current.savedBody === body);
   };
-  const submit = async (onSubmit?: (note: Note) => Promise<void>) => {
+  const submit = async (
+    onSubmit?: (note: Note) => Promise<void>,
+    githubDraft = false,
+  ) => {
     const entry = current.current;
     if (!entry?.note.body.trim()) return;
-    const note = await flush();
+    if (githubDraft && entry.note.anchor?.textSelection)
+      throw new Error("Text selections are AI-only.");
+    let note = await flush();
     if (!note || current.current !== entry) return;
+    if (githubDraft) {
+      // Finish queued autosaves before converting the same note in place.
+      note = await api.note({ ...note, githubDraft: true });
+      entry.note = note;
+      onNote(note);
+      if (current.current !== entry) return;
+    }
     const next = newNote(note.snapshotId, note.anchor, "");
     current.current = { note: next, savedBody: null };
     setDraft(next);

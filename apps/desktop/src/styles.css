@@ -49,6 +49,11 @@
     --code: #ffffff;
     --added: #edf9f0;
     --removed: #fff0f0;
+    --code-selected: #d9e9fa;
+    --syntax-keyword: #b42330;
+    --syntax-string: #176630;
+    --syntax-title: #6535bd;
+    --syntax-number: #185c9e;
     --shadow: 0 12px 40px #00000020;
   }
   :root[data-theme="dark"] {
@@ -80,6 +85,11 @@
     --code: #0a0a0a;
     --added: #102b18;
     --removed: #350f0f;
+    --code-selected: #173c59;
+    --syntax-keyword: #ff9caa;
+    --syntax-string: #9fe2ad;
+    --syntax-title: #d4b5ff;
+    --syntax-number: #9acbff;
     --shadow: 0 12px 40px #00000080;
   }
 }
@@ -1269,9 +1279,9 @@
     top: max(0px, calc(var(--guide-inset, 16px) - 16px));
     z-index: 3;
     border-radius: 6px 6px 0 0;
-    background: var(--subtle);
+    background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 10px 13px;
+    padding: 6px 10px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1285,7 +1295,7 @@
     white-space: nowrap;
   }
   .file-bar > svg {
-    color: var(--muted);
+    color: var(--blue);
   }
   .file-bar .mono {
     color: var(--muted);
@@ -1753,8 +1763,8 @@
     /* Keep prose near 90 characters, plus message padding and borders. */
     max-width: calc(90ch + 32px);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--text);
-    border-radius: 6px;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px #00000008;
     background: var(--surface);
     color: var(--text);
     min-width: 0;
@@ -1807,7 +1817,7 @@
     padding: 12px;
   }
   .inline-thread .composer textarea {
-    min-height: 80px;
+    min-height: 72px;
   }
   .inline-thread .message:last-of-type {
     border-bottom: 0;
@@ -1964,6 +1974,7 @@
   }
   .composer-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-end;
   }
@@ -2495,8 +2506,8 @@
     color: var(--red);
   }
   .diff-line.selected {
-    background: var(--selected);
-    box-shadow: inset 3px 0 var(--text);
+    background: var(--code-selected);
+    box-shadow: inset 3px 0 var(--blue);
   }
   .line-number {
     color: var(--muted);
@@ -2510,7 +2521,12 @@
     outline-offset: -2px;
   }
   .line-comment {
-    color: var(--text);
+    color: var(--surface);
+    background: var(--text);
+    width: 23px;
+    height: 23px;
+    margin: 1px;
+    border-radius: 5px;
   }
   .diff-content:focus-visible {
     outline-offset: -2px;
@@ -3612,4 +3628,96 @@
   .guide-switcher {
     padding-inline: 10px;
   }
+}
+
+/* Split cells keep their own gutters, backgrounds and conversation lanes. */
+.split-row,
+.diff-thread-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.split-row > :first-child {
+  border-right: 1px solid var(--border);
+}
+.split-row .diff-line {
+  min-width: 0;
+}
+.diff-empty-cell {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    color-mix(in srgb, var(--muted) 13%, var(--code)) 4px 5px
+  );
+  min-height: 25px;
+}
+.split-row .addition {
+  box-shadow: inset 3px 0 var(--green);
+}
+.split-row .deletion {
+  box-shadow: inset 3px 0 var(--red);
+}
+.split-row .selected {
+  box-shadow: inset 3px 0 var(--blue);
+}
+.split-row .addition .line-number {
+  color: var(--green);
+}
+.split-row .deletion .line-number {
+  color: var(--red);
+}
+.diff-thread-row {
+  background: var(--subtle);
+}
+.diff-thread-row[data-side="RIGHT"] .diff-thread-cell {
+  grid-column: 2;
+}
+.diff-thread-row[data-side="LEFT"] .diff-thread-cell {
+  grid-column: 1;
+}
+.diff-thread-cell {
+  min-width: 0;
+}
+.diff-thread-row .inline-thread {
+  margin: 8px;
+}
+.diff-thread-row .inline-thread > header {
+  gap: 6px;
+}
+.diff-thread-row .inline-thread > header .text-button {
+  margin-left: auto;
+}
+.composer textarea {
+  border-color: transparent;
+  background: transparent;
+  padding: 8px 2px;
+}
+.composer-status,
+.composer-model {
+  font-size: 11px;
+  line-height: 1.6;
+}
+.composer-model {
+  margin: 0 0 8px;
+}
+[data-code-text] .hljs-keyword,
+[data-code-text] .hljs-selector-tag {
+  color: var(--syntax-keyword);
+}
+[data-code-text] .hljs-string,
+[data-code-text] .hljs-regexp {
+  color: var(--syntax-string);
+}
+[data-code-text] .hljs-title,
+[data-code-text] .hljs-built_in,
+[data-code-text] .hljs-type {
+  color: var(--syntax-title);
+}
+[data-code-text] .hljs-number,
+[data-code-text] .hljs-literal,
+[data-code-text] .hljs-attr {
+  color: var(--syntax-number);
+}
+[data-code-text] .hljs-comment,
+[data-code-text] .hljs-meta {
+  color: var(--muted);
 }

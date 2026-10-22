@@ -4,7 +4,6 @@ import { Button } from "react-aria-components";
 import {
   ChevronDown,
   ChevronRight,
-  MessageSquare,
   PanelRightOpen,
   Sparkles,
   X,
@@ -75,14 +74,13 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </Button>
-        {thread.anchor.textSelection ? (
-          <Sparkles size={14} />
-        ) : (
-          <MessageSquare size={14} />
-        )}
+        <Sparkles size={14} aria-hidden />
         <div className="inline-thread-heading">
           <strong title={title || label}>{title || label}</strong>
-          {title && <span className="muted">{label}</span>}
+          <span className="muted">
+            {title ? `${label} · ` : ""}
+            {t("Private AI conversation")}
+          </span>
         </div>
         <Button
           className="text-button"

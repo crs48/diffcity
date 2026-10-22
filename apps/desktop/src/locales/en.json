@@ -507,5 +507,13 @@
   "Useful code notes will appear here as the priority pass finishes each file.": "Useful code notes will appear here as the priority pass finishes each file.",
   "One file at a time, up to 6 files per batch and 2 notes per file. Each request includes at most 24 KB of diff, with a three-minute time limit. Up to 24 notes per guide. No automatic retries or continuous re-analysis.": "One file at a time, up to 6 files per batch and 2 notes per file. Each request includes at most 24 KB of diff, with a three-minute time limit. Up to 24 notes per guide. No automatic retries or continuous re-analysis.",
   "Priority pass covers code flagged for high attention. Explore further covers the remaining assessed implementation and tests. Routine and unassessed changes are excluded. Enrichment uses this guide’s model.": "Priority pass covers code flagged for high attention. Explore further covers the remaining assessed implementation and tests. Routine and unassessed changes are excluded. Enrichment uses this guide’s model.",
-  "The guide appears first. A background priority pass then inspects up to 6 important files with this model. You can stop it at any time; further enrichment requires your choice.": "The guide appears first. A background priority pass then inspects up to 6 important files with this model. You can stop it at any time; further enrichment requires your choice."
+  "The guide appears first. A background priority pass then inspects up to 6 important files with this model. You can stop it at any time; further enrichment requires your choice.": "The guide appears first. A background priority pass then inspects up to 6 important files with this model. You can stop it at any time; further enrichment requires your choice.",
+  "Write a GitHub review comment…": "Write a GitHub review comment…",
+  "Ask AI about this code, or ask it to draft feedback…": "Ask AI about this code, or ask it to draft feedback…",
+  "GitHub draft · publish later in Finish review": "GitHub draft · publish later in Finish review",
+  "Private conversation · Enter to ask AI · Shift+Enter for a new line": "Private conversation · Enter to ask AI · Shift+Enter for a new line",
+  "Save private note": "Save private note",
+  "Save GitHub draft": "Save GitHub draft",
+  "Private AI conversation": "Private AI conversation",
+  "Ask AI about": "Ask AI about"
 }

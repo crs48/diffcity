@@ -35,6 +35,7 @@ export type GuideSection = { annotations?: Array<GuideAnnotation>, id: string, t
 export type Guide = { enrichment?: GuideEnrichment, id?: string, reasoningEffort?: string, snapshotId: string, summary: string, sections: Array<GuideSection>, source: string, model: string, generatedAt: string, limitations: Array<string>, policyVersion: number, };
 export type GuideVersion = { id: string, source: string, model: string, reasoningEffort: string | null, generatedAt: string, sectionCount: number, };
 export type Note = { threadTitle?: string, model?: ModelPreference, id: string, snapshotId: string, anchor: Anchor | null, body: string, role: string, parentId: string | null, githubDraft: boolean, publishedUrl: string | null, createdAt: string, };
+export type AskReply = { answer: Note, draft: Note | null, };
 export type ReviewProgress = { reviewed: Array<string>, acknowledged: Array<string>, deferred: Array<string>, expanded: Array<string>, activeSection: string | null, };
 export type RemoteComment = { id: string, author: string, body: string, path: string | null, line: number | null, side: Side | null, commit: string | null, url: string, createdAt: string, };
 export type ReviewWorkspace = { snapshot: Snapshot, guide: Guide, notes: Array<Note>, progress: ReviewProgress, comments: Array<RemoteComment>, checks: string, previousSnapshotId: string | null, changedHunks: Array<string>, syncError: string | null, };

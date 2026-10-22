@@ -680,7 +680,10 @@ export default function App() {
       },
       (id) => api.ask(note.snapshotId, note.id, id, preference),
     );
-    if (answer) onNote(answer);
+    if (answer) {
+      onNote(answer.answer);
+      if (answer.draft) onNote(answer.draft);
+    }
   };
   const explainText = async (anchor: Anchor) => {
     if (

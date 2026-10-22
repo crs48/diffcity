@@ -41,6 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Guide,
         GuideVersion,
         Note,
+        AskReply,
         ReviewProgress,
         RemoteComment,
         ReviewWorkspace,

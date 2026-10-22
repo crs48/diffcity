@@ -17,14 +17,14 @@ const lineAtPointer = (
   hunk: Hunk,
   element: HTMLDivElement,
   active: Drag,
-  indexAtOffset?: (offset: number) => number | null,
+  indexAtOffset?: (offset: number, side: Side) => number | null,
 ) => {
   const bounds = element.getBoundingClientRect();
   const y = active.clientY - bounds.top;
   const offset =
     Math.max(0, Math.min(bounds.height - 1, y)) + element.scrollTop;
   const index = indexAtOffset
-    ? indexAtOffset(offset)
+    ? indexAtOffset(offset, active.side)
     : Math.max(
         0,
         Math.min(hunk.lines.length - 1, Math.floor(offset / rowHeight)),
@@ -40,7 +40,7 @@ export function useLineSelection(
   scroll: RefObject<HTMLDivElement | null>,
   onSelect: (anchor: Anchor) => void,
   scrollToIndex: (index: number) => void,
-  indexAtOffset?: (offset: number) => number | null,
+  indexAtOffset?: (offset: number, side: Side) => number | null,
 ) {
   const pivot = useRef<Endpoint | null>(null);
   const drag = useRef<Drag | null>(null);

@@ -440,6 +440,13 @@ pub struct Note {
     pub created_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AskReply {
+    pub answer: Note,
+    pub draft: Option<Note>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ReviewProgress {

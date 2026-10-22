@@ -53,7 +53,9 @@ export function ReviewMessages({
                       : "Codex"
                     : t("You")}
                   {n.githubDraft && (
-                    <span className="draft-tag">{t("GitHub draft")} </span>
+                    <span className="draft-tag">
+                      {t("GitHub draft · not published")}{" "}
+                    </span>
                   )}
                   {n.publishedUrl && (
                     <span className="draft-tag">{t("Published")} </span>

@@ -211,11 +211,18 @@ pub async fn ask_codex(
     note_id: String,
     run_id: String,
     preference: Option<ModelPreference>,
-) -> Output<Note> {
-    service
+) -> Output<AskReply> {
+    let answer = service
         .ask_with_preference(&snapshot_id, &note_id, &run_id, preference, emitter(app))
         .await
-        .map_err(error)
+        .map_err(error)?;
+    let draft = service
+        .store
+        .notes(&snapshot_id)
+        .map_err(error)?
+        .into_iter()
+        .find(|n| n.github_draft && n.parent_id.as_deref() == Some(answer.id.as_str()));
+    Ok(AskReply { answer, draft })
 }
 #[tauri::command]
 pub async fn cancel_codex(service: State<'_, Arc<Service>>, run_id: String) -> Output<()> {

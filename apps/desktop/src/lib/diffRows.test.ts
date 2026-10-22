@@ -40,3 +40,21 @@ it("renders an empty editor without creating a saved message", () => {
   expect(rows[3].kind === "thread" && rows[3].thread.notes).toEqual([]);
   expect(rows[4]).toMatchObject({ kind: "code", codeIndex: 3 });
 });
+it("pairs replacement rows and puts both side-specific threads after their matching pair", () => {
+  const old = rangeAnchor(hunk, "LEFT", 1, 2),
+    next = rangeAnchor(hunk, "RIGHT", 1, 2);
+  const rows = diffRows(
+    hunk,
+    [newNote("s", old, "Before"), newNote("s", next, "After")],
+    [],
+    null,
+    true,
+  );
+  expect(rows.filter((r) => r.kind === "code").map((r) => r.indices)).toEqual([
+    [0, 2],
+    [1, 3],
+  ]);
+  expect(
+    rows.slice(2).map((r) => r.kind === "thread" && r.thread.anchor.side),
+  ).toEqual(["LEFT", "RIGHT"]);
+});

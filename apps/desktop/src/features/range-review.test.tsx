@@ -152,7 +152,7 @@ describe("multi-line review", () => {
       await user.keyboard("{Shift>}{ArrowUp}{ArrowUp}{ArrowUp}{/Shift}");
       await waitFor(() => expect(document.activeElement).toBe(lineButton(64)));
       await user.click(
-        screen.getByRole("button", { name: "Comment on lines 63–64" }),
+        screen.getByRole("button", { name: "Ask AI about lines 63–64" }),
       );
       expect(discuss).toHaveBeenCalledWith(
         expect.objectContaining({ side: "RIGHT", startLine: 63, line: 64 }),
@@ -247,11 +247,11 @@ describe("multi-line review", () => {
     await user.keyboard("{Shift>}{ArrowDown}{/Shift}");
     await waitFor(() => expect(document.activeElement).toBe(lineButton(13)));
     expect(
-      screen.getByRole("button", { name: "Comment on lines 11–13" }),
+      screen.getByRole("button", { name: "Ask AI about lines 11–13" }),
     ).toBeTruthy();
     await user.keyboard("{Shift>}{ArrowUp}{/Shift}");
     await user.click(
-      screen.getByRole("button", { name: "Comment on lines 11–12" }),
+      screen.getByRole("button", { name: "Ask AI about lines 11–12" }),
     );
     expect(discuss).toHaveBeenCalledWith(
       expect.objectContaining({ side: "RIGHT", startLine: 11, line: 12 }),
@@ -385,7 +385,7 @@ describe("multi-line review", () => {
           asked.push(note);
           return new Promise<Note>((resolve) => {
             reply = resolve;
-          });
+          }).then((answer) => ({ answer, draft: null }));
         }
         throw new Error(`Unexpected command: ${command}`);
       },
@@ -405,7 +405,7 @@ describe("multi-line review", () => {
     );
     fireEvent.click(last, { detail: 0, shiftKey: true });
     await user.click(
-      await screen.findByRole("button", { name: "Comment on lines 1–2" }),
+      await screen.findByRole("button", { name: "Ask AI about lines 1–2" }),
     );
     const composer = screen.getByRole("textbox", {
       name: "Inline comment or AI question",
@@ -414,7 +414,7 @@ describe("multi-line review", () => {
     await user.paste(
       "Will these two migration statements work with existing rows?",
     );
-    await user.click(screen.getByRole("button", { name: "Save comment" }));
+    await user.click(screen.getByRole("button", { name: "Save private note" }));
     await user.click(
       await screen.findByRole("button", {
         name: "Ask AI about this comment",
@@ -429,9 +429,7 @@ describe("multi-line review", () => {
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /^PR chat/ }));
     const chat = screen.getByRole("complementary", { name: "PR chat" });
-    expect(
-      within(chat).getByLabelText("AI response in progress"),
-    ).toBeTruthy();
+    expect(within(chat).getByLabelText("AI response in progress")).toBeTruthy();
     expect(asked).toHaveLength(1);
     expect(asked[0].anchor).toMatchObject({
       side: "RIGHT",

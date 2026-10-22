@@ -185,7 +185,9 @@ it("offers only AI follow-up actions on both questions and answers", () => {
       <ReviewMessages notes={[question, answer]} conversation={conversation} />
     </>,
   );
-  expect(screen.queryByRole("button", { name: "Save comment" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Save private note" }),
+  ).toBeNull();
   expect(
     screen.queryByRole("button", { name: "Prepare GitHub draft" }),
   ).toBeNull();

@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import "../i18n";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { Button } from "react-aria-components";
-import { Check, Send } from "lucide-react";
+import { Github, Send, StickyNote } from "lucide-react";
 import type { Note } from "../lib/api";
 import type { NoteComposerState } from "./useNoteComposer";
 
@@ -62,28 +62,41 @@ export function NoteComposer({
         placeholder={
           textOnly
             ? t("Ask a follow-up about this selection…")
-            : inline
-              ? t("Comment on this code or ask AI…")
-              : t("Discuss this PR with AI…")
+            : editing
+              ? t("Write a GitHub review comment…")
+              : inline
+                ? t("Ask AI about this code, or ask it to draft feedback…")
+                : t("Discuss this PR with AI…")
         }
         value={state.draft.body}
         onChange={(e) => state.change(e.target.value)}
+        onKeyDown={(event) => {
+          if (
+            event.key !== "Enter" ||
+            event.shiftKey ||
+            event.altKey ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.nativeEvent.isComposing ||
+            event.nativeEvent.keyCode === 229 ||
+            editing
+          )
+            return;
+          event.preventDefault();
+          if (!busy && state.draft?.body.trim())
+            void state.submit(onAsk).catch(onError);
+        }}
       />
       <div className="composer-status" role="status">
-        {textOnly ? (
-          t("AI only · never published to GitHub")
-        ) : state.saved ? (
-          <>
-            <Check size={12} />
-            {t("Saved locally")}{" "}
-          </>
-        ) : editing ? (
-          t("GitHub draft · not published")
-        ) : (
-          t("Private · this thread has its own AI context")
-        )}
+        {textOnly
+          ? t("AI only · never published to GitHub")
+          : editing
+            ? t("GitHub draft · publish later in Finish review")
+            : t(
+                "Private conversation · Enter to ask AI · Shift+Enter for a new line",
+              )}
       </div>
-      {model && (
+      {model && !editing && (
         <p className="muted composer-model">
           {t("Replies use {{model}}", { model })}
         </p>
@@ -100,17 +113,30 @@ export function NoteComposer({
             isDisabled={!state.draft.body.trim()}
             onPress={() => void state.submit().catch(onError)}
           >
-            {editing ? t("Save draft") : t("Save comment")}
+            <StickyNote size={13} />
+            {editing ? t("Save draft") : t("Save private note")}
           </Button>
         )}
-        <Button
-          className="primary"
-          isDisabled={busy || editing || !state.draft.body.trim()}
-          onPress={() => void state.submit(onAsk).catch(onError)}
-        >
-          <Send size={13} />
-          {t("Ask AI")}{" "}
-        </Button>
+        {!textOnly && !editing && (
+          <Button
+            className="secondary"
+            isDisabled={!state.draft.body.trim()}
+            onPress={() => void state.submit(undefined, true).catch(onError)}
+          >
+            <Github size={13} />
+            {t("Save GitHub draft")}
+          </Button>
+        )}
+        {!editing && (
+          <Button
+            className="primary"
+            isDisabled={busy || editing || !state.draft.body.trim()}
+            onPress={() => void state.submit(onAsk).catch(onError)}
+          >
+            <Send size={13} />
+            {t("Ask AI")}{" "}
+          </Button>
+        )}
       </div>
     </div>
   );

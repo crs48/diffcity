@@ -1,12 +1,7 @@
 import { useTranslation } from "react-i18next";
 import "../i18n";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import {
-  ChevronDown,
-  ChevronRight,
-  FileCode2,
-  MessageSquare,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, FileCode2, Plus } from "lucide-react";
 import { Button } from "react-aria-components";
 import type {
   Anchor,
@@ -27,6 +22,7 @@ import { contextBefore, contextAfter } from "../lib/contextGaps";
 import { DIFF_CHUNK_SIZE, DiffChunks, rowAtOffset } from "./DiffChunks";
 import { codeTextProps } from "../lib/textSelection";
 
+import { CodeText } from "../ui/CodeText";
 import { NoteDetails } from "./GuideCodeNotes";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { annotationLine } from "../lib/guideAnnotations";
@@ -115,8 +111,9 @@ const DiffContent = memo(function DiffContent({
         hasConversation ? notes : [],
         hasConversation ? comments : [],
         editing,
+        split,
       ),
-    [hunk, notes, comments, editing, hasConversation],
+    [hunk, notes, comments, editing, hasConversation, split],
   );
   const contextFile = file?.hunks
     ? { status: file.status, hunks: file.hunks }
@@ -125,14 +122,21 @@ const DiffContent = memo(function DiffContent({
   const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const collapsed = collapsedAt === expansionKey;
   const indexAtOffset = useCallback(
-    (offset: number) => {
+    (offset: number, side: Side) => {
       const element = scroll.current;
       if (!element) return null;
       const row = rowAtOffset(element, offset);
       const item = row ? items[Number(row.dataset.index)] : null;
-      return item?.kind === "code" ? item.codeIndex : null;
+      return item?.kind === "code"
+        ? (item.indices.find(
+            (index) =>
+              (side === "LEFT"
+                ? hunk.lines[index].old
+                : hunk.lines[index].new) !== null,
+          ) ?? null)
+        : null;
     },
-    [items],
+    [items, hunk],
   );
   const scrollToCode = (index: number) => {
     const row = scroll.current?.querySelector<HTMLElement>(
@@ -173,9 +177,97 @@ const DiffContent = memo(function DiffContent({
     onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) =>
       line && interaction.keyDown(event, line, side),
   });
+  const mapLines = useMemo(
+    () =>
+      split
+        ? items.flatMap((item) =>
+            item.kind === "code" ? [hunk.lines[item.indices.at(-1)!]] : [],
+          )
+        : hunk.lines,
+    [split, items, hunk],
+  );
+  const renderLine = (index: number, splitSide?: Side) => {
+    const line = hunk.lines[index];
+    const side = splitSide ?? (line.kind === "deletion" ? "LEFT" : "RIGHT");
+    const number = side === "LEFT" ? line.old : line.new;
+    const chosen = splitSide
+      ? containsLine(selected, hunk, side, number)
+      : containsLine(selected, hunk, "LEFT", line.old) ||
+        containsLine(selected, hunk, "RIGHT", line.new);
+    const showAction =
+      !chosen ||
+      (activeRange?.side === "LEFT" ? line.old : line.new) ===
+        activeRange?.line;
+    const annotated =
+      notes.some(
+        (n) =>
+          n.anchor?.hunkId === hunk.id &&
+          n.anchor.side === side &&
+          n.anchor.line === number,
+      ) ||
+      comments.some(
+        (c) => c.path === hunk.path && c.side === side && c.line === number,
+      );
+    return (
+      <div
+        key={side}
+        data-code-index={index}
+        className={`diff-line ${line.kind} ${chosen ? "selected" : ""}`}
+      >
+        {number && showAction ? (
+          <button
+            className={`line-comment ${annotated ? "has-comment" : ""}`}
+            title={
+              chosen && activeRange
+                ? `Ask AI about ${lineRange(activeRange)}`
+                : "Ask AI about this line"
+            }
+            aria-label={`Discuss ${hunk.path} ${chosen && activeRange ? lineRange(activeRange) : `${splitSide === "LEFT" ? "old " : ""}line ${number}`}`}
+            onClick={() =>
+              onDiscuss(
+                chosen && activeRange
+                  ? activeRange
+                  : rangeAnchor(hunk, side, number, number),
+              )
+            }
+          >
+            <Plus size={14} aria-hidden />
+          </button>
+        ) : (
+          <span className="line-comment-placeholder" aria-hidden="true" />
+        )}
+        {(!splitSide || splitSide === "LEFT") && (
+          <button {...lineControls(line.old, "LEFT")}>{line.old}</button>
+        )}
+        {(!splitSide || splitSide === "RIGHT") && (
+          <button {...lineControls(line.new, "RIGHT")}>{line.new}</button>
+        )}
+        <span className="sr-only">
+          {line.kind === "addition"
+            ? "Added: "
+            : line.kind === "deletion"
+              ? "Removed: "
+              : "Unchanged: "}
+        </span>
+        {!splitSide && (
+          <span className="diff-sign" aria-hidden="true">
+            {line.kind === "addition"
+              ? "+"
+              : line.kind === "deletion"
+                ? "−"
+                : " "}
+          </span>
+        )}
+        <code {...codeTextProps(line, splitSide)}>
+          <CodeText path={hunk.path} text={line.text} />
+        </code>
+      </div>
+    );
+  };
   return (
     <div
       className="diff-file"
+      data-split={split}
       data-hunk-id={hunk.id}
       data-source-snapshot={snapshotId}
       data-source-path={hunk.path}
@@ -222,8 +314,8 @@ const DiffContent = memo(function DiffContent({
                   className="secondary"
                   onPress={() => onDiscuss(activeRange)}
                 >
-                  <MessageSquare size={13} />
-                  {t("Comment on")} {lineRange(activeRange)}
+                  <Plus size={13} />
+                  {t("Ask AI about")} {lineRange(activeRange)}
                 </Button>
               )}
               <span role="status" aria-live="polite">
@@ -244,77 +336,63 @@ const DiffContent = memo(function DiffContent({
           >
             <DiffChunks
               items={items}
-              minimapLines={hunk.lines}
+              minimapLines={mapLines}
               lineIndex={(item) =>
-                item.kind === "code" ? item.codeIndex : null
+                item.kind === "code" ? item.mapIndex : null
               }
               itemKey={(item) => item.key}
               startsChunk={(item) =>
-                item.kind === "code" && item.codeIndex % DIFF_CHUNK_SIZE === 0
+                item.kind === "code" && item.mapIndex % DIFF_CHUNK_SIZE === 0
               }
               keepItem={(item) =>
                 item.kind === "thread" ||
-                (item.kind === "code" &&
-                  (containsLine(
-                    selected,
-                    hunk,
-                    "LEFT",
-                    hunk.lines[item.codeIndex].old,
-                  ) ||
+                item.indices.some(
+                  (index) =>
+                    containsLine(
+                      selected,
+                      hunk,
+                      "LEFT",
+                      hunk.lines[index].old,
+                    ) ||
                     containsLine(
                       selected,
                       hunk,
                       "RIGHT",
-                      hunk.lines[item.codeIndex].new,
-                    )))
+                      hunk.lines[index].new,
+                    ),
+                )
               }
               estimateItem={(item) => (item.kind === "thread" ? 160 : 25)}
               render={(item, index) => {
                 const wrapper = {
                   "data-index": index,
                   "data-row-key": item.key,
-                  "data-code-index":
-                    item.kind === "code" ? item.codeIndex : undefined,
                   "data-map-line":
-                    item.kind === "code" ? item.codeIndex : undefined,
+                    item.kind === "code" ? item.mapIndex : undefined,
                 };
                 if (item.kind === "thread")
                   return (
-                    <div key={item.key} {...wrapper}>
-                      <InlineDiscussion thread={item.thread} />
+                    <div
+                      key={item.key}
+                      {...wrapper}
+                      className={split ? "diff-thread-row" : undefined}
+                      data-side={item.thread.anchor.side}
+                    >
+                      <div className="diff-thread-cell">
+                        <InlineDiscussion thread={item.thread} />
+                      </div>
                     </div>
-                  );
-                const l = hunk.lines[item.codeIndex];
-                const side: Side = l.kind === "deletion" ? "LEFT" : "RIGHT";
-                const line = side === "LEFT" ? l.old : l.new;
-                const chosen =
-                  containsLine(selected, hunk, "LEFT", l.old) ||
-                  containsLine(selected, hunk, "RIGHT", l.new);
-                const showComment =
-                  !chosen ||
-                  (activeRange?.side === "LEFT" ? l.old : l.new) ===
-                    activeRange?.line;
-                const annotated =
-                  notes.some(
-                    (n) =>
-                      n.anchor?.hunkId === hunk.id &&
-                      n.anchor.startLine <= (line ?? 0) &&
-                      n.anchor.line >= (line ?? 0) &&
-                      n.anchor.side === side,
-                  ) ||
-                  comments.some(
-                    (c) =>
-                      c.path === hunk.path &&
-                      c.line === line &&
-                      c.side === side,
                   );
                 return (
                   <div key={item.key} {...wrapper}>
                     {annotations
-                      .filter(
-                        (n) =>
-                          (n.anchor.side === "LEFT" ? l.old : l.new) ===
-                          n.anchor.startLine,
+                      .filter((n) =>
+                        item.indices.some(
+                          (index) =>
+                            (n.anchor.side === "LEFT"
+                              ? hunk.lines[index].old
+                              : hunk.lines[index].new) === n.anchor.startLine,
+                        ),
                       )
                       .map((n) => (
                         <aside
@@ -328,69 +406,29 @@ const DiffContent = memo(function DiffContent({
                           {n.details && <NoteDetails body={n.details} />}
                         </aside>
                       ))}
-                    <div
-                      className={`diff-line ${l.kind} ${chosen ? "selected" : ""}`}
-                    >
-                      {line && showComment ? (
-                        <button
-                          className={`line-comment ${annotated ? "has-comment" : ""}`}
-                          title={
-                            chosen && activeRange
-                              ? `Discuss ${lineRange(activeRange)}`
-                              : "Discuss this line"
-                          }
-                          aria-label={`Discuss ${hunk.path} ${chosen && activeRange ? lineRange(activeRange) : `line ${line}`}`}
-                          onClick={() =>
-                            onDiscuss(
-                              chosen && activeRange
-                                ? activeRange
-                                : rangeAnchor(hunk, side, line, line),
-                            )
-                          }
-                        >
-                          <MessageSquare size={13} />
-                        </button>
-                      ) : (
-                        <span
-                          className="line-comment-placeholder"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <button {...lineControls(l.old, "LEFT")}>{l.old}</button>
-                      <button {...lineControls(l.new, "RIGHT")}>{l.new}</button>
-                      <span className="sr-only">
-                        {l.kind === "addition"
-                          ? "Added: "
-                          : l.kind === "deletion"
-                            ? "Removed: "
-                            : "Unchanged: "}
-                      </span>
-                      <span className="diff-sign" aria-hidden="true">
-                        {l.kind === "addition"
-                          ? "+"
-                          : l.kind === "deletion"
-                            ? "−"
-                            : " "}
-                      </span>
-                      {split ? (
-                        <>
-                          <code
-                            className="split-code old"
-                            {...codeTextProps(l, "LEFT")}
-                          >
-                            {l.kind !== "addition" ? l.text : ""}
-                          </code>
-                          <code
-                            className="split-code new"
-                            {...codeTextProps(l, "RIGHT")}
-                          >
-                            {l.kind !== "deletion" ? l.text : ""}
-                          </code>
-                        </>
-                      ) : (
-                        <code {...codeTextProps(l)}>{l.text || " "}</code>
-                      )}
-                    </div>
+                    {split ? (
+                      <div className="split-row">
+                        {(["LEFT", "RIGHT"] as const).map((side) => {
+                          const index = item.indices.find(
+                            (i) =>
+                              (side === "LEFT"
+                                ? hunk.lines[i].old
+                                : hunk.lines[i].new) !== null,
+                          );
+                          return index === undefined ? (
+                            <div
+                              className="diff-empty-cell"
+                              key={side}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            renderLine(index, side)
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      renderLine(item.codeIndex)
+                    )}
                   </div>
                 );
               }}

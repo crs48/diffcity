@@ -507,5 +507,13 @@
   "Useful code notes will appear here as the priority pass finishes each file.": "Las notas útiles aparecerán aquí cuando la revisión prioritaria termine cada archivo.",
   "One file at a time, up to 6 files per batch and 2 notes per file. Each request includes at most 24 KB of diff, with a three-minute time limit. Up to 24 notes per guide. No automatic retries or continuous re-analysis.": "Un archivo a la vez, hasta 6 archivos por lote y 2 notas por archivo. Cada solicitud incluye hasta 24 KB de diferencias y tiene un límite de tres minutos. Hasta 24 notas por guía. Sin reintentos automáticos ni análisis continuo.",
   "Priority pass covers code flagged for high attention. Explore further covers the remaining assessed implementation and tests. Routine and unassessed changes are excluded. Enrichment uses this guide’s model.": "La revisión prioritaria cubre el código que requiere más atención. Explorar más cubre la implementación y las pruebas restantes ya evaluadas. Se excluyen los cambios rutinarios y sin evaluar. Se usa el modelo de esta guía.",
-  "The guide appears first. A background priority pass then inspects up to 6 important files with this model. You can stop it at any time; further enrichment requires your choice.": "La guía aparece primero. Luego, una revisión prioritaria en segundo plano examina hasta 6 archivos importantes con este modelo. Puedes detenerla cuando quieras; debes elegir si deseas continuar."
+  "The guide appears first. A background priority pass then inspects up to 6 important files with this model. You can stop it at any time; further enrichment requires your choice.": "La guía aparece primero. Luego, una revisión prioritaria en segundo plano examina hasta 6 archivos importantes con este modelo. Puedes detenerla cuando quieras; debes elegir si deseas continuar.",
+  "Write a GitHub review comment…": "Escribe un comentario para la revisión de GitHub…",
+  "Ask AI about this code, or ask it to draft feedback…": "Pregunta a la IA sobre este código o pídele que redacte comentarios…",
+  "GitHub draft · publish later in Finish review": "Borrador de GitHub · publícalo en Finalizar revisión",
+  "Private conversation · Enter to ask AI · Shift+Enter for a new line": "Conversación privada · Intro para preguntar a la IA · Mayús+Intro para una nueva línea",
+  "Save private note": "Guardar nota privada",
+  "Save GitHub draft": "Guardar borrador de GitHub",
+  "Private AI conversation": "Conversación privada con IA",
+  "Ask AI about": "Preguntar a la IA sobre"
 }

@@ -1,17 +1,39 @@
 import { useTranslation } from "react-i18next";
-import type { DiffLine } from "../lib/api";
+import type { DiffLine, Side } from "../lib/api";
 import { DiffChunks } from "./DiffChunks";
 import { codeTextProps } from "../lib/textSelection";
+import { CodeText } from "../ui/CodeText";
 
 export function ContextLines({
   lines,
   split,
+  path = "",
 }: {
   lines: DiffLine[];
   split: boolean;
+  path?: string;
 }) {
   const { t } = useTranslation();
   if (!lines.length) return null;
+  const cell = (line: DiffLine, side?: Side) => (
+    <div key={side} className="diff-line context">
+      <span className="line-comment-placeholder" aria-hidden="true" />
+      {(!side || side === "LEFT") && (
+        <span className="line-number">{line.old}</span>
+      )}
+      {(!side || side === "RIGHT") && (
+        <span className="line-number">{line.new}</span>
+      )}
+      {!side && (
+        <span className="diff-sign" aria-hidden="true">
+          {" "}
+        </span>
+      )}
+      <code {...codeTextProps(line, side)}>
+        <CodeText text={line.text} path={path} />
+      </code>
+    </div>
+  );
   return (
     <div
       className="expanded-context"
@@ -24,33 +46,17 @@ export function ContextLines({
         itemKey={(line) => `${line.old}/${line.new}`}
         render={(line, index) => (
           <div
-            className="diff-line context"
             data-map-line={index}
             key={`${line.old}/${line.new}`}
+            className={split ? "split-row" : undefined}
           >
-            <span className="line-comment-placeholder" aria-hidden="true" />
-            <span className="line-number">{line.old}</span>
-            <span className="line-number">{line.new}</span>
-            <span className="diff-sign" aria-hidden="true">
-              {" "}
-            </span>
             {split ? (
               <>
-                <code
-                  className="split-code old"
-                  {...codeTextProps(line, "LEFT")}
-                >
-                  {line.text || " "}
-                </code>
-                <code
-                  className="split-code new"
-                  {...codeTextProps(line, "RIGHT")}
-                >
-                  {line.text || " "}
-                </code>
+                {cell(line, "LEFT")}
+                {cell(line, "RIGHT")}
               </>
             ) : (
-              <code {...codeTextProps(line)}>{line.text || " "}</code>
+              cell(line)
             )}
           </div>
         )}

@@ -17,6 +17,7 @@ pub mod migrations;
 mod models;
 mod pins;
 mod providers;
+mod reply_draft;
 mod review_cache;
 mod review_comparison;
 pub mod service;

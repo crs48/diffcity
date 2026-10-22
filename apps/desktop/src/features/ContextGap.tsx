@@ -92,7 +92,11 @@ export function ContextGap({
   return (
     <div className="context-gap">
       <div {...source(gap.above)}>
-        <ContextLines lines={head} split={split} />
+        <ContextLines
+          lines={head}
+          split={split}
+          path={(gap.above ?? gap.below)!.path}
+        />
       </div>
       <div ref={controls} className="context-controls" aria-busy={busy}>
         {remaining !== 0 && (
@@ -166,7 +170,11 @@ export function ContextGap({
         </p>
       )}
       <div {...source(gap.below)}>
-        <ContextLines lines={tail} split={split} />
+        <ContextLines
+          lines={tail}
+          split={split}
+          path={(gap.below ?? gap.above)!.path}
+        />
       </div>
     </div>
   );

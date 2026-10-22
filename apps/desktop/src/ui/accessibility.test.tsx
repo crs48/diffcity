@@ -236,7 +236,13 @@ describe("keyboard and assistive navigation", () => {
         split={false}
       />,
     );
-    expect(screen.getByText("added line 80")).toBeTruthy();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "CODE" &&
+          element.textContent === "added line 80",
+      ),
+    ).toBeTruthy();
     const lastLine = screen.getByRole("button", {
       name: `Select ${hunk.path} line 80`,
     });

@@ -45,7 +45,12 @@ describe("expanded review code", () => {
       })),
     });
     expect(document.querySelectorAll("[data-code-index]")).toHaveLength(1000);
-    expect(screen.getByText("added 1000")).toBeTruthy();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "CODE" && element.textContent === "added 1000",
+      ),
+    ).toBeTruthy();
     await user.click(
       screen.getByRole("button", { name: "Collapse diff src/review.ts" }),
     );
@@ -82,15 +87,30 @@ describe("expanded review code", () => {
     await user.click(
       screen.getByRole("button", { name: "Show 25 lines above" }),
     );
-    expect(await screen.findByText("before 75")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === "CODE" && element.textContent === "before 75",
+      ),
+    ).toBeTruthy();
     await user.click(
       screen.getByRole("button", { name: "Show 25 lines below" }),
     );
-    expect(await screen.findByText("after 125")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === "CODE" && element.textContent === "after 125",
+      ),
+    ).toBeTruthy();
     await user.click(
       screen.getByRole("button", { name: "Show 25 lines above" }),
     );
-    expect(await screen.findByText("before 50")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === "CODE" && element.textContent === "before 50",
+      ),
+    ).toBeTruthy();
     expect(request.mock.calls).toEqual([
       ["snapshot", hunk.id, 25, 0],
       ["snapshot", hunk.id, 0, 25],
@@ -106,7 +126,12 @@ describe("expanded review code", () => {
     await user.click(
       screen.getAllByRole("button", { name: "Collapse context" })[0],
     );
-    expect(screen.queryByText("before 50")).toBeNull();
+    expect(
+      screen.queryByText(
+        (_, element) =>
+          element?.tagName === "CODE" && element.textContent === "before 50",
+      ),
+    ).toBeNull();
     expect(screen.getByText("newValue")).toBeTruthy();
   });
 

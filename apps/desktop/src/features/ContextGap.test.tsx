@@ -94,12 +94,22 @@ it("joins neighboring hunks into one gap and expands from both ends without dupl
     controls.getByRole("button", { name: "Show 25 lines below" }),
   );
   expect(controls.getByText("40 hidden lines")).toBeTruthy();
-  expect(controls.getByText("source 3")).toBeTruthy();
+  expect(
+    controls.getByText(
+      (_, element) =>
+        element?.tagName === "CODE" && element.textContent === "source 3",
+    ),
+  ).toBeTruthy();
   await user.click(
     controls.getByRole("button", { name: "Show 25 lines above" }),
   );
   expect(controls.getByText("15 hidden lines")).toBeTruthy();
-  expect(controls.getByText("source 67")).toBeTruthy();
+  expect(
+    controls.getByText(
+      (_, element) =>
+        element?.tagName === "CODE" && element.textContent === "source 67",
+    ),
+  ).toBeTruthy();
   await user.click(
     controls.getByRole("button", { name: "Show 15 lines below" }),
   );
@@ -113,7 +123,10 @@ it("joins neighboring hunks into one gap and expands from both ends without dupl
     ["snapshot", "1", 0, 40],
   ]);
   // Revealed context remains available to text-selection questions, never line comments.
-  const code = controls.getByText("source 67");
+  const code = controls.getByText(
+    (_, element) =>
+      element?.tagName === "CODE" && element.textContent === "source 67",
+  );
   const range = document.createRange();
   range.selectNodeContents(code);
   expect(selectedCode(range, container)).toMatchObject({
@@ -124,8 +137,18 @@ it("joins neighboring hunks into one gap and expands from both ends without dupl
   });
   await user.click(controls.getByRole("button", { name: "Collapse context" }));
   expect(controls.getByText("65 hidden lines")).toBeTruthy();
-  expect(controls.queryByText("source 67")).toBeNull();
-  expect(screen.getByText("shown 68")).toBeTruthy();
+  expect(
+    controls.queryByText(
+      (_, element) =>
+        element?.tagName === "CODE" && element.textContent === "source 67",
+    ),
+  ).toBeNull();
+  expect(
+    screen.getByText(
+      (_, element) =>
+        element?.tagName === "CODE" && element.textContent === "shown 68",
+    ),
+  ).toBeTruthy();
 });
 
 it("clamps a small gap to its actual count, including singular labels", async () => {
@@ -183,7 +206,12 @@ it("retains already revealed context when another expansion fails and permits re
   await user.click(screen.getByRole("button", { name: "Show 25 lines below" }));
   await user.click(screen.getByRole("button", { name: "Show 25 lines above" }));
   expect(screen.getByRole("alert").textContent).toContain("Offline");
-  expect(screen.getByText("source 3")).toBeTruthy();
+  expect(
+    screen.getByText(
+      (_, element) =>
+        element?.tagName === "CODE" && element.textContent === "source 3",
+    ),
+  ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Show 25 lines above" }));
   expect(screen.queryByRole("alert")).toBeNull();
   expect(screen.getByText("15 hidden lines")).toBeTruthy();

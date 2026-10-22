@@ -79,3 +79,22 @@ it("keeps exact text context on follow-up drafts and distinguishes two words on 
   await act(() => result.current.start("snapshot", second));
   expect(result.current.draft?.anchor).toEqual(second);
 });
+it("converts an autosaved private note to one unpublished draft without sending to AI", async () => {
+  const notes = new Map<string, Note>();
+  vi.spyOn(api, "note").mockImplementation(async (n) => {
+    const saved = { ...n, id: n.id || "one" };
+    notes.set(saved.id, saved);
+    return saved;
+  });
+  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  await act(() => result.current.start("s", null));
+  act(() => result.current.change("Please add a migration test."));
+  await act(() => result.current.flush());
+  await act(() => result.current.submit(undefined, true));
+  expect(notes.size).toBe(1);
+  expect(notes.get("one")).toMatchObject({
+    githubDraft: true,
+    publishedUrl: null,
+  });
+  expect(result.current.draft?.body).toBe("");
+});

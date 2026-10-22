@@ -15,6 +15,7 @@ import type {
   ReviewCheckpoint,
   ReviewComparison,
   Note,
+  AskReply,
   Guide,
   GuideVersion,
   EnrichmentTier,
@@ -89,7 +90,7 @@ export const api = {
     noteId: string,
     runId: string,
     preference?: ModelPreference,
-  ) => invoke<Note>("ask_codex", { snapshotId, noteId, runId, preference }),
+  ) => invoke<AskReply>("ask_codex", { snapshotId, noteId, runId, preference }),
   cancel: (runId: string) => invoke<void>("cancel_codex", { runId }),
   publish: (request: PublishRequest) =>
     invoke<PublishResult>("publish_review", { request }),

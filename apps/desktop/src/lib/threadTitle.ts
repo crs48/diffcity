@@ -47,11 +47,14 @@ const marker = "<!-- diffcity-thread-title:";
 
 /** Keep final-line metadata, including a partial streamed marker, out of chat. */
 export function visibleReply(body: string) {
+  const draft = body.indexOf("\n<diffcity-github-draft>");
+  if (draft >= 0) body = body.slice(0, draft);
   const start = body.lastIndexOf("\n");
   if (start < 0) return body;
   const last = body.slice(start + 1);
   return last.startsWith(marker) ||
-    (last.startsWith("<") && marker.startsWith(last))
+    (last.startsWith("<") &&
+      (marker.startsWith(last) || "<diffcity-github-draft>".startsWith(last)))
     ? body.slice(0, start).trimEnd()
     : body;
 }

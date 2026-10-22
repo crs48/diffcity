@@ -74,3 +74,16 @@ it("hides complete and partial title metadata while preserving code and Markdown
   const ordinary = "```html\n<div>Example</div>\n```";
   expect(visibleReply(ordinary)).toBe(ordinary);
 });
+
+it("hides a streamed GitHub draft envelope from the conversation", () => {
+  const marker = "<diffcity-github-draft>";
+  for (let length = 1; length <= marker.length; length++)
+    expect(visibleReply(`Draft prepared.\n${marker.slice(0, length)}`)).toBe(
+      "Draft prepared.",
+    );
+  expect(
+    visibleReply(
+      'Draft prepared.\n<diffcity-github-draft>\n{"body":"Check tenant scope"}\n</diffcity-github-draft>',
+    ),
+  ).toBe("Draft prepared.");
+});
