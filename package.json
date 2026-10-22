@@ -13,7 +13,10 @@
     "test": "cargo test --workspace && pnpm --filter @diffcity/desktop test",
     "contracts": "cargo run -p diffcity --bin export-contracts",
     "format": "prettier --write apps/desktop/src apps/desktop/*.json && cargo fmt --all",
-    "lint": "pnpm --filter @diffcity/desktop lint && cargo clippy --workspace --all-targets -- -D warnings"
+    "lint": "pnpm --filter @diffcity/desktop lint && cargo clippy --workspace --all-targets -- -D warnings",
+    "site:dev": "pnpm --filter @diffcity/site dev",
+    "site:build": "pnpm --filter @diffcity/site build",
+    "site:preview": "pnpm --filter @diffcity/site preview"
   },
   "devDependencies": {
     "prettier": "^3.8.0"

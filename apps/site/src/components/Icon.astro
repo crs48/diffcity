@@ -1,0 +1,46 @@
+---
+interface Props {
+  name: string;
+  size?: number;
+  class?: string;
+}
+const { name, size = 20, class: className } = Astro.props;
+const paths: Record<string, string[]> = {
+  arrow: ["M5 12h14", "m13 6 6 6-6 6"],
+  down: ["M12 3v12", "m7 10 5 5 5-5", "M5 16v5h14v-5"],
+  chevron: ["m9 5 7 7-7 7"],
+  check: ["m5 12 4 4L19 6"],
+  plus: ["M12 5v14", "M5 12h14"],
+  spark: ["m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"],
+  branch: ["M6 3v12a5 5 0 0 0 5 5h7", "M18 3v5a4 4 0 0 1-4 4H6"],
+  file: ["M14 2H5v20h14V7Z", "M14 2v5h5", "M8 12h8", "M8 16h6"],
+  chat: ["M21 15a3 3 0 0 1-3 3H8l-5 4V5a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3Z"],
+  clock: ["M12 8v5l3 2"],
+  github: [
+    "M9 19c-4 1-4-2-6-2m12 5v-4a3.5 3.5 0 0 0-1-3c3-.4 6-1.5 6-6a4.7 4.7 0 0 0-1.3-3.2A4.3 4.3 0 0 0 18.6 2S17.4 1.6 15 3a13.4 13.4 0 0 0-6 0C6.6 1.6 5.4 2 5.4 2a4.3 4.3 0 0 0-.1 3.8A4.7 4.7 0 0 0 4 9c0 4.5 3 5.6 6 6a3.5 3.5 0 0 0-1 3v4",
+  ],
+  sun: [
+    "M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5",
+  ],
+  moon: ["M21 13A9 9 0 0 1 11 3a9 9 0 1 0 10 10Z"],
+};
+---
+
+<svg
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.6"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  class={className}
+>
+  {name === "clock" && <circle cx="12" cy="12" r="9" />}
+  {name === "sun" && <circle cx="12" cy="12" r="4" />}
+  {(paths[name] ?? paths.spark).map((d) => (
+    <path d={d} />
+  ))}
+</svg>

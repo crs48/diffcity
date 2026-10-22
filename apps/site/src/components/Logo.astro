@@ -1,0 +1,20 @@
+---
+const { large = false } = Astro.props;
+---
+
+<span class:list={["wordmark", { large }]}>
+  <svg
+    width="29"
+    height="29"
+    viewBox="0 0 32 32"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <rect x="2" y="15" width="7" height="15" rx="1" />
+    <rect x="12" y="2" width="7" height="28" rx="1" />
+    <rect x="22" y="9" width="7" height="21" rx="1" />
+  </svg>
+  <span>
+    diff<span class="wordmark-dot">.</span>city
+  </span>
+</span>

@@ -22,3 +22,6 @@ output/playwright/
 .playwright-cli/
 
 __pycache__/
+
+# Astro generated metadata
+apps/site/.astro/

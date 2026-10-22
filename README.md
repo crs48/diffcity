@@ -2,7 +2,7 @@
 
 A desktop workspace for reviewing GitHub pull requests through AI-guided walkthroughs with Codex and Claude. Consequential changes come first; assessed routine changes fold into summaries you can expand.
 
-**Status:** working local macOS alpha. **Owner:** Christopher Smothers. **License:** [MIT](LICENSE). The repository remains private; [diff.city](https://diff.city) is reserved for future downloads and documentation.
+**Status:** working local macOS alpha. **Owner:** Christopher Smothers. **License:** [MIT](LICENSE). The repository remains private; [diff.city](https://diff.city) hosts the product website and will provide public downloads. See the [Astro website](apps/site/README.md) for local development and GitHub Pages setup.
 
 ## Run locally
 
