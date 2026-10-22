@@ -131,7 +131,9 @@ it("docks navigation outside the code viewport and jumps without covering the de
   fireEvent.wheel(viewport);
   viewport.scrollTop = 2050;
   fireEvent.scroll(viewport);
-  await screen.findByRole("button", { name: "Review outline, section 2 of 5" });
+  await screen.findByRole("button", {
+    name: "Review outline, 2 of 5 sections",
+  });
   expect(viewport.scrollTop).toBe(2050);
 });
 
@@ -185,17 +187,23 @@ it("tracks scrolling without resetting the viewport or moving keyboard focus", a
   focus.focus();
   viewport.scrollTop = 1050;
   fireEvent.scroll(viewport);
-  await screen.findByRole("button", { name: "Review outline, section 1 of 5" });
+  await screen.findByRole("button", {
+    name: "Review outline, 1 of 5 sections",
+  });
   expect(viewport.scrollTop).toBe(1050);
   expect(document.activeElement).toBe(focus);
   viewport.scrollTop = 3050;
   fireEvent.scroll(viewport);
-  await screen.findByRole("button", { name: "Review outline, section 3 of 5" });
+  await screen.findByRole("button", {
+    name: "Review outline, 3 of 5 sections",
+  });
   expect(viewport.scrollTop).toBe(3050);
   Object.defineProperty(viewport, "scrollHeight", { value: 4100 });
   viewport.scrollTop = 3500;
   fireEvent.scroll(viewport);
-  await screen.findByRole("button", { name: "Review outline, section 5 of 5" });
+  await screen.findByRole("button", {
+    name: "Review outline, 5 of 5 sections",
+  });
   expect(viewport.scrollTop).toBe(3500);
 });
 it("shows the full Markdown walkthrough and concrete checks by default, with independent collapse", async () => {
@@ -268,7 +276,9 @@ it("starts with a rich overview and returns to it from the first code chapter", 
     document.querySelector<HTMLElement>("[data-review-scroll]")!.scrollTop,
   ).toBe(0);
   await user.click(screen.getByRole("button", { name: "Next section" }));
-  await screen.findByRole("button", { name: "Review outline, section 1 of 5" });
+  await screen.findByRole("button", {
+    name: "Review outline, 1 of 5 sections",
+  });
   await user.click(screen.getByRole("button", { name: "Previous section" }));
   expect(document.activeElement).toBe(
     within(overview).getByRole("heading", { name: "PR overview" }),

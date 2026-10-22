@@ -64,6 +64,10 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 
 **Explore a sample** works without a GitHub PR and demonstrates migrations, authorization, tests, documentation, and localization. It contains deliberate issues and cannot publish feedback.
 
+New AI guides include a focused second pass over up to three high-priority or substantive sections. It adds up to four concise, line-anchored **code notes** per section (12 total), explaining invariants, decisions, and failure paths without narrating every line. Each note is validated against the captured revision and saved with that model’s guide. If the extra pass is unavailable, the main walkthrough is retained and its limitations explain the missing notes. Existing saved guides remain unchanged; choose **New guide** to generate annotations.
+
+As you scroll, code notes replace the section summary in the left margin, connect to their line ranges, and give way to the next note. Arrow controls jump between notes, including code that is not currently rendered. Narrow windows show each note directly above its code; **Read all code notes** provides a complete reading view. Notes are explanatory guide content, separate from findings, private conversations, and GitHub comments.
+
 ## Appearance and accessibility
 
 Use the appearance menu in the toolbar to choose **Light**, **Dark**, or **System**. The interface uses neutral black, white, and gray surfaces; PR status, diff additions/deletions, primary actions, and attention warnings retain semantic color. Appearance saves immediately without reconnecting accounts.

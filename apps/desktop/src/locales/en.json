@@ -464,5 +464,14 @@
   "{{count}} AI replies in this conversation.": "{{count}} AI replies in this conversation.",
   "Replies use {{model}}": "Replies use {{model}}",
   "This conversation is responding. You can ask in another thread.": "This conversation is responding. You can ask in another thread.",
-  "Applies to new guides and conversations. Existing conversations keep their model.": "Applies to new guides and conversations. Existing conversations keep their model."
+  "Applies to new guides and conversations. Existing conversations keep their model.": "Applies to new guides and conversations. Existing conversations keep their model.",
+  "Assessed by AI": "Assessed by AI",
+  "Choose New guide to add line-by-line explanations of the important passages.": "Choose New guide to add line-by-line explanations of the important passages.",
+  "Code note {{current}} of {{total}}": "Code note {{current}} of {{total}}",
+  "Previous code note": "Previous code note",
+  "Next code note": "Next code note",
+  "Show referenced lines": "Show referenced lines",
+  "Code explanation": "Code explanation",
+  "Read all code notes ({{count}})": "Read all code notes ({{count}})",
+  "Review outline, {{current}} of {{total}} sections": "Review outline, {{current}} of {{total}} sections"
 }

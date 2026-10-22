@@ -2746,6 +2746,105 @@
   .guide-annotation[data-sticky="false"] {
     position: static;
   }
+  .code-note-section {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+  .code-note-navigation {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 12px;
+  }
+  .code-note-navigation > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .code-note-navigation .icon-button {
+    width: 28px;
+    height: 28px;
+  }
+  .code-note-window {
+    overflow: clip;
+  }
+  .code-note-track {
+    position: relative;
+    transform: translateY(calc(-1 * var(--note-push, 0px)));
+  }
+  .code-note {
+    padding: 0 0 22px;
+  }
+  .code-note > h3 {
+    font-size: 17px;
+    line-height: 1.35;
+    margin: 0 0 8px;
+  }
+  .code-note-location {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 14px;
+  }
+  .code-note .comment-markdown {
+    font-size: 12px;
+    line-height: 1.75;
+  }
+  .code-note-incoming {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+  }
+  .code-note-connector {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .code-note-connector path {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 1;
+    opacity: 0.6;
+  }
+  [data-guide-note="true"] > .diff-line {
+    box-shadow: inset 2px 0 var(--muted);
+  }
+  .code-note-inline {
+    display: none;
+  }
+  .chapter-code-notes {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    font-size: 12px;
+  }
+  .chapter-code-notes > summary {
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .chapter-code-notes > article {
+    max-width: 75ch;
+    margin-top: 20px;
+  }
+  .chapter-code-notes h3 {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  .chapter-code-notes > article > code {
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
   .chapter-number {
     font-size: 11px;
     color: var(--muted);
@@ -2901,6 +3000,27 @@
     }
     .guide-annotation {
       position: static;
+    }
+    .code-note-connector {
+      display: none;
+    }
+    .code-note-inline {
+      display: block;
+      padding: 16px;
+      margin: 10px 8px;
+      max-width: min(90ch, calc(100cqw - 80px));
+      border-left: 2px solid var(--muted);
+      background: var(--surface);
+      white-space: normal;
+      font: 12px/1.7 var(--font-sans);
+      overflow-wrap: anywhere;
+    }
+    .code-note-inline > strong {
+      display: block;
+      font-size: 14px;
+    }
+    .code-note-inline > small {
+      color: var(--muted);
     }
     .guide-annotation .section-title {
       font-size: 24px;

@@ -8,7 +8,14 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Button } from "react-aria-components";
-import type { Anchor, Hunk, Note, RemoteComment, Side } from "../lib/api";
+import type {
+  Anchor,
+  GuideAnnotation,
+  Hunk,
+  Note,
+  RemoteComment,
+  Side,
+} from "../lib/api";
 import { containsLine, lineRange, rangeAnchor } from "../lib/selection";
 import { useLineSelection } from "./useLineSelection";
 import { anchorKey, diffRows } from "../lib/diffRows";
@@ -19,7 +26,13 @@ import { ContextLines } from "./ContextLines";
 import { DIFF_CHUNK_SIZE, DiffChunks, rowAtOffset } from "./DiffChunks";
 import { codeTextProps } from "../lib/textSelection";
 
+import { CommentMarkdown } from "../ui/CommentMarkdown";
+import { annotationLine } from "../lib/guideAnnotations";
+
+const NO_ANNOTATIONS: GuideAnnotation[] = [];
+
 type DiffProps = {
+  annotations?: GuideAnnotation[];
   hunk: Hunk;
   file?: { status: string; previousPath: string | null };
   selection: Anchor | null;
@@ -70,6 +83,7 @@ export function Diff(props: DiffProps) {
 
 const DiffContent = memo(function DiffContent({
   hunk,
+  annotations = NO_ANNOTATIONS,
   file,
   selection,
   onSelect,
@@ -215,7 +229,9 @@ const DiffContent = memo(function DiffContent({
                 </Button>
               )}
               <span className="muted">
-                {t("Select text to ask AI. Line comments stay within the diff.")}
+                {t(
+                  "Select text to ask AI. Line comments stay within the diff.",
+                )}
               </span>
             </div>
           )}
@@ -320,6 +336,23 @@ const DiffContent = memo(function DiffContent({
                   );
                 return (
                   <div key={item.key} {...wrapper}>
+                    {annotations
+                      .filter(
+                        (n) =>
+                          (n.anchor.side === "LEFT" ? l.old : l.new) ===
+                          n.anchor.startLine,
+                      )
+                      .map((n) => (
+                        <aside
+                          className="code-note-inline"
+                          key={n.id}
+                          aria-label={t("Code explanation")}
+                        >
+                          <strong>{n.title}</strong>
+                          <small>{annotationLine(n, t("Old"), t("New"))}</small>
+                          <CommentMarkdown body={n.body} diagrams={false} />
+                        </aside>
+                      ))}
                     <div
                       className={`diff-line ${l.kind} ${chosen ? "selected" : ""}`}
                     >

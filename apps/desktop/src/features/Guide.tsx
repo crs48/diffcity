@@ -6,9 +6,16 @@ import { FileCode2, GitBranch } from "lucide-react";
 import { Diff } from "./Diff";
 import { GuideFlow } from "./GuideFlow";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
-import type { Anchor, ReviewProgress, ReviewWorkspace } from "../lib/api";
+import type {
+  Anchor,
+  GuideAnnotation,
+  ReviewProgress,
+  ReviewWorkspace,
+} from "../lib/api";
 import { ReviewCode } from "./ReviewCode";
 import { FileDiff } from "./FileDiff";
+
+const NO_ANNOTATIONS: GuideAnnotation[] = [];
 
 export function GuideView({
   workspace: w,
@@ -39,6 +46,17 @@ export function GuideView({
       ),
     [w.snapshot.files],
   );
+  const annotationsByHunk = useMemo(() => {
+    const result = new Map<string, GuideAnnotation[]>();
+    if (mode === "guide")
+      for (const section of w.guide.sections)
+        for (const note of section.annotations ?? []) {
+          const notes = result.get(note.anchor.hunkId) ?? [];
+          notes.push(note);
+          result.set(note.anchor.hunkId, notes);
+        }
+    return result;
+  }, [w.guide.sections, mode]);
   const comments = useMemo(
     () => w.comments.filter((c) => c.commit === w.snapshot.pull.head),
     [w.comments, w.snapshot.pull.head],
@@ -51,6 +69,7 @@ export function GuideView({
         <Diff
           key={id}
           hunk={hunk}
+          annotations={annotationsByHunk.get(id) ?? NO_ANNOTATIONS}
           file={entry?.file}
           selection={selection}
           onSelect={onSelect}
@@ -83,7 +102,7 @@ export function GuideView({
         hunks={group.ids.map((id) => hunks.get(id)!.hunk)}
         selection={selection}
       >
-        {group.ids.map(renderHunk)}
+        {group.ids.map((id) => renderHunk(id))}
       </FileDiff>
     ));
   };

@@ -464,5 +464,14 @@
   "{{count}} AI replies in this conversation.": "{{count}} respuestas de IA en esta conversación.",
   "Replies use {{model}}": "Las respuestas usan {{model}}",
   "This conversation is responding. You can ask in another thread.": "Esta conversación está respondiendo. Puedes preguntar en otro hilo.",
-  "Applies to new guides and conversations. Existing conversations keep their model.": "Se aplica a guías y conversaciones nuevas. Las conversaciones existentes conservan su modelo."
+  "Applies to new guides and conversations. Existing conversations keep their model.": "Se aplica a guías y conversaciones nuevas. Las conversaciones existentes conservan su modelo.",
+  "Assessed by AI": "Evaluado por IA",
+  "Choose New guide to add line-by-line explanations of the important passages.": "Elige Nueva guía para añadir explicaciones de los pasajes importantes línea por línea.",
+  "Code note {{current}} of {{total}}": "Nota de código {{current}} de {{total}}",
+  "Previous code note": "Nota de código anterior",
+  "Next code note": "Siguiente nota de código",
+  "Show referenced lines": "Mostrar líneas referenciadas",
+  "Code explanation": "Explicación del código",
+  "Read all code notes ({{count}})": "Leer todas las notas de código ({{count}})",
+  "Review outline, {{current}} of {{total}} sections": "Índice de revisión, {{current}} de {{total}} secciones"
 }

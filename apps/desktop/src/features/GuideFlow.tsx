@@ -1,4 +1,10 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -31,6 +37,9 @@ import { anchorKey } from "../lib/diffRows";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { useConversation } from "./conversation";
 import { useGuideScroll } from "./useGuideScroll";
+
+import { GuideMargin } from "./GuideMargin";
+import { orderedAnnotations } from "../lib/guideAnnotations";
 
 const OVERVIEW = "guide-overview";
 
@@ -80,7 +89,7 @@ export function GuideFlow(props: Props) {
           aria-label={
             index < 0
               ? t("Review outline, overview")
-              : t("Review outline, section {{current}} of {{total}}", {
+              : t("Review outline, {{current}} of {{total}} sections", {
                   current: index + 1,
                   total: sections.length,
                 })
@@ -88,7 +97,7 @@ export function GuideFlow(props: Props) {
         >
           <span className="step-number">
             {index < 0 ? <BookOpen size={16} aria-hidden /> : index + 1}
-          </span>
+          </span>{" "}
           <span>
             {index < 0 ? (
               t("Overview")
@@ -210,6 +219,14 @@ export function GuideFlow(props: Props) {
               )}
             </p>
           )}
+        {["codex", "claude"].includes(w.guide.source) &&
+          w.guide.policyVersion < 4 && (
+            <p className="muted">
+              {t(
+                "Choose New guide to add line-by-line explanations of the important passages.",
+              )}
+            </p>
+          )}
         {sections.length > 0 && (
           <Button
             className="secondary overview-start"
@@ -313,6 +330,14 @@ function GuideChapter({
       s.unavailablePaths.includes(f.path) ||
       f.hunks.some((h) => s.hunkIds.includes(h.id)),
   );
+  const annotations = useMemo(
+    () =>
+      orderedAnnotations(
+        s,
+        w.snapshot.files.flatMap((f) => f.hunks),
+      ),
+    [s, w.snapshot.files],
+  );
   const titleId = `guide-title-${s.id}`;
   const contextId = `guide-context-${s.id}`;
   const mark = (kind: "reviewed" | "acknowledged" | "deferred") =>
@@ -333,7 +358,7 @@ function GuideChapter({
       data-guide-section={s.id}
       aria-labelledby={titleId}
     >
-      <aside className="guide-annotation" aria-label={t("Section explanation")}>
+      <GuideMargin notes={annotations} title={s.title} headingId={titleId}>
         <div className="chapter-number">
           {t("Section {{current}} of {{total}}", { current: index + 1, total })}
         </div>
@@ -346,7 +371,7 @@ function GuideChapter({
             {s.assessed
               ? w.guide.source === "sample"
                 ? t("Sample assessment")
-                : t("Assessed by Codex")
+                : t("Assessed by AI")
               : t("Provisional")}
           </span>
         </div>
@@ -379,7 +404,7 @@ function GuideChapter({
           {t(contextOpen ? "Hide walkthrough" : "Show walkthrough")}
           <ChevronDown size={14} />
         </Button>
-      </aside>
+      </GuideMargin>
       <div className="guide-code">
         {contextOpen && (
           <section
@@ -404,6 +429,26 @@ function GuideChapter({
               </>
             )}
           </section>
+        )}
+        {annotations.length > 0 && (
+          <details className="chapter-code-notes">
+            <summary>
+              {t("Read all code notes ({{count}})", {
+                count: annotations.length,
+              })}
+            </summary>
+            {annotations.map((note) => (
+              <article key={note.id}>
+                <h3>{note.title}</h3>
+                <code>
+                  {note.anchor.path} ·{" "}
+                  {note.anchor.side === "LEFT" ? t("Old") : t("New")}{" "}
+                  {note.anchor.startLine}–{note.anchor.line}
+                </code>
+                <CommentMarkdown body={note.body} diagrams={false} />
+              </article>
+            ))}
+          </details>
         )}
         {!expanded ? (
           <div className="fold-card">
