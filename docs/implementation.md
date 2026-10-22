@@ -593,3 +593,33 @@ Mermaid loads only for overview diagram fences. Rendering is serialized, bounded
 - [x] Light/dark/narrow axe WCAG A/AA checks report no violations. Invalid Mermaid and external-image syntax show readable source; the browser makes no requested external image fetches.
 - [x] Install and verify the native ARM bundle after manual Mac unlock. The sample opens at its full Markdown overview, renders the accessible Mermaid image in dark mode, navigates to the first code chapter with heading focus, and returns to the overview with Previous section. All 10 private notes, settings, and model preference match the fresh pre-install SQLite backup byte for byte. Installed and packaged executable SHA-256: `fa9aa4e4130309f77329e814ae68df23c2db6b9bb467c4579fe154b5b553a5c2`; all bundled executables remain ARM-native and the strict signature check passes.
 - [x] [CI passes on d0f43d2](https://github.com/crs48/diffcity/actions/runs/39712522348), including all 98 frontend tests, 76 Rust tests, architecture fixtures, and signed ARM packaging.
+
+## Changes since your last review
+
+A compact **Full PR / Since your last review** control appears above the review document. It identifies the comparison source, review date, and both commit IDs; a blue dot identifies a different head. The focused view shows only the exact reviewed-head-to-current-head file diff, with the existing unified/split layouts, file search, sticky headers, minimap, context expansion, and virtualization. Full PR returns to the complete guide and its existing notes/progress. The focused view does not reuse the full guide's explanations as if they described only the new changes.
+
+The baseline is the later of an explicit private checkpoint and the viewer's latest submitted GitHub review (commented, approved, or changes requested). Pending/dismissed reviews and other people's reviews do not qualify. **Finish review → Save review checkpoint** saves the captured revision locally without publishing, changing hunk assessments, or discarding drafts. Confirmed GitHub publication records its submitted commit and date. Opening, capturing, prefetching, and AI analysis never advance the checkpoint.
+
+```mermaid
+flowchart LR
+  Local[Explicit private checkpoint] --> Latest[Latest human review]
+  GitHub[Viewer's submitted GitHub review] --> Latest
+  Latest --> Pair[Reviewed SHA → captured HEAD]
+  Pair --> Cache[Immutable comparison cache]
+  Cache --> Delta[Changed files only]
+  Delta --> Full[Full PR for original GitHub comment anchors]
+```
+
+Comparisons and their context bases are stored separately from normal PR captures, so they cannot become the latest full review or alter progress transfer. Cached comparisons survive restart and work offline. Review history refresh failures retain the saved baseline and show a retryable warning. A missing baseline explains how to establish one. Identical commits or identical trees show an explicit up-to-date state; failures never masquerade as empty comparisons.
+
+Right-side selections map to the same immutable head in the full PR before opening an inline composer. Left-side selections refer to the reviewed revision, not GitHub's original PR base. These and ranges absent from the full PR show guidance to choose a full-PR comment location. Rust rejects direct publication from comparison snapshots. Incremental-only inline conversations and incremental Codex guides are not implemented.
+
+GitHub's comparison API supplies at most 300 files. A result reaching that limit is rejected rather than silently treated as complete. Rewritten history, a newer review than the captured revision, or an inaccessible reviewed commit falls back to an explanatory error with Full PR and retry available. Text fallback is bounded to 20 files/16 MiB, retaining visible unavailable-file entries for binary, metadata-only, or oversized changes. These are deliberate correctness limits, not an exact tree comparison for divergent histories.
+
+- [x] 82 Rust tests (62 unit, 19 review invariants, one command/capability consistency check) and 107 frontend tests pass. Generated contracts, type checking, formatting, ESLint, Clippy, and signed ARM packaging pass.
+- [x] Read-only live comparison of PR #2 from `471ca677` to `f5ead337` returns 23 files, +1450/−83, matching local `git diff` file-by-file with complete patches. An offline service restart returns the identical comparison.
+- [x] PR #1 automatically selects the viewer's actual submitted GitHub review at `f5475290`, compares it with `db57c887`, and shows one file with one added line. No GitHub review or comment is posted by these checks.
+- [x] The native sample demonstrates six changed files (+9/−7), including a rename, added locale, and removed draft absent from the full PR. Unchanged migration and documentation files are excluded.
+- [x] Production WebKit verifies full/focused switching, private checkpoints and empty states, failure/retry, and a multiline selection opening the correct full-PR inline composer. Light/dark layouts at 1440 and 720 px have no window overflow or nested vertical scrollers. Settled-theme axe WCAG A/AA checks report no violations.
+- [x] Native validation caught and fixed missing Tauri command permissions. A regression checks every registered app command against both the command manifest and main-window allowlist.
+- [x] Installed the corrected ARM bundle and verified the comparison in the native app, leaving the sample open. All 14 private note/settings/model-preference documents match the pre-install SQLite backup byte for byte. All 11 bundled executables are ARM-native and the strict bundle-signature check passes.
