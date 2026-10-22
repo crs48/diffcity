@@ -623,3 +623,30 @@ GitHub's comparison API supplies at most 300 files. A result reaching that limit
 - [x] Production WebKit verifies full/focused switching, private checkpoints and empty states, failure/retry, and a multiline selection opening the correct full-PR inline composer. Light/dark layouts at 1440 and 720 px have no window overflow or nested vertical scrollers. Settled-theme axe WCAG A/AA checks report no violations.
 - [x] Native validation caught and fixed missing Tauri command permissions. A regression checks every registered app command against both the command manifest and main-window allowlist.
 - [x] Installed the corrected ARM bundle and verified the comparison in the native app, leaving the sample open. All 14 private note/settings/model-preference documents match the pre-install SQLite backup byte for byte. All 11 bundled executables are ARM-native and the strict bundle-signature check passes.
+
+## Ask AI about selected text
+
+Native text selection in code now exposes a floating **Ask AI** action (also **Alt+Enter**). It immediately sends “Help me understand this selected code. What does it do, and how does it fit into the surrounding code?” Selecting line numbers still creates the existing line-based discussion. Text questions display the selected fragment inline and in the shared PR chat; follow-ups keep that fragment, source revision, side, line range, and UTF-16 character offsets. Different variables on the same line get separate threads.
+
+Text conversations are AI-only. Their composers omit Save comment, and neither questions nor answers offer Prepare GitHub draft. Service validation rejects draft conversion, removal of the text anchor, and GitHub publication of text-selected notes. Existing line comments and publication remain available through the gutter.
+
+```mermaid
+flowchart LR
+  Selection[Select code text] --> Action[Ask AI / Alt+Enter]
+  Action --> Validate[Verify exact text against captured source]
+  Validate --> Question[Default explanation question]
+  Question --> Codex[Local Codex with bounded PR context]
+  Codex --> Inline[Inline answer]
+  Codex --> Chat[Shared PR chat]
+  Inline --> Followup[Follow-up with the same text anchor]
+  Chat --> Followup
+  Followup --> Validate
+```
+
+Selections may cover up to 200 consecutive source lines and 16,000 UTF-16 units within one file and one side. Mixed additions/deletions in unified view do not offer the action; select one side in split view instead. Expanded context is eligible after it has been captured. In “Since your last review,” the selected source retains the reviewed-to-current comparison identity while the private conversation belongs to the canonical PR workspace. Source is verified against cached immutable hunks/context before sending; columns cannot split Unicode surrogate pairs. Nearby code and historical selection excerpts are bounded separately from the exact current selection.
+
+- [x] 88 Rust tests and 115 frontend tests pass, including precise selection, split columns, Unicode, multiple words on one line, keyboard action, follow-up identity, comparison source, bounded model context, persistence, and publication rejection.
+- [x] Strict TypeScript, ESLint, Clippy, formatting, and production web build pass.
+- [x] `cargo run -p diffcity --bin text-selection-smoke` sends the selected `invitationExpiry` identifier and a follow-up through the installed local Codex runtime using GPT-6 Astra / xhigh. Both answers retain the exact private anchor and survive reopening the isolated SQLite store. No GitHub write is performed.
+- [x] Production WebKit verifies native pointer selection, one-click default questions, inline and shared-chat follow-ups, separate words on one line, Alt+Enter/Escape, backward multiline selections, split columns, reviewed-comparison old-side text, and expanded context. Light/dark and narrow layouts have no window overflow or nested diff/comment scrollbars. The full-page axe audit caught a stale review tab-to-panel reference; remounting the active panel and a keyboard regression fix it. Final sampled WCAG A/AA checks report zero violations.
+- [x] Installed the final signed ARM app and verified native double-click selection → Ask AI → streamed explanation → follow-up → shared PR chat. Both answers persisted through quit/relaunch. All 14 pre-existing private documents remain byte-for-byte identical; exactly four private messages were added by the native sample check. The final accessibility update preserves all 18 documents. All 12 bundled executables have ARM slices, strict signature verification passes, and installed/packaged executable hashes match.
