@@ -6,6 +6,7 @@ import {
   ChevronRight,
   MessageSquare,
   PanelRightOpen,
+  Sparkles,
   X,
 } from "lucide-react";
 import type { InlineThread } from "../lib/diffRows";
@@ -14,6 +15,7 @@ import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
 import { useState } from "react";
+import { SelectionQuote } from "./SelectionQuote";
 
 export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const { t } = useTranslation();
@@ -47,7 +49,11 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </Button>
-        <MessageSquare size={14} />
+        {thread.anchor.textSelection ? (
+          <Sparkles size={14} />
+        ) : (
+          <MessageSquare size={14} />
+        )}
         <strong>{label}</strong>
         <Button
           className="text-button"
@@ -68,6 +74,7 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
       </header>
       {!collapsed && (
         <>
+          <SelectionQuote anchor={thread.anchor} />
           <div className="inline-messages">
             <ReviewMessages
               notes={thread.notes.filter(

@@ -850,6 +850,12 @@ pub fn payload(
             .iter()
             .find(|n| &n.id == id && n.snapshot_id == snapshot.id)
             .context("A selected draft no longer belongs to this revision")?;
+        anyhow::ensure!(
+            note.anchor
+                .as_ref()
+                .is_none_or(|a| a.text_selection.is_none()),
+            "Text-selection conversations are AI-only and cannot be published to GitHub"
+        );
         if !note.github_draft || note.published_url.is_some() || note.body.trim().is_empty() {
             bail!("Only unpublished, explicitly prepared drafts can be sent");
         }

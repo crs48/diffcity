@@ -188,7 +188,9 @@ export function Finish({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const drafts = w.notes.filter((n) => n.githubDraft && !n.publishedUrl);
+  const drafts = w.notes.filter(
+    (n) => n.githubDraft && !n.publishedUrl && !n.anchor?.textSelection,
+  );
   const [selected, setSelected] = useState(drafts.map((n) => n.id));
   const summaryKey = `diffcity.review-summary.${w.snapshot.id}`;
   const [body, setBody] = useState(

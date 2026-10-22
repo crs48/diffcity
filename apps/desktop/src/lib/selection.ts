@@ -8,7 +8,22 @@ export const sameAnchor = (a: Anchor | null, b: Anchor | null) =>
     a.path === b.path &&
     a.side === b.side &&
     a.startLine === b.startLine &&
-    a.line === b.line);
+    a.line === b.line &&
+    sameTextSelection(a, b));
+
+const sameTextSelection = (a: Anchor, b: Anchor) => {
+  const x = a.textSelection;
+  const y = b.textSelection;
+  return (
+    (!x && !y) ||
+    (!!x &&
+      !!y &&
+      x.snapshotId === y.snapshotId &&
+      x.startColumn === y.startColumn &&
+      x.endColumn === y.endColumn &&
+      x.text === y.text)
+  );
+};
 
 export const lineRange = (a: Anchor) =>
   a.startLine === a.line ? `line ${a.line}` : `lines ${a.startLine}–${a.line}`;

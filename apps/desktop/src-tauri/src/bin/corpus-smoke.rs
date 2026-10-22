@@ -64,6 +64,7 @@ async fn main() -> Result<()> {
                     domain::validate_anchor(
                         snapshot,
                         &Anchor {
+                            text_selection: None,
                             hunk_id: hunk.id.clone(),
                             path: hunk.path.clone(),
                             side,
@@ -150,6 +151,7 @@ async fn main() -> Result<()> {
                 .next()
                 .expect("migration fixture");
             let anchor = Anchor {
+                text_selection: None,
                 hunk_id: hunk.id.clone(),
                 path: hunk.path.clone(),
                 side: Side::RIGHT,

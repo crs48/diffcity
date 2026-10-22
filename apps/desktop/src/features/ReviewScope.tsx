@@ -269,7 +269,7 @@ export function ReviewScope({
               workspace={{
                 ...workspace,
                 snapshot: result.snapshot,
-                notes: [],
+                notes: workspace.notes,
                 comments: [],
                 changedHunks: [],
                 previousSnapshotId: null,

@@ -221,6 +221,7 @@ mod tests {
             domain::validate_anchor(
                 &snapshot,
                 &Anchor {
+                    text_selection: None,
                     hunk_id: snapshot.files[0].hunks[0].id.clone(),
                     path: path.into(),
                     side: Side::RIGHT,

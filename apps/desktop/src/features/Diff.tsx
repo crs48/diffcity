@@ -17,6 +17,7 @@ import { useConversation } from "./conversation";
 import { useHunkContext } from "./useHunkContext";
 import { ContextLines } from "./ContextLines";
 import { DIFF_CHUNK_SIZE, DiffChunks, rowAtOffset } from "./DiffChunks";
+import { codeTextProps } from "../lib/textSelection";
 
 type DiffProps = {
   hunk: Hunk;
@@ -123,7 +124,7 @@ const DiffContent = memo(function DiffContent({
   };
   const interaction = useLineSelection(
     hunk,
-    selection,
+    selection?.textSelection ? null : selection,
     scroll,
     onSelect,
     scrollToCode,
@@ -152,7 +153,12 @@ const DiffContent = memo(function DiffContent({
       line && interaction.keyDown(event, line, side),
   });
   return (
-    <div className="diff-file" data-hunk-id={hunk.id}>
+    <div
+      className="diff-file"
+      data-hunk-id={hunk.id}
+      data-source-snapshot={snapshotId}
+      data-source-path={hunk.path}
+    >
       {!hideFileHeader && (
         <div className="file-bar">
           <Button
@@ -209,7 +215,7 @@ const DiffContent = memo(function DiffContent({
                 </Button>
               )}
               <span className="muted">
-                {t("Extra context is read-only; comment within the diff.")}
+                {t("Select text to ask AI. Line comments stay within the diff.")}
               </span>
             </div>
           )}
@@ -360,15 +366,21 @@ const DiffContent = memo(function DiffContent({
                       </span>
                       {split ? (
                         <>
-                          <code className="split-code old">
+                          <code
+                            className="split-code old"
+                            {...codeTextProps(l, "LEFT")}
+                          >
                             {l.kind !== "addition" ? l.text : ""}
                           </code>
-                          <code className="split-code new">
+                          <code
+                            className="split-code new"
+                            {...codeTextProps(l, "RIGHT")}
+                          >
                             {l.kind !== "deletion" ? l.text : ""}
                           </code>
                         </>
                       ) : (
-                        <code>{l.text || " "}</code>
+                        <code {...codeTextProps(l)}>{l.text || " "}</code>
                       )}
                     </div>
                   </div>

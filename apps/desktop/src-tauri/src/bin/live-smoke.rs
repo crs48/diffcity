@@ -68,6 +68,7 @@ async fn main() -> anyhow::Result<()> {
         id: String::new(),
         snapshot_id: snapshot.id.clone(),
         anchor: Some(Anchor {
+            text_selection: None,
             hunk_id: hunk.id.clone(),
             path: hunk.path.clone(),
             side: Side::RIGHT,

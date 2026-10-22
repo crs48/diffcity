@@ -168,6 +168,7 @@ fn source_anchors_reject_wrong_side_and_out_of_diff_ranges() {
     let s = snapshot();
     let h = &s.files[0].hunks[0];
     let mut a = Anchor {
+        text_selection: None,
         hunk_id: h.id.clone(),
         path: h.path.clone(),
         side: Side::RIGHT,
@@ -253,6 +254,7 @@ fn multiline_deletion_uses_left_source_coordinates() {
         id: "draft".into(),
         snapshot_id: s.id.clone(),
         anchor: Some(Anchor {
+            text_selection: None,
             hunk_id: h.id,
             path: "old.ts".into(),
             side: Side::LEFT,

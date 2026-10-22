@@ -46,3 +46,9 @@ The entries below include historical checks of the earlier virtualized layout. C
 - [ ] Profile worst-case captures near the file and capture limits, including initial rendering.
 
 Browser checks use synthetic fixtures with mocked Tauri IPC and make no GitHub or Codex requests. They verify rendering and interaction, not native integration or live authentication. Local screenshots and browser logs are ignored under `output/playwright/` and `.playwright-cli/`.
+
+## Text selection questions
+
+Select native code text to reveal **Ask AI to explain selected code**, or press **Alt+Enter** while the selection is active. Escape clears the action and selection. The action has a visible focus ring and retains the selected fragment when activated. Text remains normally selectable and copyable until the action is used. Selection processing is coalesced per animation frame and existing virtualization keeps selected code blocks mounted.
+
+The exact fragment is shown with **Selected text · AI only**. Inline and PR-chat follow-up fields have the explicit accessible name **Follow-up about selected code**, and state that they are never published to GitHub. These conversations expose neither Save comment nor Prepare GitHub draft. The chat header uses a short selection preview so a long selected function does not consume the conversation panel; the messages and inline thread retain the complete selected fragment.

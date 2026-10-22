@@ -228,6 +228,7 @@ export default function App() {
   );
   const inline = useNoteComposer(onNote, onError);
   const chat = useNoteComposer(onNote, onError);
+  const startingTextQuestion = useRef(false);
   const flushInline = inline.flush;
   const flushChat = chat.flush;
   const flush = useCallback(async () => {
@@ -533,6 +534,11 @@ export default function App() {
         return;
       setSelection(anchor);
       if (jumpToCode) {
+        if (
+          anchor.textSelection &&
+          anchor.textSelection.snapshotId !== snapshotId
+        )
+          return;
         // A chat reference may point into another section or a filtered file.
         const section = workspace?.guide.sections.find((s) =>
           s.hunkIds.includes(anchor.hunkId),
@@ -555,6 +561,10 @@ export default function App() {
     }
   };
   const prepare = async (note: Note) => {
+    if (note.anchor?.textSelection)
+      throw new Error(
+        "Text selections are AI-only and cannot be prepared for GitHub.",
+      );
     const draft = await api.note({
       ...newNote(note.snapshotId, note.anchor, note.body),
       githubDraft: true,
@@ -609,6 +619,39 @@ export default function App() {
       setRun(null);
       setStream("");
       setActiveQuestion(null);
+    }
+  };
+  const explainText = async (anchor: Anchor) => {
+    if (
+      !workspace ||
+      !anchor.textSelection ||
+      run ||
+      startingTextQuestion.current
+    )
+      return;
+    startingTextQuestion.current = true;
+    const snapshotId = workspace.snapshot.id;
+    try {
+      await flush();
+      if (current.current?.snapshot.id !== snapshotId) return;
+      const note = await api.note(
+        newNote(
+          snapshotId,
+          anchor,
+          t(
+            "Help me understand this selected code. What does it do, and how does it fit into the surrounding code?",
+          ),
+        ),
+      );
+      onNote(note);
+      if (current.current?.snapshot.id !== snapshotId) return;
+      await chat.start(snapshotId, anchor);
+      await inline.start(snapshotId, anchor);
+      if (current.current?.snapshot.id !== snapshotId) return;
+      setSelection(anchor);
+      await ask(note);
+    } finally {
+      startingTextQuestion.current = false;
     }
   };
   const login = data?.github.identity || "you";
@@ -1159,6 +1202,7 @@ export default function App() {
                 activeQuestion,
                 stream,
                 ask,
+                explainText,
                 prepare,
                 edit,
                 openInline: (a) => void select(a, true, true),

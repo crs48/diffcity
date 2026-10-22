@@ -41,3 +41,41 @@ it("retains an unsaved comment on failure and serializes saves without duplicate
   expect(persisted.get("saved-one")?.body).toBe("An updated question.");
   expect(result.current.draft?.body).toBe("");
 });
+
+it("keeps exact text context on follow-up drafts and distinguishes two words on the same line", async () => {
+  const anchor = {
+    hunkId: "h",
+    path: "a.ts",
+    side: "RIGHT" as const,
+    startLine: 1,
+    line: 1,
+    textSelection: {
+      snapshotId: "snapshot",
+      startColumn: 2,
+      endColumn: 5,
+      text: "foo",
+    },
+  };
+  vi.spyOn(api, "note").mockImplementation(async (n) => ({
+    ...n,
+    id: n.id || "question",
+  }));
+  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  await act(() => result.current.start("snapshot", anchor));
+  act(() => result.current.change("Why is foo here?"));
+  const ask = vi.fn().mockResolvedValue(undefined);
+  await act(() => result.current.submit(ask));
+  expect(result.current.draft?.anchor).toEqual(anchor);
+  expect(result.current.draft?.githubDraft).toBe(false);
+  const second = {
+    ...anchor,
+    textSelection: {
+      ...anchor.textSelection,
+      startColumn: 7,
+      endColumn: 10,
+      text: "bar",
+    },
+  };
+  await act(() => result.current.start("snapshot", second));
+  expect(result.current.draft?.anchor).toEqual(second);
+});

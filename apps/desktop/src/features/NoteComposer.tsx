@@ -45,25 +45,32 @@ export function NoteComposer({
   }, [state.draft?.body]);
   if (!state.draft) return null;
   const editing = state.draft.githubDraft;
+  const textOnly = !!state.draft.anchor?.textSelection;
   return (
     <div className="composer">
       <textarea
         ref={input}
         aria-label={
-          inline
-            ? t("Inline comment or Codex question")
-            : t("Message to Codex about this PR")
+          textOnly
+            ? t("Follow-up about selected code")
+            : inline
+              ? t("Inline comment or Codex question")
+              : t("Message to Codex about this PR")
         }
         placeholder={
-          inline
-            ? t("Comment on this code or ask Codex…")
-            : t("Discuss this PR with Codex…")
+          textOnly
+            ? t("Ask a follow-up about this selection…")
+            : inline
+              ? t("Comment on this code or ask Codex…")
+              : t("Discuss this PR with Codex…")
         }
         value={state.draft.body}
         onChange={(e) => state.change(e.target.value)}
       />
       <div className="composer-status" role="status">
-        {state.saved ? (
+        {textOnly ? (
+          t("AI only · never published to GitHub")
+        ) : state.saved ? (
           <>
             <Check size={12} />
             {t("Saved locally")}{" "}
@@ -75,13 +82,15 @@ export function NoteComposer({
         )}
       </div>
       <div className="composer-actions">
-        <Button
-          className="secondary"
-          isDisabled={!state.draft.body.trim()}
-          onPress={() => void state.submit().catch(onError)}
-        >
-          {editing ? t("Save draft") : t("Save comment")}
-        </Button>
+        {!textOnly && (
+          <Button
+            className="secondary"
+            isDisabled={!state.draft.body.trim()}
+            onPress={() => void state.submit().catch(onError)}
+          >
+            {editing ? t("Save draft") : t("Save comment")}
+          </Button>
+        )}
         <Button
           className="primary"
           isDisabled={busy || editing || !state.draft.body.trim()}

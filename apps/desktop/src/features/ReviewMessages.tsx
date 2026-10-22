@@ -6,6 +6,7 @@ import { CommentMarkdown } from "../ui/CommentMarkdown";
 import type { Note, RemoteComment } from "../lib/api";
 import { lineRange } from "../lib/selection";
 import type { Conversation } from "./conversation";
+import { SelectionQuote } from "./SelectionQuote";
 
 export function ReviewMessages({
   notes,
@@ -55,7 +56,11 @@ export function ReviewMessages({
               {!inline && n.anchor && (
                 <Button
                   className="message-location text-button"
-                  onPress={() => c.openInline(n.anchor!)}
+                  onPress={() =>
+                    n.anchor?.textSelection
+                      ? c.openChat(n.anchor)
+                      : c.openInline(n.anchor!)
+                  }
                 >
                   {n.anchor.path} · {n.anchor.side === "LEFT" ? "Old" : "New"}{" "}
                   {lineRange(n.anchor)}
@@ -63,6 +68,9 @@ export function ReviewMessages({
               )}
               {!inline && !n.anchor && (
                 <span className="message-scope">{t("PR discussion")} </span>
+              )}
+              {!inline && n.anchor?.textSelection && n.role === "user" && (
+                <SelectionQuote anchor={n.anchor} />
               )}
               <CommentMarkdown body={n.body} />
               <div className="message-actions">
@@ -73,7 +81,11 @@ export function ReviewMessages({
                     onPress={() => void c.ask(n).catch(c.onError)}
                   >
                     <Sparkles size={12} />
-                    {t("Ask Codex about this comment")}{" "}
+                    {t(
+                      n.anchor?.textSelection
+                        ? "Ask again about this selection"
+                        : "Ask Codex about this comment",
+                    )}{" "}
                   </Button>
                 )}
                 {n.githubDraft && !n.publishedUrl && (
@@ -84,20 +96,22 @@ export function ReviewMessages({
                     {t("Edit draft")}{" "}
                   </Button>
                 )}
-                {!n.githubDraft && !n.publishedUrl && (
-                  <Button
-                    className="text-button"
-                    isDisabled={c.workspace.notes.some(
-                      (other) =>
-                        other.parentId === n.id &&
-                        (other.githubDraft || !!other.publishedUrl),
-                    )}
-                    onPress={() => void c.prepare(n).catch(c.onError)}
-                  >
-                    <Github size={12} />
-                    {t("Prepare GitHub draft")}{" "}
-                  </Button>
-                )}
+                {!n.githubDraft &&
+                  !n.publishedUrl &&
+                  !n.anchor?.textSelection && (
+                    <Button
+                      className="text-button"
+                      isDisabled={c.workspace.notes.some(
+                        (other) =>
+                          other.parentId === n.id &&
+                          (other.githubDraft || !!other.publishedUrl),
+                      )}
+                      onPress={() => void c.prepare(n).catch(c.onError)}
+                    >
+                      <Github size={12} />
+                      {t("Prepare GitHub draft")}{" "}
+                    </Button>
+                  )}
               </div>
             </article>
           );

@@ -409,5 +409,16 @@
   "No file changes since this review. Your full PR guide and notes are still available.": "No hay cambios en los archivos desde esta revisión. La guía completa y tus notas siguen disponibles.",
   "Return to Full PR": "Volver al PR completo",
   "Keep a private review checkpoint": "Guardar un punto de revisión privado",
-  "Save this revision as your comparison point for the next update. This stays on your computer, leaves your notes and progress intact, and does not mark unread code as reviewed.": "Guarda esta revisión como punto de comparación para la próxima actualización. Se guarda en tu equipo, mantiene tus notas y progreso, y no marca como revisado el código que no has leído."
+  "Save this revision as your comparison point for the next update. This stays on your computer, leaves your notes and progress intact, and does not mark unread code as reviewed.": "Guarda esta revisión como punto de comparación para la próxima actualización. Se guarda en tu equipo, mantiene tus notas y progreso, y no marca como revisado el código que no has leído.",
+  "Ask AI to explain selected code": "Pedir a la IA que explique el código seleccionado",
+  "Explain this selection · AI only · Alt+Enter": "Explicar esta selección · Solo IA · Alt+Enter",
+  "Ask AI": "Preguntar a la IA",
+  "Private text selection; never published to GitHub": "Selección de texto privada; nunca se publica en GitHub",
+  "Follow-up about selected code": "Pregunta de seguimiento sobre el código seleccionado",
+  "Ask a follow-up about this selection…": "Haz otra pregunta sobre esta selección…",
+  "AI only · never published to GitHub": "Solo IA · nunca se publica en GitHub",
+  "Selected text · AI only": "Texto seleccionado · Solo IA",
+  "Ask again about this selection": "Volver a preguntar sobre esta selección",
+  "Help me understand this selected code. What does it do, and how does it fit into the surrounding code?": "Ayúdame a entender este código seleccionado. ¿Qué hace y cómo encaja en el código que lo rodea?",
+  "Select text to ask AI. Line comments stay within the diff.": "Selecciona texto para preguntar a la IA. Los comentarios por línea se limitan al diff."
 }

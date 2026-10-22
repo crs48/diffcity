@@ -7,6 +7,7 @@ import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
 import { useLayoutEffect, useRef } from "react";
+import { SelectionQuote } from "./SelectionQuote";
 
 export function Discussion({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -47,6 +48,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
         <span>{t("One conversation with Codex across this review.")} </span>
         {anchor ? (
           <>
+            <SelectionQuote anchor={anchor} compact />
             <code>
               {anchor.path} · {anchor.side === "LEFT" ? "Old" : "New"}{" "}
               {lineRange(anchor)}

@@ -10,6 +10,7 @@ export type Conversation = {
   activeQuestion: Note | null;
   stream: string;
   ask: (note: Note) => Promise<void>;
+  explainText?: (anchor: Anchor) => Promise<void>;
   prepare: (note: Note) => Promise<void>;
   edit: (note: Note, inline: boolean) => Promise<void>;
   openInline: (anchor: Anchor) => void;

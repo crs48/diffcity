@@ -246,6 +246,7 @@ mod tests {
                     body: format!("Evidence {n}"),
                     severity: "P2".into(),
                     anchor: Anchor {
+                        text_selection: None,
                         hunk_id: format!("hunk-{n}"),
                         path: "test.ts".into(),
                         side: Side::RIGHT,

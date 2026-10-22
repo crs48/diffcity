@@ -15,6 +15,7 @@ mod review_cache;
 mod review_comparison;
 pub mod service;
 pub mod text_diff;
+mod text_selection;
 
 use std::sync::Arc;
 use tauri::Manager;

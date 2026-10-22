@@ -8,6 +8,7 @@ import { findCode, type CodeMatch } from "../lib/codeSearch";
 import { followScrollTarget } from "../lib/scrollTarget";
 import { createFileNavigation, FileNavigationContext } from "./fileNavigation";
 import { FileMinimap } from "./FileMinimap";
+import { TextSelectionAction } from "./TextSelectionAction";
 import {
   ReviewRenderingContext,
   VIRTUAL_REVIEW_THRESHOLD,
@@ -129,6 +130,7 @@ export function ReviewCode({
     <ReviewRenderingContext.Provider value={large && !all}>
       <FileNavigationContext.Provider value={navigation}>
         <div className="review-code" ref={root}>
+          <TextSelectionAction root={root} />
           <div
             className="review-code-tools"
             role="search"

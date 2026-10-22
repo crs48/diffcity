@@ -409,5 +409,16 @@
   "No file changes since this review. Your full PR guide and notes are still available.": "No file changes since this review. Your full PR guide and notes are still available.",
   "Return to Full PR": "Return to Full PR",
   "Keep a private review checkpoint": "Keep a private review checkpoint",
-  "Save this revision as your comparison point for the next update. This stays on your computer, leaves your notes and progress intact, and does not mark unread code as reviewed.": "Save this revision as your comparison point for the next update. This stays on your computer, leaves your notes and progress intact, and does not mark unread code as reviewed."
+  "Save this revision as your comparison point for the next update. This stays on your computer, leaves your notes and progress intact, and does not mark unread code as reviewed.": "Save this revision as your comparison point for the next update. This stays on your computer, leaves your notes and progress intact, and does not mark unread code as reviewed.",
+  "Ask AI to explain selected code": "Ask AI to explain selected code",
+  "Explain this selection · AI only · Alt+Enter": "Explain this selection · AI only · Alt+Enter",
+  "Ask AI": "Ask AI",
+  "Private text selection; never published to GitHub": "Private text selection; never published to GitHub",
+  "Follow-up about selected code": "Follow-up about selected code",
+  "Ask a follow-up about this selection…": "Ask a follow-up about this selection…",
+  "AI only · never published to GitHub": "AI only · never published to GitHub",
+  "Selected text · AI only": "Selected text · AI only",
+  "Ask again about this selection": "Ask again about this selection",
+  "Help me understand this selected code. What does it do, and how does it fit into the surrounding code?": "Help me understand this selected code. What does it do, and how does it fit into the surrounding code?",
+  "Select text to ask AI. Line comments stay within the diff.": "Select text to ask AI. Line comments stay within the diff."
 }

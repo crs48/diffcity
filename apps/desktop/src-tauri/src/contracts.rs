@@ -285,11 +285,24 @@ pub enum Side {
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Anchor {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub text_selection: Option<TextSelection>,
     pub hunk_id: String,
     pub path: String,
     pub side: Side,
     pub start_line: u32,
     pub line: u32,
+}
+
+/// Zero-based UTF-16 columns, with an exclusive end (matching DOM Range offsets).
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TextSelection {
+    pub snapshot_id: String,
+    pub start_column: u32,
+    pub end_column: u32,
+    pub text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]

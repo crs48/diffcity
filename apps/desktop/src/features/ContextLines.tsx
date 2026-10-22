@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { DiffLine } from "../lib/api";
 import { DiffChunks } from "./DiffChunks";
+import { codeTextProps } from "../lib/textSelection";
 
 export function ContextLines({
   lines,
@@ -35,11 +36,21 @@ export function ContextLines({
             </span>
             {split ? (
               <>
-                <code className="split-code old">{line.text || " "}</code>
-                <code className="split-code new">{line.text || " "}</code>
+                <code
+                  className="split-code old"
+                  {...codeTextProps(line, "LEFT")}
+                >
+                  {line.text || " "}
+                </code>
+                <code
+                  className="split-code new"
+                  {...codeTextProps(line, "RIGHT")}
+                >
+                  {line.text || " "}
+                </code>
               </>
             ) : (
-              <code>{line.text || " "}</code>
+              <code {...codeTextProps(line)}>{line.text || " "}</code>
             )}
           </div>
         )}

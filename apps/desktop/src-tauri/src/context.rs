@@ -348,6 +348,7 @@ mod tests {
             crate::domain::validate_anchor(
                 &snapshot,
                 &Anchor {
+                    text_selection: None,
                     hunk_id: hunk_id.clone(),
                     path: snapshot.files[0].path.clone(),
                     side: Side::RIGHT,
