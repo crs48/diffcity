@@ -1,6 +1,6 @@
 # Diff City website
 
-A static, one-page Astro + Tailwind CSS site for [diff.city](https://diff.city). The page uses local fonts, a keyboard-accessible gallery of real app screenshots, light/dark themes, and no analytics, cookies, or backend. Theme preference is saved in local storage. The screenshots are captured from the installed macOS app reviewing sample PRs in `crs48/diffcity`, with actual Claude Code guides and responses. Only the Diff City test corpus is shown; unrelated repositories and account navigation are cropped out.
+A static, one-page Astro + Tailwind CSS site for [diff.city](https://diff.city). The page uses local fonts, a keyboard-accessible gallery of real app screenshots, light/dark themes, and no analytics, cookies, or backend. Theme preference is saved in local storage. The screenshots are captured from the installed macOS app reviewing sample PRs in `crs48/diffcity`, with actual Claude Code guides and responses. The screenshots show the entire app window at its normal zoom, including the navigation rail and window controls, while reviewing the Diff City test corpus.
 
 ## Local development
 
@@ -43,8 +43,8 @@ Run `pnpm --filter @diffcity/site format` to format this package. Verify the bui
 
 ## Refreshing screenshots
 
-Generate a guide inside the installed Diff City app using a sample PR from this repository. Capture the real overview, guided diff, or inline conversation through the native app. Keep the PR and model attribution accurate, and inspect each capture before publishing. Screenshots must not include another repository, credentials, or unrelated account information.
+Generate a guide inside the installed Diff City app using a sample PR from this repository. Capture the real overview, guided diff, or inline conversation through the native app. Keep the PR and model attribution accurate, and inspect each capture before publishing. Use the full app window without cropping or zooming in. Select a Diff City sample PR and check that no credentials or unrelated repository content are visible.
 
 The current gallery uses PR #1 (invitation review, Claude Fable 5.1) and PR #9 (schema backfill guide, Claude Fable 5.1; inline reply, Claude Fable 5). The sample PRs deliberately contain test-only code. The guides and private conversation remain saved in the local app.
 
-Images in `public/screenshots/` are crops of native screenshots, resized and encoded as WebP without redrawing or changing the app content. Keep full-resolution versions for the “View full size” links and generate 1440px and 960px variants for responsive loading. Set the matching source dimensions in `ReviewPreview.astro` to avoid layout shifts.
+Images in `public/screenshots/` are complete 2880 × 1880 native window screenshots, encoded as WebP without cropping, zooming, redrawing, or changing the app content. Responsive variants scale the whole image proportionally. Keep full-resolution versions for the “View full size” links and generate 1440px and 960px variants for responsive loading. Set the matching source dimensions in `ReviewPreview.astro` to avoid layout shifts.

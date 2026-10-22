@@ -5,7 +5,7 @@ const screenshots = [
     id: "guide",
     label: "Follow the code",
     icon: "branch",
-    image: "guided-review",
+    image: "guided-review-window",
     title: "The explanation follows the code.",
     description:
       "The schema backfill sample, with Claude’s risk summary beside the actual SQL diff.",
@@ -16,7 +16,7 @@ const screenshots = [
     id: "overview",
     label: "Start with the overview",
     icon: "file",
-    image: "overview",
+    image: "overview-window",
     title: "Understand the change before reading the diff.",
     description:
       "A real Claude Code overview of the invitation sample PR, connecting the intended behavior to what the code actually does.",
@@ -27,7 +27,7 @@ const screenshots = [
     id: "conversation",
     label: "Ask in place",
     icon: "chat",
-    image: "inline-conversation",
+    image: "inline-conversation-window",
     title: "A question becomes an inline conversation.",
     description:
       "An actual AI reply about the selected migration lines. The conversation is private; preparing and publishing a GitHub draft are separate actions.",
@@ -75,10 +75,10 @@ const screenshots = [
         >
           <img
             src={`/screenshots/${shot.image}-1440.webp`}
-            srcset={`/screenshots/${shot.image}-960.webp 960w, /screenshots/${shot.image}-1440.webp 1440w, /screenshots/${shot.image}.webp 2752w`}
+            srcset={`/screenshots/${shot.image}-960.webp 960w, /screenshots/${shot.image}-1440.webp 1440w, /screenshots/${shot.image}.webp 2880w`}
             sizes="(max-width: 700px) calc(100vw - 36px), (max-width: 1244px) calc(100vw - 64px), 1180px"
-            width="2752"
-            height="1266"
+            width="2880"
+            height="1880"
             alt={shot.alt}
             loading={i === 0 ? "eager" : "lazy"}
             decoding="async"
@@ -102,8 +102,9 @@ const screenshots = [
   ))}
 </div>
 <p class="capture-note">
-  Captured from the real macOS app using sample PRs in the Diff City repo.
-  Guides generated with Claude Code · Fable 5.1. Source repo currently private.
+  Full-window screenshots from the real macOS app using sample PRs in the Diff
+  City repo. Guides generated with Claude Code · Fable 5.1. Source repo
+  currently private.
 </p>
 <script>
   const tabs = Array.from(
