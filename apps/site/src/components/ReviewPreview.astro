@@ -1,35 +1,39 @@
 ---
 import Icon from "./Icon.astro";
-const lines = [
+const screenshots = [
   {
-    n: "18",
-    type: "context",
-    text: "export async function acceptInvite(token) {",
+    id: "guide",
+    label: "Follow the code",
+    icon: "branch",
+    image: "guided-review",
+    title: "The explanation follows the code.",
+    description:
+      "The schema backfill sample, with Claude’s risk summary beside the actual SQL diff.",
+    alt: "Diff City guided review of a schema backfill, with Claude’s explanation and attention level beside the SQL migration.",
+    pr: 9,
   },
   {
-    n: "19",
-    type: "remove",
-    text: "  const invite = await findInvite(token);",
+    id: "overview",
+    label: "Start with the overview",
+    icon: "file",
+    image: "overview",
+    title: "Understand the change before reading the diff.",
+    description:
+      "A real Claude Code overview of the invitation sample PR, connecting the intended behavior to what the code actually does.",
+    alt: "Diff City showing a Claude Fable 5.1 overview of its invitation sample pull request, explaining the changes and review priorities.",
+    pr: 1,
   },
   {
-    n: "19",
-    type: "add",
-    text: "  const invite = await findInvite(token, tenant.id);",
+    id: "conversation",
+    label: "Ask in place",
+    icon: "chat",
+    image: "inline-conversation",
+    title: "A question becomes an inline conversation.",
+    description:
+      "An actual AI reply about the selected migration lines. The conversation is private; preparing and publishing a GitHub draft are separate actions.",
+    alt: "An inline AI conversation in Diff City about the safety of a SQL migration, showing the line reference, the question, and Claude’s response.",
+    pr: 9,
   },
-  {
-    n: "20",
-    type: "add",
-    text: "  if (!invite || invite.expiresAt <= now()) {",
-  },
-  { n: "21", type: "add", text: "    throw new InvitationExpiredError();" },
-  { n: "22", type: "add", text: "  }" },
-  { n: "23", type: "context", text: "  return addMember(invite);" },
-  { n: "24", type: "context", text: "}" },
-];
-const modes = [
-  { id: "guide", label: "Follow the story", icon: "branch" },
-  { id: "conversation", label: "Ask in place", icon: "chat" },
-  { id: "return", label: "Pick up where you left off", icon: "clock" },
 ];
 ---
 
@@ -38,281 +42,69 @@ const modes = [
   role="tablist"
   aria-label="Explore the review workflow"
 >
-  {modes.map((mode, i) => (
+  {screenshots.map((shot, i) => (
     <button
       type="button"
       role="tab"
-      id={`tab-${mode.id}`}
-      aria-controls={`panel-${mode.id}`}
+      id={`tab-${shot.id}`}
+      aria-controls={`panel-${shot.id}`}
       aria-selected={i === 0 ? "true" : "false"}
       tabindex={i === 0 ? 0 : -1}
     >
-      <Icon name={mode.icon} size={16} />
-      {mode.label}
+      <Icon name={shot.icon} size={16} />
+      {shot.label}
     </button>
   ))}
 </div>
-<figure class="app-preview">
-  <div class="window-bar" aria-hidden="true">
-    <span class="window-dots">
-      <i></i>
-      <i></i>
-      <i></i>
-    </span>
-    <span>diffcity / invitations</span>
-    <span class="window-shortcut">⌘ K</span>
-  </div>
-  <div class="app-shell">
-    <div class="preview-rail" aria-hidden="true">
-      <span class="rail-city">▥</span>
-      <span class="rail-selected">
-        <Icon name="github" />
-      </span>
-      <span class="rail-avatar">D</span>
-      <span class="rail-bottom">
-        <Icon name="spark" />
-      </span>
-    </div>
-    <div class="preview-inbox" aria-hidden="true">
-      <div class="inbox-label">
-        Pull requests <span>6</span>
-      </div>
-      <div class="inbox-group">YOUR PULL REQUESTS</div>
-      <div class="preview-pr">
-        <Icon name="branch" size={16} />
-        <div>
-          <strong>Clean up the settings page</strong>
-          <small>#128 · Draft</small>
-        </div>
-      </div>
-      <div class="inbox-group">YOUR REVIEWS</div>
-      <div class="preview-pr active">
-        <Icon name="branch" size={16} />
-        <div>
-          <strong>Make invitations expire safely</strong>
-          <small>#126 · Review requested</small>
-        </div>
-      </div>
-      <div class="preview-pr">
-        <Icon name="branch" size={16} />
-        <div>
-          <strong>Streamline the onboarding flow</strong>
-          <small>#124 · Updated 2h ago</small>
-        </div>
-      </div>
-      <div class="inbox-group">READY FOR REVIEW</div>
-      <div class="preview-pr">
-        <Icon name="branch" size={16} />
-        <div>
-          <strong>Add a French translation</strong>
-          <small>#122 · Open</small>
-        </div>
-      </div>
-      <div class="inbox-footer">
-        <span class="status-dot"></span> In sync with GitHub
-      </div>
-    </div>
-    <div class="preview-review">
-      <div class="preview-heading">
-        <div>
-          <span class="preview-breadcrumb">
-            diffcity / invitations <span>#126</span>
+<div class="screenshot-gallery">
+  {screenshots.map((shot, i) => (
+    <div
+      role="tabpanel"
+      id={`panel-${shot.id}`}
+      aria-labelledby={`tab-${shot.id}`}
+      tabindex="0"
+      hidden={i !== 0}
+    >
+      <figure class="app-preview">
+        <a
+          class="screenshot-link"
+          href={`/screenshots/${shot.image}.webp`}
+          target="_blank"
+          rel="noopener"
+          aria-label={`Open full-size screenshot: ${shot.label}`}
+        >
+          <img
+            src={`/screenshots/${shot.image}-1440.webp`}
+            srcset={`/screenshots/${shot.image}-960.webp 960w, /screenshots/${shot.image}-1440.webp 1440w, /screenshots/${shot.image}.webp 2752w`}
+            sizes="(max-width: 700px) calc(100vw - 36px), (max-width: 1244px) calc(100vw - 64px), 1180px"
+            width="2752"
+            height="1266"
+            alt={shot.alt}
+            loading={i === 0 ? "eager" : "lazy"}
+            decoding="async"
+          />
+          <span class="screenshot-expand">
+            <Icon name="plus" size={14} /> View full size
           </span>
-          <h3>Make invitations expire safely</h3>
-        </div>
-        <span class="diff-count">
-          <span>+84</span> <span>−12</span>
-        </span>
-      </div>
-      <div class="review-topline">
-        <span class="guide-label">
-          <Icon name="spark" size={14} /> Guided review
-        </span>
-        <span class="preview-muted">Codex or Claude · your choice</span>
-      </div>
-      <div
-        id="panel-guide"
-        role="tabpanel"
-        aria-labelledby="tab-guide"
-        tabindex="0"
-      >
-        <div class="preview-progress">
-          <span>01 / 04</span> Start with the access boundary{" "}
-          <span class="progress-track">
-            <i></i>
-          </span>
-        </div>
-        <div class="preview-code-layout">
-          <div class="preview-annotation">
-            <span class="attention-label">PAY ATTENTION</span>
-            <h4>
-              Keep invitations <br />
-              inside their team.
-            </h4>
-            <p>
-              The lookup now checks the tenant before accepting an invitation.
-            </p>
-            <div class="annotation-note">
-              <span class="annotation-number">1</span>
-              <p>
-                <strong>Check the boundary.</strong> <br />
-                An expired invitation should never create a membership.
-              </p>
-            </div>
-            <span class="annotation-line" aria-hidden="true"></span>
+        </a>
+        <figcaption>
+          <div>
+            <strong>{shot.title}</strong>
+            <p>{shot.description}</p>
           </div>
-          <div class="preview-code">
-            <div class="preview-file">
-              <Icon name="file" size={15} />
-              <span>src/auth/invitations.ts</span>
-              <span class="file-plus">+4 −1</span>
-            </div>
-            <div class="code-gap">⋯ 17 unchanged lines</div>
-            <div class="code-lines">
-              {lines.map((line) => (
-                <div class:list={["code-line", line.type]}>
-                  <span class="code-number">{line.n}</span>
-                  <span class="code-sign">
-                    {line.type === "add"
-                      ? "+"
-                      : line.type === "remove"
-                        ? "−"
-                        : " "}
-                  </span>
-                  <code>{line.text}</code>
-                </div>
-              ))}
-            </div>
-            <div class="folded-file">
-              <Icon name="chevron" size={14} />
-              <span>2 translation files</span>
-              <span>Routine · folded</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div
-        id="panel-conversation"
-        role="tabpanel"
-        aria-labelledby="tab-conversation"
-        tabindex="0"
-        hidden
-      >
-        <div class="preview-progress">
-          <span>
-            <Icon name="chat" size={14} />
-          </span>{" "}
-          A conversation, right where the question starts
-        </div>
-        <div class="conversation-demo">
-          <div class="preview-file">
-            <Icon name="file" size={15} /> src/auth/invitations.ts{" "}
-            <span class="file-plus">+4 −1</span>
-          </div>
-          <div class="code-line selected">
-            <span class="sample-plus" aria-hidden="true">
-              +
-            </span>
-            <span class="code-number">20</span>
-            <code>if (!invite || invite.expiresAt &lt;= now()) &#123;</code>
-          </div>
-          <div class="sample-thread">
-            <div class="thread-heading">
-              <Icon name="spark" size={14} />
-              <strong>The expiry boundary</strong>
-              <span>Private AI conversation</span>
-            </div>
-            <div class="sample-message">
-              <span class="sample-person">You</span>
-              <p>
-                Why does this use <code>&lt;=</code> instead of{" "}
-                <code>&lt;</code>?
-              </p>
-            </div>
-            <div class="sample-message">
-              <span class="sample-person">
-                <Icon name="spark" size={12} /> AI
-              </span>
-              <p>
-                An invitation that expires <strong>exactly now</strong> is
-                already expired. Using <code>&lt;=</code> keeps that boundary
-                explicit.
-              </p>
-              <p class="sample-validation">
-                Worth checking: add a test at the exact expiry timestamp.
-              </p>
-            </div>
-            <div class="sample-reply">
-              <span>↳ Replying to src/auth/invitations.ts · New line 20</span>
-              <p>Draft a comment asking for that test…</p>
-              <small>Private until you choose to publish to GitHub.</small>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div
-        id="panel-return"
-        role="tabpanel"
-        aria-labelledby="tab-return"
-        tabindex="0"
-        hidden
-      >
-        <div class="preview-progress">
-          <span>
-            <Icon name="clock" size={14} />
-          </span>{" "}
-          Another push. A focused second look.
-        </div>
-        <div class="return-demo">
-          <div class="comparison">
-            <span>Full PR</span>
-            <strong>
-              Since your last review <span>+12 −2</span>
-            </strong>
-          </div>
-          <div class="return-summary">
-            <span class="status-check">
-              <Icon name="check" size={18} />
-            </span>
-            <div>
-              <h4>Your previous review is the starting point.</h4>
-              <p>Focus on what changed after your last checkpoint.</p>
-            </div>
-          </div>
-          <div class="preview-file">
-            <Icon name="file" size={15} /> tests/invitations.test.ts{" "}
-            <span class="file-plus">+12 −2</span>
-          </div>
-          <div class="code-gap">⋯ Previously reviewed code</div>
-          <div class="code-line add">
-            <span class="code-number">42</span>
-            <span class="code-sign">+</span>
-            <code>
-              it('rejects an invitation at its expiry time', () =&gt; &#123;
-            </code>
-          </div>
-          <div class="code-line add">
-            <span class="code-number">43</span>
-            <span class="code-sign">+</span>
-            <code> expect(acceptInvite(expiredToken)).rejects.toThrow();</code>
-          </div>
-          <div class="code-line add">
-            <span class="code-number">44</span>
-            <span class="code-sign">+</span>
-            <code>&#125;);</code>
-          </div>
-          <div class="return-footnote">
-            Same PR. Less rereading. A clearer next step.
-          </div>
-        </div>
-      </div>
+          <a href={`https://github.com/crs48/diffcity/pull/${shot.pr}`}>
+            Sample PR #{shot.pr}
+            <Icon name="arrow" size={14} />
+          </a>
+        </figcaption>
+      </figure>
     </div>
-  </div>
-  <figcaption>
-    Illustrative review with sample data. Your code stays in your workspace
-    until you send it to your chosen AI provider.
-  </figcaption>
-</figure>
+  ))}
+</div>
+<p class="capture-note">
+  Captured from the real macOS app using sample PRs in the Diff City repo.
+  Guides generated with Claude Code · Fable 5.1. Source repo currently private.
+</p>
 <script>
   const tabs = Array.from(
     document.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
