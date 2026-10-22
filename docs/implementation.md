@@ -589,5 +589,6 @@ Mermaid loads only for overview diagram fences. Rendering is serialized, bounded
 
 - [x] 98 frontend tests and 76 Rust tests pass. Types, ESLint, Clippy, formatting, and production builds pass. Regressions cover overview navigation, empty guides, legacy content, diagram theme changes, failed/stale results, and renderer bounds/resource rejection.
 - [x] Production WebKit renders actual Mermaid diagrams in light/dark modes at 1440 px and 720 px, with no nested vertical scroller or window overflow. Natural scrolling, outline jumps, first-chapter navigation, and return to the top all pass.
-- [ ] Verify a live Codex-generated overview and its persisted Markdown.
+- [x] Live local Codex verification with GPT-6 Astra/Extra high produces a persisted version 3 guide with a 389-word Markdown overview, one accessible Mermaid flowchart, and four chapters. The actual generated diagram renders in production WebKit; the same saved model preference also produces a follow-up reply. This uses the invitation sample in an isolated data directory. A separate live GitHub capture attempt timed out at `/user` and is not counted as a passing check.
+- [x] Light/dark/narrow axe WCAG A/AA checks report no violations. Invalid Mermaid and external-image syntax show readable source; the browser makes no requested external image fetches.
 - [ ] Install the ARM bundle and verify the native overview, preserving private notes and preferences after manual Mac unlock.
