@@ -614,10 +614,17 @@ export default function App() {
       setGuideChanging(false);
     }
   };
-  const refreshModels = useCallback(
-    (provider: string) => api.models(provider),
-    [],
-  );
+  const refreshModels = useCallback(async (provider: string) => {
+    const catalog = await api.models(provider);
+    if (provider === "codex") {
+      setData((current) =>
+        current
+          ? { ...current, codex: catalog.connection, models: catalog.models }
+          : current,
+      );
+    }
+    return catalog;
+  }, []);
   const analyze = async (preference: ModelPreference) => {
     if (!workspace) return;
     const id = crypto.randomUUID();
