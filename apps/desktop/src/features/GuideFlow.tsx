@@ -40,6 +40,7 @@ import { useGuideScroll } from "./useGuideScroll";
 
 import { GuideMargin } from "./GuideMargin";
 import { orderedAnnotations } from "../lib/guideAnnotations";
+import { Walkthrough } from "./Walkthrough";
 
 const OVERVIEW = "guide-overview";
 
@@ -406,30 +407,7 @@ function GuideChapter({
         </Button>
       </GuideMargin>
       <div className="guide-code">
-        {contextOpen && (
-          <section
-            id={contextId}
-            className="chapter-context"
-            aria-label={t("Full section context")}
-          >
-            <h3>{t("Walkthrough")}</h3>
-            <CommentMarkdown body={s.explanation || s.summary} />
-            <h3>{t("Why it matters")}</h3>
-            <CommentMarkdown body={s.reason} />
-            {s.questions.length > 0 && (
-              <>
-                <h3>{t("What to verify")}</h3>
-                <ul>
-                  {s.questions.map((q) => (
-                    <li key={q}>
-                      <CommentMarkdown body={q} />
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </section>
-        )}
+        {contextOpen && <Walkthrough id={contextId} section={s} />}
         {annotations.length > 0 && (
           <details className="chapter-code-notes">
             <summary>

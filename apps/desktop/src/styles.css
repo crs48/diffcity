@@ -2942,26 +2942,81 @@
     flex-wrap: wrap;
   }
   .chapter-context {
-    padding: 20px;
+    max-width: 96ch;
+    padding: 22px 24px;
     border: 1px solid var(--border);
     border-radius: 8px;
-    background: var(--subtle);
+    background: var(--surface);
     margin-bottom: 24px;
+    font-size: 13px;
     overflow-wrap: anywhere;
   }
-  .chapter-context > h3 {
+  .walkthrough-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .walkthrough-heading > svg {
+    flex-shrink: 0;
+  }
+  .walkthrough-heading h3,
+  .walkthrough-heading h4,
+  .walkthrough-impact h4 {
     font-size: 13px;
-    margin: 22px 0 10px;
+    font-weight: 650;
+    color: var(--text);
   }
-  .chapter-context > h3:first-child {
-    margin-top: 0;
+  .walkthrough-explanation .comment-markdown > :is(h3, h4) {
+    margin-top: 24px;
+    margin-bottom: 12px;
   }
-  .chapter-context > ul {
-    list-style: disc;
-    padding-left: 20px;
+  .walkthrough-explanation .comment-markdown li + li {
+    margin-top: 9px;
   }
-  .chapter-context > ul > li + li {
-    margin-top: 10px;
+  .walkthrough-explanation .comment-markdown li::marker {
+    color: var(--muted);
+  }
+  .walkthrough-review {
+    display: grid;
+    gap: 22px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .walkthrough-impact {
+    border-left: 2px solid var(--border);
+    padding-left: 14px;
+  }
+  .walkthrough-impact .comment-markdown {
+    margin-top: 8px;
+  }
+  .walkthrough-checks .walkthrough-heading {
+    margin-bottom: 10px;
+  }
+  .walkthrough-checks > ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .walkthrough-checks > ol > li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 0;
+  }
+  .walkthrough-checks > ol > li + li {
+    border-top: 1px solid var(--border);
+  }
+  .walkthrough-check-number {
+    flex: 0 0 22px;
+    border-radius: 4px;
+    background: var(--subtle);
+    color: var(--muted);
+    text-align: center;
+    font-size: 11px;
+    line-height: 22px;
   }
   .guide-introduction {
     padding: 36px clamp(24px, 5vw, 72px) 48px;
@@ -3005,8 +3060,7 @@
     color: var(--muted);
     font-size: 12px;
   }
-  .chapter-context > .comment-markdown {
-    max-width: 85ch;
+  .chapter-context .comment-markdown {
     font-size: 13px;
     line-height: 1.75;
   }

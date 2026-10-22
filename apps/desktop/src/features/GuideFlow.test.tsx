@@ -12,11 +12,10 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { GuideView } from "./Guide";
 import type { ReviewWorkspace } from "../lib/api";
-vi.mock("../ui/mermaid", () => ({
-  renderDiagram: vi.fn().mockResolvedValue({
-    url: "data:image/svg+xml,<svg/>",
-    description: "Invitation flow",
-  }),
+vi.mock("../ui/MermaidDiagram", () => ({
+  MermaidDiagram: ({ source }: { source: string }) => (
+    <figure aria-label="Code diagram">{source}</figure>
+  ),
 }));
 
 import fixture from "../../../../tests/fixtures/review-workspace.json";
@@ -266,8 +265,10 @@ it("preserves legacy explanations and distinguishes provisional groups from gene
 it("starts with a rich overview and returns to it from the first code chapter", async () => {
   const user = userEvent.setup();
   mount();
-  await screen.findByRole("img", { name: "Invitation flow" });
   const overview = screen.getByRole("region", { name: "PR overview" });
+  expect(
+    within(overview).getByRole("figure", { name: "Code diagram" }).textContent,
+  ).toContain("Team invitation changes");
   expect(within(overview).getByRole("table")).toBeTruthy();
   expect(
     screen.getByRole("button", { name: "Review outline, overview" }),
@@ -290,6 +291,44 @@ it("starts with a rich overview and returns to it from the first code chapter", 
     screen.getByRole("button", { name: "Review outline, overview" }),
   );
   expect(screen.getByRole("menuitem", { name: /^PR overview/ })).toBeTruthy();
+});
+
+it("renders scannable Markdown and diagrams inside a chapter's full walkthrough", async () => {
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  w.guide.sections[0].explanation = [
+    "#### What changes",
+    "",
+    "- **Existing rows.** Backfill before enforcing the constraint.",
+    "- **New writes.** Supply `expires_at` during creation.",
+    "",
+    "| Before | After |",
+    "| --- | --- |",
+    "| No deadline | Required expiry |",
+    "",
+    "```mermaid",
+    "flowchart TD",
+    "  A[Create invitation] --> B[Store deadline]",
+    "```",
+  ].join("\n");
+  w.guide.sections[0].questions = ["Does the upgrade preserve existing rows?"];
+  mount(w);
+  const full = within(
+    screen.getByRole("region", { name: w.guide.sections[0].title }),
+  ).getByRole("region", { name: "Full section context" });
+  expect(
+    within(full).getByRole("heading", { name: "What changes", level: 4 }),
+  ).toBeTruthy();
+  expect(within(full).getByRole("table").textContent).toContain(
+    "Required expiry",
+  );
+  expect(within(full).getAllByRole("list")).toHaveLength(2);
+  expect(within(full).getAllByRole("listitem")).toHaveLength(3);
+  expect(
+    within(full).getByRole("figure", { name: "Code diagram" }).textContent,
+  ).toContain("A[Create invitation] --> B[Store deadline]");
+  expect(
+    within(full).getByText("Does the upgrade preserve existing rows?"),
+  ).toBeTruthy();
 });
 
 it("retains an overview for guides with no text chapters", () => {

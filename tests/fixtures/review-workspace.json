@@ -330,7 +330,7 @@
         "findings": [],
         "assessed": true,
         "foldable": false,
-        "explanation": ""
+        "explanation": "The new expiry column changes both upgrades and invitation creation.\n\n#### Before and after\n\n| Path | Before | With this change |\n| --- | --- | --- |\n| Existing invitations | No expiry value required | Every row needs `expires_at` |\n| New invitations | Inserts can omit expiry | Inserts must supply a deadline |\n\n#### Important details\n\n- **Upgrade risk.** `042_invitation_expiry.sql` adds `TIMESTAMPTZ NOT NULL` immediately, without a default or backfill. Existing rows cannot satisfy that constraint; an empty development database would hide the problem.\n- **Indexing is separate.** The expiry index supports lookups. It neither fills the new column nor rejects expired invitations during acceptance.\n- **Rollout to verify.** Decide a policy for existing invitations, backfill their deadlines, and only then enforce the required value. This is a proposed sequence to check; it is not implemented by the supplied migration.\n\n#### Evidence\n\n- The diff contains no populated-database upgrade test. Verify compatibility with existing rows and older application instances before rollout."
       },
       {
         "id": "section-1",
@@ -345,7 +345,7 @@
         "findings": [],
         "assessed": true,
         "foldable": false,
-        "explanation": ""
+        "explanation": "`inviteMember()` checks administrator access, then reuses or creates an invitation.\n\n#### Follow the request\n\n```mermaid\nflowchart LR\n  accTitle: Invitation lookup and creation\n  accDescr: Administrator access is checked before an email-only lookup. An existing invitation is returned, or a new invitation is created with the actor's tenant identifier.\n  A[Administrator check] --> B[Find invitation by email]\n  B --> C{Existing invitation?}\n  C -->|Yes| D[Return existing record]\n  C -->|No| E[Create with actor tenant]\n```\n\n#### Important details\n\n- **Read and write scopes differ.** The lookup filters only by email; creation includes `tenant_id: actor.tenant_id`. Administrator access alone does not establish ownership of the record being reused.\n- **Concrete failure case.** If team A already invited an email address, an administrator in team B can receive team A's record when inviting that same address.\n- **Expiry is not wired in.** The creation call also omits the newly required `expires_at`. The supplied code shows neither a database default nor a call to `invitationExpiry()` that would supply it.\n\n#### Evidence\n\n- Follow the tenant and deadline values into the actual lookup and insert. The supplied helper test does not establish either integration."
       },
       {
         "id": "section-2",
@@ -360,7 +360,7 @@
         "findings": [],
         "assessed": true,
         "foldable": false,
-        "explanation": ""
+        "explanation": "`invitationExpiry(now)` defines a deterministic seven-day duration.\n\n#### What the test establishes\n\n| Evidence | What it demonstrates |\n| --- | --- |\n| Explicit `now` argument | Calculation does not depend on the wall clock |\n| January 1 input → January 8 expectation | Seven 24-hour periods are added |\n| No creation or acceptance call in this test | Persistence and expiry enforcement remain unverified |\n\n#### Important details\n\n- **Duration, not enforcement.** The helper calculates a deadline; it does not itself persist it or reject an invitation. The visible `inviteMember()` does not call the helper, and acceptance code was not supplied.\n- **Time policy matters.** Exactly 168 elapsed hours can differ from seven local calendar days around daylight-saving transitions. Confirm which policy the product intends.\n- **Evidence limit.** The test is present in the diff; it was not executed for this illustrative guide."
       },
       {
         "id": "section-3",
@@ -375,7 +375,7 @@
         "findings": [],
         "assessed": true,
         "foldable": true,
-        "explanation": ""
+        "explanation": "- **User-facing promise.** The documentation directs administrators to the Members page and says invitations expire after seven days.\n- **Behavioral dependency.** That promise relies on deadlines being persisted and enforced during acceptance. The arithmetic test alone does not establish either behavior.\n- **Review scope.** This file changes copy, with no executable logic. Check the promise against the shipped invitation flow."
       },
       {
         "id": "section-4",
@@ -390,7 +390,7 @@
         "findings": [],
         "assessed": true,
         "foldable": true,
-        "explanation": ""
+        "explanation": "- **Matching keys.** English and French both add `invite.title` and `invite.help` for the invitation heading and help text.\n- **No parameter changes.** Neither entry has interpolation placeholders, and neither file removes a key. The supplied pair has no key or parameter mismatch.\n- **Evidence limit.** UI callers and other locale files were not supplied. Review these two files together after the behavior changes."
       }
     ],
     "source": "sample",
