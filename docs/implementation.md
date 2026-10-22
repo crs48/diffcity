@@ -531,7 +531,7 @@ Virtual window visibility uses cached numeric bounds and one shared, frame-batch
 - [x] Install and verify sticky headers and minimap navigation in the native app, preserving private notes and settings. Real GitHub test PR #3 verifies a midpoint minimap jump, keyboard navigation to the file end, title/map handoff from `policies-0.ts` to `policies-1.ts`, and collapse/reopen from the pinned title.
 - [x] [CI passes on a132122](https://github.com/crs48/diffcity/actions/runs/39703426638): 76 Rust and 90 frontend tests, contracts, types, formatting, ESLint, Clippy, and desktop packaging. The existing implementation PR describes sticky headers, minimap behavior, validation, and limits.
 
-The production bundle, including the single range-comment control below, is installed and running (executable SHA-256: `c459d0fd5218b183e78aec92db52431e8720777d016252bf396090b88b4b9ab1`). All 10 private notes, saved settings, and the model preference match the fresh pre-install SQLite backup byte for byte. The installed executable matches the packaged bundle.
+The first sticky-header/minimap bundle, including the single range-comment control below, was installed and verified (executable SHA-256: `c459d0fd5218b183e78aec92db52431e8720777d016252bf396090b88b4b9ab1`). All 10 private notes, saved settings, and the model preference matched the fresh pre-install SQLite backup byte for byte. The later overlay build is recorded below.
 
 ## Single comment control for selected ranges
 
@@ -548,4 +548,7 @@ The minimap is absolutely positioned inside the review canvas, below the sticky 
 
 - [x] Production WebKit verifies identical editor and file widths with/without the map, horizontal clearance, and no nested or window-level overflow in unified/split views at 1440 px and 720 px.
 - [x] Click, drag, keyboard navigation, sticky titles, collapse, hiding for short files, and zero canvas repaints during ordinary scrolling still pass. Light/dark/narrow axe WCAG A/AA checks pass; focusing an inline close control pans it clear of the overlay.
-- [ ] Install and verify the overlay in the native app, preserving private notes and saved preferences.
+- [x] Install the overlay and verify its placement and midpoint navigation in native test PR #3. The full-width file header and code extend behind the map; the map no longer consumes a separate column. All 10 private notes, settings, and the model preference match the fresh SQLite backup byte for byte. Installed and packaged executables match (SHA-256: `73a61638a93cfeb3e157e36ec73ee5cb123e03a70fa24ecf4672c59e4b416312`).
+- [x] [CI passes on 56dedbc](https://github.com/crs48/diffcity/actions/runs/39708081394): 76 Rust and 92 frontend tests, generated contracts, formatting, types, lint, Clippy, and packaging.
+
+Native horizontal-wheel/keyboard verification was interrupted by the Mac locking. The installed overlay is visually verified; horizontal clearance and focused-control reveal are verified in production WebKit, including actual long wrapped text moving clear of the map.
