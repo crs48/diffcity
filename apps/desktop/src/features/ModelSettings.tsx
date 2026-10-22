@@ -145,6 +145,13 @@ export function ModelSettings({
             aria-hidden="true"
           />
         </div>
+        {purpose === "guide" && (
+          <p className="muted">
+            {t(
+              "The guide appears first. A background priority pass then inspects up to 6 important files with this model. You can stop it at any time; further enrichment requires your choice.",
+            )}
+          </p>
+        )}
         <p className="muted" id="model-scope-help">
           {t(
             purpose === "guide"

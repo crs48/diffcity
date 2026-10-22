@@ -40,6 +40,7 @@ import { useGuideScroll } from "./useGuideScroll";
 
 import { GuideMargin } from "./GuideMargin";
 import { orderedAnnotations } from "../lib/guideAnnotations";
+import { GuideCodeNotes } from "./GuideCodeNotes";
 import { Walkthrough } from "./Walkthrough";
 
 const OVERVIEW = "guide-overview";
@@ -311,6 +312,18 @@ function GuideChapter({
   const conversation = useConversation();
   const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const [contextOpen, setContextOpen] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [noteRequest, setNoteRequest] = useState<{
+    id: string;
+    sequence: number;
+  } | null>(null);
+  const readNote = (id: string) => {
+    setNotesOpen(true);
+    setNoteRequest((request) => ({
+      id,
+      sequence: (request?.sequence ?? 0) + 1,
+    }));
+  };
   const selected =
     selection && s.hunkIds.includes(selection.hunkId) ? selection : null;
   const editing = conversation?.inline.draft?.anchor;
@@ -359,7 +372,12 @@ function GuideChapter({
       data-guide-section={s.id}
       aria-labelledby={titleId}
     >
-      <GuideMargin notes={annotations} title={s.title} headingId={titleId}>
+      <GuideMargin
+        notes={annotations}
+        title={s.title}
+        headingId={titleId}
+        onRead={readNote}
+      >
         <div className="chapter-number">
           {t("Section {{current}} of {{total}}", { current: index + 1, total })}
         </div>
@@ -408,25 +426,14 @@ function GuideChapter({
       </GuideMargin>
       <div className="guide-code">
         {contextOpen && <Walkthrough id={contextId} section={s} />}
-        {annotations.length > 0 && (
-          <details className="chapter-code-notes">
-            <summary>
-              {t("Read all code notes ({{count}})", {
-                count: annotations.length,
-              })}
-            </summary>
-            {annotations.map((note) => (
-              <article key={note.id}>
-                <h3>{note.title}</h3>
-                <code>
-                  {note.anchor.path} ·{" "}
-                  {note.anchor.side === "LEFT" ? t("Old") : t("New")}{" "}
-                  {note.anchor.startLine}–{note.anchor.line}
-                </code>
-                <CommentMarkdown body={note.body} diagrams={false} />
-              </article>
-            ))}
-          </details>
+        {(annotations.length > 0 ||
+          (w.guide.enrichment && !s.foldable && s.assessed)) && (
+          <GuideCodeNotes
+            notes={annotations}
+            open={notesOpen}
+            onOpen={setNotesOpen}
+            request={noteRequest}
+          />
         )}
         {!expanded ? (
           <div className="fold-card">

@@ -321,6 +321,9 @@ pub struct Finding {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct GuideAnnotation {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[ts(optional, as = "Option<String>")]
+    pub details: String,
     pub id: String,
     pub title: String,
     pub body: String,
@@ -350,9 +353,45 @@ pub struct GuideSection {
     pub foldable: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum EnrichmentStatus {
+    Pending,
+    Complete,
+    Failed,
+    Skipped,
+    Interrupted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum EnrichmentTier {
+    Priority,
+    Further,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct EnrichmentFile {
+    pub path: String,
+    pub tier: EnrichmentTier,
+    pub status: EnrichmentStatus,
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GuideEnrichment {
+    pub files: Vec<EnrichmentFile>,
+    pub dismissed: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Guide {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub enrichment: Option<GuideEnrichment>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub id: Option<String>,
@@ -442,6 +481,9 @@ pub struct ReviewWorkspace {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct RunEvent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub guide: Option<Guide>,
     pub run_id: String,
     pub snapshot_id: String,
     pub phase: String,

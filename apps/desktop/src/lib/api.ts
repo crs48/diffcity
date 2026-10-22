@@ -17,6 +17,7 @@ import type {
   Note,
   Guide,
   GuideVersion,
+  EnrichmentTier,
   ReviewProgress,
   PublishRequest,
   PublishResult,
@@ -72,6 +73,17 @@ export const api = {
     invoke<ReviewWorkspace>("select_guide", { snapshotId, guideId }),
   analyze: (snapshotId: string, runId: string, preference?: ModelPreference) =>
     invoke<Guide>("analyze", { snapshotId, runId, preference }),
+  enrich: (
+    snapshotId: string,
+    guideId: string,
+    tier: EnrichmentTier,
+    runId: string,
+  ) => invoke<Guide>("enrich_guide", { snapshotId, guideId, tier, runId }),
+  dismissEnrichment: (
+    snapshotId: string,
+    guideId: string,
+    dismissed: boolean,
+  ) => invoke<Guide>("dismiss_enrichment", { snapshotId, guideId, dismissed }),
   ask: (
     snapshotId: string,
     noteId: string,

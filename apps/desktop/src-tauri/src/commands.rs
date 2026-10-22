@@ -332,3 +332,29 @@ pub fn select_guide(
 ) -> Output<ReviewWorkspace> {
     service.select_guide(&snapshot_id, &guide_id).map_err(error)
 }
+
+#[tauri::command]
+pub async fn enrich_guide(
+    service: State<'_, Arc<Service>>,
+    app: tauri::AppHandle,
+    snapshot_id: String,
+    guide_id: String,
+    tier: EnrichmentTier,
+    run_id: String,
+) -> Output<Guide> {
+    service
+        .enrich_guide(&snapshot_id, &guide_id, tier, &run_id, emitter(app))
+        .await
+        .map_err(error)
+}
+#[tauri::command]
+pub fn dismiss_enrichment(
+    service: State<'_, Arc<Service>>,
+    snapshot_id: String,
+    guide_id: String,
+    dismissed: bool,
+) -> Output<Guide> {
+    service
+        .dismiss_enrichment(&snapshot_id, &guide_id, dismissed)
+        .map_err(error)
+}

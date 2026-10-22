@@ -10,6 +10,7 @@ pub mod github;
 mod github_lists;
 pub mod guide;
 mod guide_annotations;
+mod guide_enrichment;
 mod guide_history;
 mod guide_prompt;
 pub mod migrations;
@@ -59,6 +60,8 @@ pub fn run() {
             commands::delete_note,
             commands::save_progress,
             commands::analyze,
+            commands::enrich_guide,
+            commands::dismiss_enrichment,
             commands::guide_versions,
             commands::select_guide,
             commands::ask_codex,

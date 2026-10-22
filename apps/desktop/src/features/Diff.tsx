@@ -27,6 +27,7 @@ import { contextBefore, contextAfter } from "../lib/contextGaps";
 import { DIFF_CHUNK_SIZE, DiffChunks, rowAtOffset } from "./DiffChunks";
 import { codeTextProps } from "../lib/textSelection";
 
+import { NoteDetails } from "./GuideCodeNotes";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { annotationLine } from "../lib/guideAnnotations";
 
@@ -324,6 +325,7 @@ const DiffContent = memo(function DiffContent({
                           <strong>{n.title}</strong>
                           <small>{annotationLine(n, t("Old"), t("New"))}</small>
                           <CommentMarkdown body={n.body} diagrams={false} />
+                          {n.details && <NoteDetails body={n.details} />}
                         </aside>
                       ))}
                     <div

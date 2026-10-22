@@ -6,13 +6,15 @@ import {
   type ModelPreference,
   type Note,
   type RunEvent,
+  type Guide,
 } from "../lib/api";
 import { sameAnchor } from "../lib/selection";
 
 export type AiRun = {
   id: string;
   snapshotId: string;
-  kind: "guide" | "question";
+  kind: "guide" | "question" | "enrichment";
+  guideId?: string;
   question?: Note;
   preference: ModelPreference;
   phase: "queued" | "working" | "cancelling" | "error" | "cancelled";
@@ -50,6 +52,7 @@ export const threadModel = (
 export function useAiRuns() {
   const [runs, setRuns] = useState<AiRun[]>([]);
   const current = useRef<AiRun[]>([]);
+  const progress = useRef(new Map<string, (guide: Guide) => void>());
   const ready = useRef<Promise<unknown>>(Promise.resolve());
   const update = useCallback((change: (runs: AiRun[]) => AiRun[]) => {
     current.current = change(current.current);
@@ -59,6 +62,19 @@ export function useAiRuns() {
     let disposed = false;
     const subscription = listen<RunEvent>("codex-run", ({ payload: event }) => {
       if (disposed) return;
+      const active = current.current.find(
+        (run) =>
+          run.id === event.runId &&
+          run.snapshotId === event.snapshotId &&
+          isActiveRun(run),
+      );
+      if (
+        active &&
+        event.guide &&
+        active.guideId === event.guide.id &&
+        event.guide.snapshotId === event.snapshotId
+      )
+        progress.current.get(active.id)?.(event.guide);
       update((runs) =>
         runs.map((run) => {
           if (
@@ -91,8 +107,12 @@ export function useAiRuns() {
     [update],
   );
   const start = async <T>(
-    details: Pick<AiRun, "snapshotId" | "kind" | "question" | "preference">,
+    details: Pick<
+      AiRun,
+      "snapshotId" | "kind" | "question" | "preference" | "guideId"
+    >,
     task: (id: string) => Promise<T>,
+    onGuide?: (guide: Guide) => void,
   ): Promise<T | undefined> => {
     if (
       current.current.some(
@@ -102,12 +122,15 @@ export function useAiRuns() {
           r.kind === details.kind &&
           (r.kind === "question"
             ? sameAnchor(r.question!.anchor, details.question!.anchor)
-            : JSON.stringify(r.preference) ===
-              JSON.stringify(details.preference)),
+            : r.kind === "enrichment"
+              ? r.guideId === details.guideId
+              : JSON.stringify(r.preference) ===
+                JSON.stringify(details.preference)),
       )
     )
       return;
     const id = crypto.randomUUID();
+    if (onGuide) progress.current.set(id, onGuide);
     update((runs) => [
       ...runs,
       {
@@ -140,6 +163,8 @@ export function useAiRuns() {
             : r,
         ),
       );
+    } finally {
+      progress.current.delete(id);
     }
   };
   const cancel = async (id: string) => {

@@ -201,3 +201,60 @@ it("defaults new threads to Fable and preserves the model of an existing exact s
     ),
   ).toEqual(defaultModelPreference);
 });
+
+it("routes incremental enrichment only to its guide while question responses remain independent", async () => {
+  const { result } = renderHook(useAiRuns);
+  const task = deferred<string>();
+  const updates = vi.fn();
+  const details = {
+    kind: "enrichment" as const,
+    guideId: "guide-one",
+    snapshotId: "snapshot",
+    preference: defaultModelPreference,
+  };
+  let promise: Promise<string | undefined>;
+  act(() => {
+    promise = result.current.start(details, () => task.promise, updates);
+  });
+  const run = result.current.runs[0];
+  const guide = { id: "guide-one", snapshotId: "snapshot" } as NonNullable<
+    RunEvent["guide"]
+  >;
+  act(() => {
+    events.listener({
+      payload: {
+        runId: run.id,
+        snapshotId: "snapshot",
+        phase: "enriched",
+        text: "First file saved",
+        guide,
+      },
+    });
+    events.listener({
+      payload: {
+        runId: run.id,
+        snapshotId: "snapshot",
+        phase: "enriched",
+        text: "Wrong guide",
+        guide: { ...guide, id: "other" },
+      },
+    });
+  });
+  expect(updates).toHaveBeenCalledExactlyOnceWith(guide);
+  await act(async () => {
+    task.resolve("done");
+    await promise;
+  });
+  act(() => {
+    events.listener({
+      payload: {
+        runId: run.id,
+        snapshotId: "snapshot",
+        phase: "enriched",
+        text: "Late event",
+        guide,
+      },
+    });
+  });
+  expect(updates).toHaveBeenCalledTimes(1);
+});

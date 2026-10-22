@@ -16,8 +16,9 @@ pub struct Service {
     pub store: Store,
     pub github: GitHub,
     inbox_sync: Mutex<()>,
-    runs: crate::ai_runs::Runs,
+    pub(crate) runs: crate::ai_runs::Runs,
     publication: Mutex<()>,
+    pub(crate) enrichment_slot: tokio::sync::Semaphore,
     pub(crate) review_loads: crate::review_cache::ReviewLoads,
 }
 impl Service {
@@ -28,6 +29,7 @@ impl Service {
             inbox_sync: Mutex::new(()),
             runs: crate::ai_runs::Runs::default(),
             publication: Mutex::new(()),
+            enrichment_slot: tokio::sync::Semaphore::new(1),
             review_loads: crate::review_cache::ReviewLoads::default(),
         })
     }
@@ -519,6 +521,7 @@ impl Service {
         }
         let emit_event = |phase: &str, text: &str| {
             emit(RunEvent {
+                guide: None,
                 run_id: run_id.into(),
                 snapshot_id: id.into(),
                 phase: phase.into(),
@@ -564,39 +567,6 @@ impl Service {
         let proposal = serde_json::from_str(&answer)
             .context("AI output was not a valid guide; the previous guide is preserved")?;
         let mut guide = domain::validate_guide(&snapshot, proposal, &model, &input.supplied)?;
-        if let Some(annotations) = crate::guide_annotations::input(&snapshot, &guide) {
-            emit_event(
-                "annotating",
-                "Taking a closer look at important passages and adding line annotations…",
-            );
-            let directory = self.store.directory.join("review-context");
-            let result = crate::providers::turn(
-                &settings,
-                codex::TurnRequest {
-                    cwd: &directory,
-                    preference: &preference,
-                    instructions: crate::guide_annotations::INSTRUCTIONS,
-                    prompt: &annotations.prompt,
-                    schema: Some(crate::guide_annotations::schema()),
-                },
-                rx.clone(),
-                |phase, text| {
-                    if phase != "stream" {
-                        emit_event(phase, text);
-                    }
-                },
-            )
-            .await;
-            if *rx.borrow() {
-                bail!("Guide generation cancelled; the previous guide is preserved");
-            }
-            let result = result.and_then(|(answer, _)| {
-                crate::guide_annotations::apply(&snapshot, &mut guide, &annotations, &answer)
-            });
-            if result.is_err() {
-                guide.limitations.push("The focused annotation pass was unavailable. The complete first-pass guide is preserved; generate a new guide to retry line annotations.".into());
-            }
-        }
         if *rx.borrow() {
             bail!("Guide generation cancelled; the previous guide is preserved");
         }
@@ -610,6 +580,7 @@ impl Service {
         guide.source = preference.provider;
         guide.reasoning_effort = preference.reasoning_effort;
         let guide = self.store.retain_guide(guide)?;
+        let guide = self.store.enriched_guide(guide)?;
         emit_event("complete", "Guide ready");
         Ok(guide)
     }
@@ -678,6 +649,7 @@ impl Service {
             ));
         }
         emit(RunEvent {
+            guide: None,
             run_id: run_id.into(),
             snapshot_id: id.into(),
             phase: "queued".into(),
@@ -685,6 +657,7 @@ impl Service {
         });
         let _permit = job.wait().await?;
         emit(RunEvent {
+            guide: None,
             run_id: run_id.into(),
             snapshot_id: id.into(),
             phase: "thinking".into(),
@@ -713,6 +686,7 @@ impl Service {
             rx,
             |phase, text| {
                 emit(RunEvent {
+                    guide: None,
                     run_id: run_id.into(),
                     snapshot_id: id.into(),
                     phase: phase.into(),
@@ -1054,7 +1028,7 @@ pub fn guide_schema() -> Value {
         json!({"title":string(),"body":string(),"severity":{"type":"string","enum":["critical","high","medium","low"]},"anchor":anchor}),
     );
     let section = object(
-        json!({"title":string(),"summary":described("Compact takeaway for the sticky annotation: one or two sentences explaining the outcome."),"explanation":described("Full Markdown walkthrough: why, before/after behavior, concrete flow through symbols and paths, design choices, and test evidence or gaps. Normally 2–5 focused paragraphs for substantive changes."),"attention":{"type":"string","enum":["high","standard","routine","needsAssessment"]},"category":string(),"reason":string(),"hunkIds":array(string()),"questions":array(described("A concrete reviewer check naming a scenario and expected behavior or evidence; not a claim that a test was run.")),"findings":array(finding)}),
+        json!({"title":string(),"summary":described("Compact takeaway for the sticky annotation: one or two sentences explaining the outcome."),"explanation":described("Full Markdown walkthrough: why, before/after behavior, concrete flow through symbols and paths, design choices, and test evidence or gaps. Use short headings, focused labeled bullets, compact comparison tables, or a grounded Mermaid diagram when useful; avoid walls of text."),"attention":{"type":"string","enum":["high","standard","routine","needsAssessment"]},"category":string(),"reason":string(),"hunkIds":array(string()),"questions":array(described("A concrete reviewer check naming a scenario and expected behavior or evidence; not a claim that a test was run.")),"findings":array(finding)}),
     );
     object(
         json!({"summary":described("Full Markdown PR overview shown before code: purpose, before/after behavior, cross-file flow, risks and rollout, test evidence and gaps, and the reading path. Use headings, lists or tables as helpful; typically 300–600 words for a substantial PR. Include fenced mermaid diagrams with accTitle/accDescr when they clarify the supplied evidence. No HTML, images, links in diagrams, or Mermaid configuration."),"sections":{"type":"array","items":section,"maxItems":crate::guide::MAX_SECTIONS},"limitations":array(string())}),

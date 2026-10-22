@@ -25,11 +25,11 @@ impl Store {
             .get::<Guide>("guide", &fallback.snapshot_id)?
             .unwrap_or(fallback);
         if guide.id.is_some() {
-            return Ok(guide);
+            return self.enriched_guide(guide);
         }
         let guide = self.retain_guide(guide)?;
         self.put("guide", &guide.snapshot_id, &guide)?;
-        Ok(guide)
+        self.enriched_guide(guide)
     }
 }
 
@@ -80,7 +80,7 @@ impl Service {
             ("guide", snapshot_id, to_value(&guide)?),
             ("progress", snapshot_id, to_value(&progress)?),
         ])?;
-        workspace.guide = guide;
+        workspace.guide = self.store.enriched_guide(guide)?;
         workspace.progress = progress;
         Ok(crate::guide::compact_workspace(workspace))
     }

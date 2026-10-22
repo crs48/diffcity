@@ -40,6 +40,7 @@ import {
   type Anchor,
   type Bootstrap,
   type Guide,
+  type EnrichmentTier,
   type ModelPreference,
   type Note,
   type PullRequest,
@@ -63,6 +64,8 @@ import {
 import { useNoteComposer } from "./features/useNoteComposer";
 import { Connections, Finish } from "./features/Dialogs";
 import { DisplaySettings } from "./features/DisplaySettings";
+import { GuideEnrichment } from "./features/GuideEnrichment";
+import { mergeEnrichment } from "./lib/enrichment";
 import { GuideSwitcher } from "./features/GuideSwitcher";
 import { ModelSettings } from "./features/ModelSettings";
 import { defaultModelPreference } from "./lib/models";
@@ -607,6 +610,40 @@ export default function App() {
     }
     return catalog;
   }, []);
+  const onEnriched = (guide: Guide) => {
+    setWorkspace((w) =>
+      w && w.guide.id === guide.id && w.snapshot.id === guide.snapshotId
+        ? { ...w, guide: mergeEnrichment(w.guide, guide) }
+        : w,
+    );
+    setPendingGuides((guides) =>
+      guides.map((g) => (g.id === guide.id ? mergeEnrichment(g, guide) : g)),
+    );
+  };
+  const enrich = async (guide: Guide, tier: EnrichmentTier) => {
+    if (!guide.id) return;
+    const result = await ai.start(
+      {
+        kind: "enrichment",
+        guideId: guide.id,
+        snapshotId: guide.snapshotId,
+        preference: {
+          provider: guide.source,
+          model: guide.model,
+          reasoningEffort: guide.reasoningEffort ?? null,
+        },
+      },
+      (runId) => api.enrich(guide.snapshotId, guide.id!, tier, runId),
+      onEnriched,
+    );
+    if (result) onEnriched(result);
+  };
+  const dismissEnrichment = async (guide: Guide, dismissed: boolean) => {
+    if (guide.id)
+      onEnriched(
+        await api.dismissEnrichment(guide.snapshotId, guide.id, dismissed),
+      );
+  };
   const analyze = async (preference: ModelPreference) => {
     if (!workspace) return;
     const snapshotId = workspace.snapshot.id;
@@ -615,7 +652,16 @@ export default function App() {
       { kind: "guide", snapshotId, preference },
       (id) => api.analyze(snapshotId, id, preference),
     );
-    if (guide) setPendingGuides((guides) => [...guides, guide]);
+    if (guide) {
+      setPendingGuides((guides) => [...guides, guide]);
+      // Only a newly requested guide starts work automatically. Restores and switches never do.
+      if (
+        guide.enrichment?.files.some(
+          (file) => file.tier === "priority" && file.status === "pending",
+        )
+      )
+        void enrich(guide, "priority").catch(onError);
+    }
   };
   const ask = async (note: Note) => {
     const preference = threadModel(
@@ -1160,11 +1206,29 @@ export default function App() {
                 onSelect={selectGuide}
               />
             )}
+            {mode === "guide" && (
+              <GuideEnrichment
+                guide={workspace.guide}
+                runs={ai.runs}
+                onStart={(tier) =>
+                  void enrich(workspace.guide, tier).catch(onError)
+                }
+                onCancel={(id) => void ai.cancel(id)}
+                onDismissRun={ai.dismiss}
+                onDismiss={(dismissed) =>
+                  void dismissEnrichment(workspace.guide, dismissed).catch(
+                    onError,
+                  )
+                }
+              />
+            )}
             {ai.runs
               .filter(
                 (run) =>
                   run.snapshotId === workspace.snapshot.id &&
-                  run.kind === "guide",
+                  (run.kind === "guide" ||
+                    (run.kind === "enrichment" &&
+                      run.guideId !== workspace.guide.id)),
               )
               .map((run) => (
                 <div className="run-banner" key={run.id} role="status">

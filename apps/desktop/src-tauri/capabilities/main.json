@@ -27,6 +27,8 @@
     "allow-delete-note",
     "allow-save-progress",
     "allow-analyze",
+    "allow-enrich-guide",
+    "allow-dismiss-enrichment",
     "allow-guide-versions",
     "allow-select-guide",
     "allow-ask-codex",

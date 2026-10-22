@@ -28,11 +28,13 @@ export function GuideMargin({
   notes,
   title,
   headingId,
+  onRead,
   children,
 }: {
   notes: GuideAnnotation[];
   title: string;
   headingId: string;
+  onRead: (id: string) => void;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -228,6 +230,11 @@ export function GuideMargin({
         {annotationLine(note, t("Old"), t("New"))}
       </span>
       <CommentMarkdown body={note.body} diagrams={false} />
+      {!!note.details && (
+        <Button className="text-button" onPress={() => onRead(note.id)}>
+          {t("Read deeper")}
+        </Button>
+      )}
     </>
   );
   return (
