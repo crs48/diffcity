@@ -27,9 +27,6 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const active =
     c.inline.draft?.snapshotId === c.workspace.snapshot.id &&
     sameAnchor(c.inline.draft.anchor, thread.anchor);
-  const streaming =
-    c.activeQuestion?.snapshotId === c.workspace.snapshot.id &&
-    sameAnchor(c.activeQuestion.anchor, thread.anchor);
   const label = `${thread.anchor.side === "LEFT" ? "Old" : "New"} ${lineRange(thread.anchor)}`;
   return (
     <section
@@ -83,14 +80,14 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
               remote={thread.remote}
               conversation={c}
               inline
-              streaming={streaming}
             />
           </div>
           {active ? (
             <NoteComposer
               state={c.inline}
               inline
-              busy={c.busy}
+              busy={c.isBusy(thread.anchor)}
+              model={c.modelFor(thread.anchor).model}
               onAsk={c.ask}
               onError={c.onError}
             />

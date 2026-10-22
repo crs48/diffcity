@@ -210,15 +210,16 @@ pub async fn ask_codex(
     snapshot_id: String,
     note_id: String,
     run_id: String,
+    preference: Option<ModelPreference>,
 ) -> Output<Note> {
     service
-        .ask(&snapshot_id, &note_id, &run_id, emitter(app))
+        .ask_with_preference(&snapshot_id, &note_id, &run_id, preference, emitter(app))
         .await
         .map_err(error)
 }
 #[tauri::command]
-pub async fn cancel_codex(service: State<'_, Arc<Service>>) -> Output<()> {
-    service.cancel().await;
+pub async fn cancel_codex(service: State<'_, Arc<Service>>, run_id: String) -> Output<()> {
+    service.cancel(&run_id).await;
     Ok(())
 }
 #[tauri::command]

@@ -18,7 +18,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
     const viewport = messages.current;
     if (viewport && followReplies.current)
       viewport.scrollTop = viewport.scrollHeight;
-  }, [c?.workspace.notes, c?.workspace.comments, c?.stream]);
+  }, [c?.workspace.notes, c?.workspace.comments, c?.runs]);
   if (!c) return null;
   const anchor = c.chat.draft?.anchor;
   return (
@@ -45,7 +45,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
         </Button>
       </header>
       <div className="discussion-context">
-        <span>{t("One conversation with AI across this review.")} </span>
+        <span>{t("Independent conversations, shared PR context.")} </span>
         {anchor ? (
           <>
             <SelectionQuote anchor={anchor} compact />
@@ -91,15 +91,12 @@ export function Discussion({ onClose }: { onClose: () => void }) {
           notes={c.workspace.notes}
           remote={c.workspace.comments}
           conversation={c}
-          streaming={
-            !!c.activeQuestion &&
-            c.activeQuestion.snapshotId === c.workspace.snapshot.id
-          }
         />
       </div>
       <NoteComposer
         state={c.chat}
-        busy={c.busy}
+        busy={c.isBusy(c.chat.draft?.anchor ?? null)}
+        model={c.modelFor(c.chat.draft?.anchor ?? null).model}
         onAsk={c.ask}
         onError={c.onError}
       />

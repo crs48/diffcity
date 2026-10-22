@@ -1,3 +1,4 @@
+mod ai_runs;
 pub mod claude;
 pub mod codex;
 mod commands;

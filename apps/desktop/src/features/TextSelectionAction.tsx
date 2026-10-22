@@ -97,7 +97,7 @@ export function TextSelectionAction({
         e.altKey &&
         e.key === "Enter" &&
         action.current &&
-        !current.current?.busy
+        !current.current?.isBusy(action.current.anchor)
       ) {
         e.preventDefault();
         e.stopPropagation();
@@ -136,7 +136,7 @@ export function TextSelectionAction({
       style={{ left: candidate.x, top: candidate.y }}
       aria-label={t("Ask AI to explain selected code")}
       title={t("Explain this selection · AI only · Alt+Enter")}
-      disabled={conversation.busy}
+      disabled={conversation.isBusy(candidate.anchor)}
       onPointerDown={(e) => e.preventDefault()}
       onClick={() => {
         const anchor = action.current?.anchor;

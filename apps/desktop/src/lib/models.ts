@@ -1,9 +1,9 @@
 import type { Model, ModelPreference } from "./api";
 
 export const defaultModelPreference: ModelPreference = {
-  provider: "codex",
-  model: "gpt-6-astra",
-  reasoningEffort: "xhigh",
+  provider: "claude",
+  model: "claude-fable-5",
+  reasoningEffort: "high",
 };
 
 export const effortLabel = (effort: string) =>

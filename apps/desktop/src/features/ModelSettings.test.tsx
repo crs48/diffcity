@@ -3,7 +3,11 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ModelSettings } from "./ModelSettings";
-import { defaultModelPreference } from "../lib/models";
+const codexPreference = {
+  provider: "codex",
+  model: "gpt-6-astra",
+  reasoningEffort: "xhigh",
+};
 import type { Model } from "../lib/api";
 import "../i18n";
 
@@ -39,7 +43,7 @@ const connection = {
   detail: "",
 };
 const props = () => ({
-  preference: defaultModelPreference,
+  preference: codexPreference,
   models,
   connection,
   onSave: vi.fn().mockResolvedValue(undefined),
@@ -85,7 +89,7 @@ it("shows the requested default and saves the selected model with an advertised 
   ).toBe("medium");
   await user.click(screen.getByRole("button", { name: "Save default" }));
   expect(callbacks.onSave).toHaveBeenCalledWith({
-    ...defaultModelPreference,
+    ...codexPreference,
     reasoningEffort: "medium",
   });
   expect(callbacks.onClose).toHaveBeenCalledOnce();
@@ -108,7 +112,7 @@ it("keeps unavailable saved choices visible without substituting a model", async
   render(
     <ModelSettings
       {...callbacks}
-      preference={{ ...defaultModelPreference, model: "retired" }}
+      preference={{ ...codexPreference, model: "retired" }}
     />,
   );
   expect(
@@ -167,7 +171,7 @@ it("allows the catalog default reasoning and closes with Escape", async () => {
   ).toBe("");
   await user.click(screen.getByRole("button", { name: "Save default" }));
   expect(callbacks.onSave).toHaveBeenCalledWith({
-    ...defaultModelPreference,
+    ...codexPreference,
     model: "gpt-6-luna",
     reasoningEffort: null,
   });
@@ -213,7 +217,7 @@ it("creates a guide with Claude without saving a different default", async () =>
     reasoningEffort: "high",
   });
   expect(callbacks.onClose).toHaveBeenCalledOnce();
-  expect(defaultModelPreference.model).toBe("gpt-6-astra");
+  expect(codexPreference.model).toBe("gpt-6-astra");
 });
 
 it("shows a disconnected Claude account and lets the user return to Codex", async () => {

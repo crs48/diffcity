@@ -45,7 +45,6 @@ import {
   type PullRequest,
   type ReviewProgress,
   type ReviewWorkspace,
-  type RunEvent,
   type InboxSync,
   type Pins,
 } from "./lib/api";
@@ -55,6 +54,12 @@ import { ReviewScope } from "./features/ReviewScope";
 import { ReviewHeader } from "./features/ReviewHeader";
 import { Discussion } from "./features/Discussion";
 import { ConversationContext } from "./features/conversation";
+import {
+  useAiRuns,
+  isActiveRun,
+  threadRuns,
+  threadModel,
+} from "./features/useAiRuns";
 import { useNoteComposer } from "./features/useNoteComposer";
 import { Connections, Finish } from "./features/Dialogs";
 import { DisplaySettings } from "./features/DisplaySettings";
@@ -110,7 +115,6 @@ export default function App() {
   const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
   const [selection, setSelection] = useState<Anchor | null>(null);
   const [discussion, setDiscussion] = useState(false);
-  const [activeQuestion, setActiveQuestion] = useState<Note | null>(null);
   const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
   const reviewScroll = useRef<HTMLDivElement>(null);
@@ -129,10 +133,13 @@ export default function App() {
   const [link, setLink] = useState("");
   const [showLink, setShowLink] = useState(false);
   const [inboxVisible, setInboxVisible] = useState(true);
-  const [run, setRun] = useState<string | null>(null);
-  const [runText, setRunText] = useState("");
-  const [stream, setStream] = useState("");
-  const [pendingGuide, setPendingGuide] = useState<Guide | null>(null);
+  const ai = useAiRuns();
+  const [pendingGuides, setPendingGuides] = useState<Guide[]>([]);
+  const pendingGuide = pendingGuides
+    .filter((g) => g.snapshotId === workspace?.snapshot.id)
+    .at(-1);
+  const isThreadBusy = (anchor: Anchor | null) =>
+    threadRuns(ai.runs, workspace?.snapshot.id ?? "", anchor).some(isActiveRun);
   const [newRevision, setNewRevision] = useState(false);
   const [checkpointVersion, setCheckpointVersion] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -357,26 +364,6 @@ export default function App() {
       });
   }, [boot, onError]);
   useEffect(() => {
-    let removed = false;
-    const subscription = listen<RunEvent>("codex-run", (event) => {
-      if (
-        event.payload.runId !== run ||
-        event.payload.snapshotId !== current.current?.snapshot.id
-      )
-        return;
-      if (event.payload.phase === "stream")
-        setStream((text) => text + event.payload.text);
-      else setRunText(event.payload.text);
-    });
-    void subscription.then((unlisten) => {
-      if (removed) unlisten();
-    });
-    return () => {
-      removed = true;
-      void subscription.then((unlisten) => unlisten());
-    };
-  }, [run]);
-  useEffect(() => {
     if (!data?.github.connected) return;
     let tick = 0;
     const timer = setInterval(async () => {
@@ -463,11 +450,9 @@ export default function App() {
       if (request !== opening.current) return;
       setWorkspace(w);
       if (matchMedia("(max-width: 1000px)").matches) setInboxOpen(false);
-      setStream("");
       setSelection(null);
       setDiscussion(false);
       setMode("guide");
-      setPendingGuide(null);
       setNewRevision(false);
       if (!isSampleRepo(repository))
         localStorage.setItem("diffcity.lastPr", w.snapshot.pull.url);
@@ -486,11 +471,9 @@ export default function App() {
       if (request !== opening.current) return;
       setWorkspace(w);
       if (matchMedia("(max-width: 1000px)").matches) setInboxOpen(false);
-      setStream("");
       setMode("guide");
       setSelection(null);
       setDiscussion(false);
-      setPendingGuide(null);
       setNewRevision(false);
     } catch (e) {
       onError(e);
@@ -509,10 +492,8 @@ export default function App() {
       if (matchMedia("(max-width: 1000px)").matches) setInboxOpen(false);
       setSelection(null);
       setDiscussion(false);
-      setPendingGuide(null);
       setNewRevision(true);
       setMode("guide");
-      setStream("");
     } catch (e) {
       onError(e);
     } finally {
@@ -609,7 +590,7 @@ export default function App() {
           : w,
       );
       setMode("guide");
-      if (pendingGuide?.id === guideId) setPendingGuide(null);
+      setPendingGuides((guides) => guides.filter((g) => g.id !== guideId));
     } finally {
       guideSelection.current = false;
       setGuideChanging(false);
@@ -628,45 +609,38 @@ export default function App() {
   }, []);
   const analyze = async (preference: ModelPreference) => {
     if (!workspace) return;
-    const id = crypto.randomUUID();
-    setRun(id);
-    setRunText(`Starting ${preference.model} review…`);
-    setStream("");
-    setError("");
-    try {
-      await flush();
-      const guide = await api.analyze(workspace.snapshot.id, id, preference);
-      if (current.current?.snapshot.id === guide.snapshotId)
-        setPendingGuide(guide);
-    } catch (e) {
-      onError(e);
-    } finally {
-      setRun(null);
-    }
+    const snapshotId = workspace.snapshot.id;
+    await flush();
+    const guide = await ai.start(
+      { kind: "guide", snapshotId, preference },
+      (id) => api.analyze(snapshotId, id, preference),
+    );
+    if (guide) setPendingGuides((guides) => [...guides, guide]);
   };
   const ask = async (note: Note) => {
-    const id = crypto.randomUUID();
-    setRun(id);
-    setActiveQuestion(note);
-    setStream("");
-    setRunText("Asking your AI agent…");
-    setError("");
-    try {
-      await flush();
-      onNote(await api.ask(note.snapshotId, note.id, id));
-    } catch (e) {
-      onError(e);
-    } finally {
-      setRun(null);
-      setStream("");
-      setActiveQuestion(null);
-    }
+    const preference = threadModel(
+      current.current?.snapshot.id === note.snapshotId
+        ? current.current.notes
+        : [],
+      note.anchor,
+      data?.modelPreference ?? defaultModelPreference,
+    );
+    const answer = await ai.start(
+      {
+        kind: "question",
+        snapshotId: note.snapshotId,
+        question: note,
+        preference,
+      },
+      (id) => api.ask(note.snapshotId, note.id, id, preference),
+    );
+    if (answer) onNote(answer);
   };
   const explainText = async (anchor: Anchor) => {
     if (
       !workspace ||
       !anchor.textSelection ||
-      run ||
+      isThreadBusy(anchor) ||
       startingTextQuestion.current
     )
       return;
@@ -690,7 +664,7 @@ export default function App() {
       await inline.start(snapshotId, anchor);
       if (current.current?.snapshot.id !== snapshotId) return;
       setSelection(anchor);
-      await ask(note);
+      void ask(note).catch(onError);
     } finally {
       startingTextQuestion.current = false;
     }
@@ -1133,7 +1107,7 @@ export default function App() {
               key={`${workspace.snapshot.id}/${mode}`}
               workspace={workspace}
               viewport={reviewScroll}
-              disabled={loading || guideChanging || !!run || !data}
+              disabled={loading || guideChanging || !data}
               onAnalyze={() => setDialog("new-guide")}
             />
             <div className="workspace-tabs">
@@ -1182,37 +1156,62 @@ export default function App() {
                 key={workspace.snapshot.id}
                 guide={workspace.guide}
                 pendingId={pendingGuide?.id}
-                disabled={loading || guideChanging || !!run}
+                disabled={loading || guideChanging}
                 onSelect={selectGuide}
               />
             )}
-            {run && (
-              <div className="run-banner">
-                <LoaderCircle size={14} className="spin" />
-                <span>{runText}</span>
-                <Button
-                  className="text-button"
-                  onPress={() => void api.cancel()}
-                >
-                  {t("Cancel")}{" "}
-                </Button>
-              </div>
-            )}
-            {pendingGuide?.snapshotId === workspace.snapshot.id && (
-              <div className="update-banner">
-                <Sparkles size={15} />
-                <span>{t("Your guided review is ready.")} </span>
-                <Button
-                  isDisabled={guideChanging || !!run}
-                  onPress={() => {
-                    if (pendingGuide.id)
-                      void selectGuide(pendingGuide.id).catch(onError);
-                  }}
-                >
-                  {t("Open updated guide")} <ArrowRight size={13} />
-                </Button>
-              </div>
-            )}
+            {ai.runs
+              .filter(
+                (run) =>
+                  run.snapshotId === workspace.snapshot.id &&
+                  run.kind === "guide",
+              )
+              .map((run) => (
+                <div className="run-banner" key={run.id} role="status">
+                  {isActiveRun(run) && (
+                    <LoaderCircle size={14} className="spin" />
+                  )}
+                  <span>
+                    {run.preference.model} · {t(run.text)}
+                  </span>
+                  <Button
+                    className="text-button"
+                    isDisabled={run.phase === "cancelling"}
+                    onPress={() =>
+                      isActiveRun(run)
+                        ? void ai.cancel(run.id)
+                        : ai.dismiss(run.id)
+                    }
+                  >
+                    {t(isActiveRun(run) ? "Cancel" : "Dismiss")}
+                  </Button>
+                </div>
+              ))}
+            {pendingGuides
+              .filter((g) => g.snapshotId === workspace.snapshot.id)
+              .map((guide) => (
+                <div className="update-banner" key={guide.id}>
+                  <Sparkles size={15} />
+                  <span>
+                    {guide.model} · {t("Your guided review is ready.")}
+                  </span>
+                  <Button
+                    isDisabled={guideChanging}
+                    onPress={() => {
+                      if (guide.id)
+                        void selectGuide(guide.id)
+                          .then(() =>
+                            setPendingGuides((guides) =>
+                              guides.filter((g) => g.id !== guide.id),
+                            ),
+                          )
+                          .catch(onError);
+                    }}
+                  >
+                    {t("Open updated guide")} <ArrowRight size={13} />
+                  </Button>
+                </div>
+              ))}
             {newRevision && (
               <div className="update-banner">
                 <GitPullRequest size={15} />
@@ -1238,9 +1237,18 @@ export default function App() {
                 workspace,
                 inline,
                 chat,
-                busy: !!run,
-                activeQuestion,
-                stream,
+                runs: ai.runs.filter(
+                  (r) => r.snapshotId === workspace.snapshot.id,
+                ),
+                isBusy: isThreadBusy,
+                modelFor: (anchor) =>
+                  threadModel(
+                    workspace.notes,
+                    anchor,
+                    data?.modelPreference ?? defaultModelPreference,
+                  ),
+                cancel: ai.cancel,
+                dismiss: ai.dismiss,
                 ask,
                 explainText,
                 prepare,
@@ -1417,7 +1425,7 @@ export default function App() {
             onRefresh={refreshModels}
             onSave={async (preference) => {
               if (dialog === "new-guide") {
-                void analyze(preference);
+                void analyze(preference).catch(onError);
                 return;
               }
               const modelPreference = await api.modelPreference(preference);

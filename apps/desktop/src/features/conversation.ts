@@ -1,14 +1,22 @@
 import { createContext, useContext } from "react";
-import type { Anchor, Note, ReviewWorkspace } from "../lib/api";
+import type {
+  Anchor,
+  Note,
+  ModelPreference,
+  ReviewWorkspace,
+} from "../lib/api";
+import type { AiRun } from "./useAiRuns";
 import type { NoteComposerState } from "./useNoteComposer";
 
 export type Conversation = {
   workspace: ReviewWorkspace;
   inline: NoteComposerState;
   chat: NoteComposerState;
-  busy: boolean;
-  activeQuestion: Note | null;
-  stream: string;
+  runs: AiRun[];
+  modelFor: (anchor: Anchor | null) => ModelPreference;
+  isBusy: (anchor: Anchor | null) => boolean;
+  cancel: (id: string) => Promise<void>;
+  dismiss: (id: string) => void;
   ask: (note: Note) => Promise<void>;
   explainText?: (anchor: Anchor) => Promise<void>;
   prepare: (note: Note) => Promise<void>;

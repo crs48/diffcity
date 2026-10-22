@@ -372,11 +372,19 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let binary = fake_binary(root.path());
         for preference in [
-            ModelPreference::default(),
+            ModelPreference {
+                provider: "codex".into(),
+                model: "gpt-6-astra".into(),
+                reasoning_effort: Some("xhigh".into()),
+            },
             ModelPreference {
                 model: "gpt-6-luna".into(),
                 reasoning_effort: Some("low".into()),
-                ..ModelPreference::default()
+                ..ModelPreference {
+                    provider: "codex".into(),
+                    model: "gpt-6-astra".into(),
+                    reasoning_effort: Some("xhigh".into()),
+                }
             },
         ] {
             let mut rpc = Rpc::spawn(&binary, root.path()).await.unwrap();

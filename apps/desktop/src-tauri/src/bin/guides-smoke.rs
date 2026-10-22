@@ -24,7 +24,11 @@ async fn main() -> Result<()> {
     }
     let mut guides = vec![];
     for choice in [
-        ModelPreference::default(),
+        ModelPreference {
+            provider: "codex".into(),
+            model: "gpt-6-astra".into(),
+            reasoning_effort: Some("xhigh".into()),
+        },
         ModelPreference {
             provider: "claude".into(),
             model: "claude-fable-5".into(),

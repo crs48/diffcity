@@ -450,5 +450,19 @@
   "Think alongside your AI agent": "Think alongside your AI agent",
   "Choose New guide for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.": "Choose New guide for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.",
   "This saved guide uses the earlier brief format. Choose New guide for a full overview with diagrams where helpful.": "This saved guide uses the earlier brief format. Choose New guide for a full overview with diagrams where helpful.",
-  "Historical review: code, private comments, and AI chat are available. GitHub publication requires an open PR.": "Historical review: code, private comments, and AI chat are available. GitHub publication requires an open PR."
+  "Historical review: code, private comments, and AI chat are available. GitHub publication requires an open PR.": "Historical review: code, private comments, and AI chat are available. GitHub publication requires an open PR.",
+  "Independent conversations, shared PR context.": "Independent conversations, shared PR context.",
+  "Private · this thread has its own AI context": "Private · this thread has its own AI context",
+  "Continue conversation": "Continue conversation",
+  "AI response stopped": "AI response stopped",
+  "Cancel response": "Cancel response",
+  "Cancelled": "Cancelled",
+  "Cancelling…": "Cancelling…",
+  "Waiting for an AI slot…": "Waiting for an AI slot…",
+  "Thinking about your question…": "Thinking about your question…",
+  "Dismiss": "Dismiss",
+  "{{count}} AI replies in this conversation.": "{{count}} AI replies in this conversation.",
+  "Replies use {{model}}": "Replies use {{model}}",
+  "This conversation is responding. You can ask in another thread.": "This conversation is responding. You can ask in another thread.",
+  "Applies to new guides and conversations. Existing conversations keep their model.": "Applies to new guides and conversations. Existing conversations keep their model."
 }

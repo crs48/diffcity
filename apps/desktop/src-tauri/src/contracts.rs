@@ -87,9 +87,9 @@ pub struct ModelPreference {
 impl Default for ModelPreference {
     fn default() -> Self {
         Self {
-            provider: "codex".into(),
-            model: "gpt-6-astra".into(),
-            reasoning_effort: Some("xhigh".into()),
+            provider: "claude".into(),
+            model: "claude-fable-5".into(),
+            reasoning_effort: Some("high".into()),
         }
     }
 }

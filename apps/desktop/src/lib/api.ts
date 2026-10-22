@@ -72,9 +72,13 @@ export const api = {
     invoke<ReviewWorkspace>("select_guide", { snapshotId, guideId }),
   analyze: (snapshotId: string, runId: string, preference?: ModelPreference) =>
     invoke<Guide>("analyze", { snapshotId, runId, preference }),
-  ask: (snapshotId: string, noteId: string, runId: string) =>
-    invoke<Note>("ask_codex", { snapshotId, noteId, runId }),
-  cancel: () => invoke<void>("cancel_codex"),
+  ask: (
+    snapshotId: string,
+    noteId: string,
+    runId: string,
+    preference?: ModelPreference,
+  ) => invoke<Note>("ask_codex", { snapshotId, noteId, runId, preference }),
+  cancel: (runId: string) => invoke<void>("cancel_codex", { runId }),
   publish: (request: PublishRequest) =>
     invoke<PublishResult>("publish_review", { request }),
   external: (url: string) => invoke<void>("open_external", { url }),

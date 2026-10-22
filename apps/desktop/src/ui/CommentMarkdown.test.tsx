@@ -172,8 +172,26 @@ describe("GitHub flavored comment Markdown", () => {
     const ask = vi.fn().mockResolvedValue(undefined);
     const conversation = {
       workspace,
-      busy: false,
-      stream: body,
+      isBusy: () => false,
+      runs: [
+        {
+          id: "run",
+          snapshotId: note.snapshotId,
+          kind: "question",
+          question: note,
+          preference: {
+            provider: "claude",
+            model: "claude-fable-5",
+            reasoningEffort: "high",
+          },
+          phase: "working",
+          text: "Responding…",
+          stream: body,
+        },
+      ],
+      cancel: vi.fn(),
+      dismiss: vi.fn(),
+      openChat: vi.fn(),
       ask,
       onError: vi.fn(),
     } as unknown as Conversation;
@@ -193,7 +211,6 @@ describe("GitHub flavored comment Markdown", () => {
         notes={[note]}
         remote={[remote]}
         conversation={conversation}
-        streaming
       />,
     );
     expect(screen.getAllByRole("table")).toHaveLength(3);
@@ -206,8 +223,13 @@ describe("GitHub flavored comment Markdown", () => {
       <ReviewMessages
         notes={[note]}
         remote={[remote]}
-        conversation={{ ...conversation, stream: "```sql\nSELECT *" }}
-        streaming
+        conversation={{
+          ...conversation,
+          runs: conversation.runs.map((r) => ({
+            ...r,
+            stream: "```sql\nSELECT *",
+          })),
+        }}
       />,
     );
     expect(

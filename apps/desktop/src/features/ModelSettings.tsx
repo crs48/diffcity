@@ -149,7 +149,7 @@ export function ModelSettings({
           {t(
             purpose === "guide"
               ? "Creates another guide for this revision. Your saved guides, comments, and default model stay available."
-              : "Applies to guided walkthroughs, inline replies, and PR chat. Changes take effect on your next request.",
+              : "Applies to new guides and conversations. Existing conversations keep their model.",
           )}
         </p>
         <label>

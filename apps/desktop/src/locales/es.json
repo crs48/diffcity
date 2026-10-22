@@ -450,5 +450,19 @@
   "Think alongside your AI agent": "Reflexiona con tu agente de IA",
   "Choose New guide for an overview of the changes and a guided walkthrough. The PR description below is provided by its author.": "Elige Nueva guía para ver un resumen de los cambios y un recorrido guiado. La descripción de abajo es del autor del PR.",
   "This saved guide uses the earlier brief format. Choose New guide for a full overview with diagrams where helpful.": "Esta guía usa el formato breve anterior. Elige Nueva guía para obtener un resumen completo con diagramas cuando sean útiles.",
-  "Historical review: code, private comments, and AI chat are available. GitHub publication requires an open PR.": "Revisión histórica: están disponibles el código, los comentarios privados y el chat de IA. Para publicar en GitHub, el PR debe estar abierto."
+  "Historical review: code, private comments, and AI chat are available. GitHub publication requires an open PR.": "Revisión histórica: están disponibles el código, los comentarios privados y el chat de IA. Para publicar en GitHub, el PR debe estar abierto.",
+  "Independent conversations, shared PR context.": "Conversaciones independientes, contexto compartido de la PR.",
+  "Private · this thread has its own AI context": "Privado · este hilo tiene su propio contexto de IA",
+  "Continue conversation": "Continuar conversación",
+  "AI response stopped": "Respuesta de IA detenida",
+  "Cancel response": "Cancelar respuesta",
+  "Cancelled": "Cancelado",
+  "Cancelling…": "Cancelando…",
+  "Waiting for an AI slot…": "Esperando un turno de IA…",
+  "Thinking about your question…": "Pensando en tu pregunta…",
+  "Dismiss": "Descartar",
+  "{{count}} AI replies in this conversation.": "{{count}} respuestas de IA en esta conversación.",
+  "Replies use {{model}}": "Las respuestas usan {{model}}",
+  "This conversation is responding. You can ask in another thread.": "Esta conversación está respondiendo. Puedes preguntar en otro hilo.",
+  "Applies to new guides and conversations. Existing conversations keep their model.": "Se aplica a guías y conversaciones nuevas. Las conversaciones existentes conservan su modelo."
 }

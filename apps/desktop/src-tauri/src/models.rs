@@ -119,7 +119,11 @@ mod tests {
                 description: String::new(),
             }],
         }];
-        let preference = ModelPreference::default();
+        let preference = ModelPreference {
+            provider: "codex".into(),
+            model: "gpt-6-astra".into(),
+            reasoning_effort: Some("xhigh".into()),
+        };
         assert!(validate_preference(&preference, &models).is_ok());
         assert!(
             validate_preference(
@@ -158,9 +162,9 @@ mod tests {
         settings.codex_path = Some(codex::fake_binary(root.path()));
         service.settings(settings).unwrap();
         let selected = ModelPreference {
+            provider: "codex".into(),
             model: "gpt-6-luna".into(),
             reasoning_effort: Some("low".into()),
-            ..ModelPreference::default()
         };
         service
             .save_model_preference(selected.clone())

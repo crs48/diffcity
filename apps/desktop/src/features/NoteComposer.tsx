@@ -10,12 +10,14 @@ export function NoteComposer({
   state,
   inline = false,
   busy,
+  model,
   onAsk,
   onError,
 }: {
   state: NoteComposerState;
   inline?: boolean;
   busy: boolean;
+  model?: string;
   onAsk: (note: Note) => Promise<void>;
   onError: (error: unknown) => void;
 }) {
@@ -78,9 +80,19 @@ export function NoteComposer({
         ) : editing ? (
           t("GitHub draft · not published")
         ) : (
-          t("Private · shared with this PR’s AI conversation")
+          t("Private · this thread has its own AI context")
         )}
       </div>
+      {model && (
+        <p className="muted composer-model">
+          {t("Replies use {{model}}", { model })}
+        </p>
+      )}
+      {busy && (
+        <p className="muted">
+          {t("This conversation is responding. You can ask in another thread.")}
+        </p>
+      )}
       <div className="composer-actions">
         {!textOnly && (
           <Button
