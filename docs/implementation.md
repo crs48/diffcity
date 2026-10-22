@@ -563,5 +563,7 @@ Development and release commands now explicitly pass `--target aarch64-apple-dar
 
 - [x] All 10 packaged executables are `arm64`; the signed bundle passes strict verification.
 - [x] All 76 Rust tests pass under the native ARM toolchain. Four packaging regressions pass, including rejection of an Intel helper in an otherwise ARM app.
-- [x] The configured GitHub CLI and resolved Codex CLI executable are both `arm64`. ARM connection checks reach Codex and enumerate seven models. `gh api user` succeeds; the app's GitHub API connection timed out twice, so live app-level GitHub connectivity is not claimed by this check.
-- [ ] Replace the installed Intel build and verify native launch after the pending manual Mac unlock. Preserve private notes and saved settings using a fresh SQLite backup.
+- [x] The configured GitHub CLI and resolved Codex CLI executable are both `arm64`. ARM connection checks reach Codex and enumerate seven models. Initial standalone GitHub API checks timed out twice; the installed ARM app subsequently connects as `crs48`, identifies the Codex login/version, and advances repository synchronization.
+- [x] Replace the installed Intel build and verify native launch after manual Mac unlock. The installed app opens the saved review for test PR #3 with its minimap and no Intel warning. A runtime process sample reports `Code Type: ARM64`; all 10 installed binaries pass the architecture gate and the copied bundle passes strict signature verification.
+- [x] All 10 private notes, saved settings, and the model preference match a fresh pre-install SQLite backup byte for byte. Installed executable SHA-256: `accbda3e52d8353191979b51e5aea41c1d97206472d2efca28b7f3f800ae6da6`.
+- [x] [Signed ARM packaging CI passes on 58af2a9](https://github.com/crs48/diffcity/actions/runs/39709382554), including the architecture fixtures, deep signature check, and existing Rust/frontend validation.
