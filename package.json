@@ -5,9 +5,10 @@
   "license": "MIT",
   "packageManager": "pnpm@10.11.1",
   "scripts": {
-    "dev": "pnpm --filter @diffcity/desktop tauri dev",
+    "dev": "pnpm --filter @diffcity/desktop tauri dev --target aarch64-apple-darwin",
     "build": "pnpm --filter @diffcity/desktop build",
-    "desktop:build": "pnpm --filter @diffcity/desktop tauri build --bundles app",
+    "desktop:build": "pnpm --filter @diffcity/desktop tauri build --target aarch64-apple-darwin --bundles app && pnpm desktop:verify",
+    "desktop:verify": "node scripts/verify-macos-architecture.mjs",
     "check": "pnpm --filter @diffcity/desktop check",
     "test": "cargo test --workspace && pnpm --filter @diffcity/desktop test",
     "contracts": "cargo run -p diffcity --bin export-contracts",

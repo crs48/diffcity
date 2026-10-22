@@ -18,6 +18,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: rustup show
+      - name: Require native Apple silicon runner
+        run: test "$(uname -m)" = arm64
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
       - run: pnpm contracts && git diff --exit-code -- packages/contracts
@@ -25,4 +27,6 @@ jobs:
       - run: pnpm check
       - run: pnpm lint
       - run: pnpm test
-      - run: pnpm desktop:build
+      - run: node --test scripts/verify-macos-architecture.test.mjs
+      - name: Build and verify Apple silicon app
+        run: pnpm desktop:build
