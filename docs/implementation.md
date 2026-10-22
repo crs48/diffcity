@@ -650,3 +650,30 @@ Selections may cover up to 200 consecutive source lines and 16,000 UTF-16 units 
 - [x] `cargo run -p diffcity --bin text-selection-smoke` sends the selected `invitationExpiry` identifier and a follow-up through the installed local Codex runtime using GPT-6 Astra / xhigh. Both answers retain the exact private anchor and survive reopening the isolated SQLite store. No GitHub write is performed.
 - [x] Production WebKit verifies native pointer selection, one-click default questions, inline and shared-chat follow-ups, separate words on one line, Alt+Enter/Escape, backward multiline selections, split columns, reviewed-comparison old-side text, and expanded context. Light/dark and narrow layouts have no window overflow or nested diff/comment scrollbars. The full-page axe audit caught a stale review tab-to-panel reference; remounting the active panel and a keyboard regression fix it. Final sampled WCAG A/AA checks report zero violations.
 - [x] Installed the final signed ARM app and verified native double-click selection → Ask AI → streamed explanation → follow-up → shared PR chat. Both answers persisted through quit/relaunch. All 14 pre-existing private documents remain byte-for-byte identical; exactly four private messages were added by the native sample check. The final accessibility update preserves all 18 documents. All 12 bundled executables have ARM slices, strict signature verification passes, and installed/packaged executable hashes match.
+
+## Claude and saved guide versions — October 22, 2026
+
+**New guide** now opens a provider/model/reasoning picker. The choice applies to that guide only; **Model** in the account rail still controls the default for subsequent requests and chat. **Saved guide** switches among immutable runs for the same captured revision, including repeated runs of the same model. Generating a guide keeps the current reading view in place until the reviewer opens the result. Existing guides migrate lazily into the history without losing their content.
+
+```mermaid
+flowchart LR
+  Snapshot[Immutable PR snapshot] --> Codex[Codex guide run]
+  Snapshot --> Claude[Claude guide run]
+  Codex --> History[Saved guide versions]
+  Claude --> History
+  History --> Selected[Explicitly selected guide]
+  Shared[Shared comments and hunk decisions] --> Selected
+  Navigation[Per-guide navigation and folding] --> Selected
+```
+
+Claude Code uses its existing local login through the SDK streaming protocol. Its runtime supplies resolved model IDs and supported effort levels. Telemetry-disabled Claude startup omits older models from its standard picker, so the supported `modelPicker` setting explicitly includes Fable 5; runtime model restrictions still apply. Each turn checks the actual model, permits only structured-output tooling for guide generation, and rejects unexpected tool/MCP requests or missing structured output. Sessions are ephemeral, run outside the checkout, and disable customizations and hooks. The same provider routing supports private chat, with the actual model retained on each assistant message. See the [Claude CLI reference](https://code.claude.com/docs/en/cli-reference) and [model configuration](https://code.claude.com/docs/en/model-config).
+
+Validation completed:
+
+- [x] 93 Rust tests, 119 frontend tests, type checking, ESLint, Clippy, generated contracts, and formatting.
+- [x] Real local accounts: Astra / Extra high produced a three-section guide with a 2,358-character overview; Fable 5 / High produced four sections and a 2,846-character overview of the same synthetic invitation PR. Both were retained, selected, and reopened after restart. Shared review decisions and the default preference survived. A Claude follow-up chat returned attributed model metadata.
+- [x] Production WebKit: saved-run switching, another run of the same model, generation without moving the current view or default, selection persistence, and preserved review marks. Light/dark guide and picker plus a 720px guide report zero axe WCAG A/AA violations.
+- [x] Installed ARM app: saved-guide menu switches between both real generated guides and their distinct overviews. The New guide dialog connects to the local Claude Code account, offers Claude Fable 5 / High, and enables generation.
+- [x] All 13 bundled Mach-O executables contain ARM code and pass strict signature verification. The installed main executable matches the built bundle (`ca98ccb688b84bc1325948238103bbeb38acd21db564fe16c21e8215bd37c868`). All 18 pre-existing note/settings/model-preference documents match the fresh SQLite backup byte for byte. Two live-generated synthetic guides were added for immediate comparison; no GitHub feedback was published.
+
+The isolated live check is repeatable with `cargo run -p diffcity --bin guides-smoke -- --infer`. It reuses saved successful runs when repeated. Manual VoiceOver coverage and direct API-key/cloud-account management remain separate work; this implementation connects the installed Claude Code runtime.
