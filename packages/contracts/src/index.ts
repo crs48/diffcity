@@ -1,4 +1,9 @@
 // Generated from Rust contracts. Run pnpm contracts; do not edit.
+export type AgentAccess = "limited" | "ask" | "full";
+export type AgentInputOption = { label: string, value: string, description: string, };
+export type AgentInputQuestion = { id: string, label: string, kind: string, required: boolean, multiple: boolean, options: Array<AgentInputOption>, };
+export type AgentPrompt = { id: string, title: string, description: string, details: string, questions: Array<AgentInputQuestion>, url: string | null, };
+export type AgentAnswer = { allow: boolean, answers: { [key in string]: Array<string> }, };
 export type Settings = { repositories: Array<string>, codexPath: string | null, claudePath?: string, ghPath: string | null, model: string | null, theme: string, locale: string, completedDays: number, };
 export type LocalCodeSettings = { roots: Array<string>, overrides: { [key in string]: string }, };
 export type LocalCheckout = { repository: string, path: string, };

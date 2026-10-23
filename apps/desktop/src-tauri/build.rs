@@ -33,6 +33,7 @@ fn main() {
             "guide_versions",
             "select_guide",
             "ask_codex",
+            "respond_agent",
             "cancel_codex",
             "publish_review",
             "sample_review",

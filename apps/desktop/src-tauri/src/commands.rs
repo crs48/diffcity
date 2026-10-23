@@ -211,9 +211,17 @@ pub async fn ask_codex(
     note_id: String,
     run_id: String,
     preference: Option<ModelPreference>,
+    access: Option<AgentAccess>,
 ) -> Output<AskReply> {
     let answer = service
-        .ask_with_preference(&snapshot_id, &note_id, &run_id, preference, emitter(app))
+        .ask_with_access(
+            &snapshot_id,
+            &note_id,
+            &run_id,
+            preference,
+            access.unwrap_or_default(),
+            emitter(app),
+        )
         .await
         .map_err(error)?;
     let draft = service
@@ -421,4 +429,17 @@ pub async fn choose_code_folder(app: tauri::AppHandle) -> Output<Option<String>>
                 .map_err(|e| e.to_string())
         })
         .transpose()
+}
+
+#[tauri::command]
+pub fn respond_agent(
+    service: State<'_, Arc<Service>>,
+    run_id: String,
+    request_id: String,
+    answer: AgentAnswer,
+) -> Output<()> {
+    service
+        .approvals
+        .respond(&run_id, &request_id, answer)
+        .map_err(error)
 }

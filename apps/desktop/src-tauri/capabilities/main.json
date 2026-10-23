@@ -34,6 +34,7 @@
     "allow-guide-versions",
     "allow-select-guide",
     "allow-ask-codex",
+    "allow-respond-agent",
     "allow-cancel-codex",
     "allow-publish-review",
     "allow-sample-review",

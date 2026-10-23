@@ -21,6 +21,9 @@ pub fn path(settings: &Settings) -> Result<String> {
     )
 }
 fn command(binary: &str) -> Command {
+    command_with_access(binary, AgentAccess::Limited)
+}
+fn command_with_access(binary: &str, access: AgentAccess) -> Command {
     let mut cmd = Command::new(binary);
     let environment: Vec<_> = [
         "HOME",
@@ -37,9 +40,10 @@ fn command(binary: &str) -> Command {
     .iter()
     .filter_map(|key| std::env::var_os(key).map(|value| (*key, value)))
     .collect();
-    cmd.env_clear()
-        .envs(environment)
-        .env("DISABLE_TELEMETRY", "1")
+    if !access.connected() {
+        cmd.env_clear().envs(environment);
+    }
+    cmd.env("DISABLE_TELEMETRY", "1")
         .env("DISABLE_AUTOUPDATER", "1")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -58,28 +62,13 @@ impl Session {
         cwd: &Path,
         preference: Option<&ModelPreference>,
         repository_access: bool,
+        access: AgentAccess,
     ) -> Result<Self> {
         std::fs::create_dir_all(cwd)?;
-        let mut cmd = command(binary);
+        let mut cmd = command_with_access(binary, access);
         cmd.current_dir(cwd).args([
             "-p",
-            "--safe-mode",
-            "--restricted",
-            "--tools",
-            if repository_access { "Read,Glob,Grep,Bash" } else { "" },
-            "--disable-slash-commands",
-            "--strict-mcp-config",
-            "--mcp-config",
-            "{\"mcpServers\":{}}",
-            "--setting-sources",
-            "",
-            "--settings",
-            r#"{"disableAllHooks":true,"autoMemoryEnabled":false,"modelPicker":{"options":[{"model":"claude-fable-5","label":"Fable 5","description":"Fable 5 · A separate perspective on this review"}],"replaceBuiltInOptions":false}}"#,
             "--no-session-persistence",
-            "--permission-mode",
-            if repository_access { "plan" } else { "dontAsk" },
-            "--permission-prompts",
-            "none",
             "--input-format",
             "stream-json",
             "--output-format",
@@ -87,10 +76,54 @@ impl Session {
             "--verbose",
             "--include-partial-messages",
         ]);
-        if repository_access {
-            cmd.args(["--allowedTools", "Read", "Glob", "Grep"]);
-            cmd.env("GIT_OPTIONAL_LOCKS", "0").env("GIT_PAGER", "cat");
+        let mut settings = json!({"disableAllHooks":true,"autoMemoryEnabled":false,"modelPicker":{"options":[{"model":"claude-fable-5","label":"Fable 5","description":"Fable 5 · A separate perspective on this review"}],"replaceBuiltInOptions":false}});
+        if access.connected() {
+            cmd.args([
+                "--permission-prompt-tool=stdio",
+                "--permission-prompts",
+                "host",
+                "--permission-mode",
+                if access == AgentAccess::Full {
+                    "bypassPermissions"
+                } else {
+                    "default"
+                },
+            ]);
+            if access == AgentAccess::Full {
+                cmd.arg("--allow-dangerously-skip-permissions");
+            } else {
+                // Ask rules take priority over inherited allow rules. Read/search
+                // remain automatic; shell, edits and MCP calls are reviewable.
+                settings["permissions"] =
+                    json!({"ask":["Bash", "Edit", "Write", "NotebookEdit", "mcp__*"]});
+            }
+        } else {
+            cmd.args([
+                "--safe-mode",
+                "--restricted",
+                "--tools",
+                if repository_access {
+                    "Read,Glob,Grep,Bash"
+                } else {
+                    ""
+                },
+                "--disable-slash-commands",
+                "--strict-mcp-config",
+                "--mcp-config",
+                "{\"mcpServers\":{}}",
+                "--setting-sources",
+                "",
+                "--permission-mode",
+                if repository_access { "plan" } else { "dontAsk" },
+                "--permission-prompts",
+                "none",
+            ]);
+            if repository_access {
+                cmd.args(["--allowedTools", "Read", "Glob", "Grep"]);
+            }
         }
+        cmd.args(["--settings", &settings.to_string()]);
+        cmd.env("GIT_OPTIONAL_LOCKS", "0").env("GIT_PAGER", "cat");
         if let Some(p) = preference {
             cmd.args(["--model", &p.model]);
             if let Some(effort) = &p.reasoning_effort {
@@ -125,12 +158,18 @@ impl Session {
         serde_json::from_str(&line).context("Claude returned an invalid protocol message")
     }
     async fn initialize(&mut self, instructions: &str, schema: Option<Value>) -> Result<Value> {
-        self.send(
-            json!({"type":"control_request","request_id":"initialize","request":{
-                "subtype":"initialize", "systemPrompt":[instructions], "jsonSchema":schema,
-            }}),
+        self.initialize_request(
+            json!({"subtype":"initialize", "systemPrompt":[instructions], "jsonSchema":schema}),
         )
-        .await?;
+        .await
+    }
+    async fn initialize_connected(&mut self, instructions: &str) -> Result<Value> {
+        self.initialize_request(json!({"subtype":"initialize", "appendSystemPrompt":instructions}))
+            .await
+    }
+    async fn initialize_request(&mut self, request: Value) -> Result<Value> {
+        self.send(json!({"type":"control_request","request_id":"initialize","request":request}))
+            .await?;
         tokio::time::timeout(Duration::from_secs(45), async {
             loop {
                 let v = self.read().await?;
@@ -149,6 +188,71 @@ impl Session {
         })
         .await
         .context("Claude did not initialize in time")?
+    }
+    async fn handle_request(
+        &mut self,
+        value: &Value,
+        interaction: Option<&crate::agent_access::Interaction<'_>>,
+        emit: &impl Fn(&str, &str),
+    ) -> Result<()> {
+        use crate::agent_access::{elicitation, elicitation_content, prompt, questions};
+        let request = &value["request"];
+        let subtype = request["subtype"].as_str().unwrap_or_default();
+        let result = match (subtype, interaction) {
+            ("can_use_tool", Some(interaction)) => {
+                let tool = request["tool_name"].as_str().unwrap_or("tool");
+                let input = &request["input"];
+                let mut card = prompt(
+                    &format!("Allow {tool}?"),
+                    request["decision_reason"]
+                        .as_str()
+                        .or(request["description"].as_str())
+                        .unwrap_or("Approve this action once, or decline it."),
+                    input,
+                );
+                if tool == "AskUserQuestion" {
+                    card.title = "Agent needs your input".into();
+                    card.details.clear();
+                    card.questions = questions(&input["questions"], true);
+                }
+                let answer = interaction.request(card, emit).await?;
+                if answer.allow {
+                    let mut updated = input.clone();
+                    if tool == "AskUserQuestion" {
+                        updated["answers"] = json!(
+                            answer
+                                .answers
+                                .iter()
+                                .map(|(key, values)| (
+                                    key.clone(),
+                                    if values.len() == 1 {
+                                        json!(values[0])
+                                    } else {
+                                        json!(values)
+                                    }
+                                ))
+                                .collect::<serde_json::Map<_, _>>()
+                        );
+                    }
+                    json!({"behavior":"allow","updatedInput":updated})
+                } else {
+                    json!({"behavior":"deny","message":"The user declined this action in Diff City. Do not work around the denial."})
+                }
+            }
+            ("elicitation", Some(interaction)) => {
+                let mut request = request.clone();
+                request["requestedSchema"] = request["requested_schema"].clone();
+                let answer = interaction.request(elicitation(&request)?, emit).await?;
+                json!({"action":if answer.allow {"accept"} else {"decline"},"content":if answer.allow {elicitation_content(&request, &answer)?} else {Value::Null}})
+            }
+            ("can_use_tool", None) => {
+                json!({"behavior":"deny","message":"Tools requiring permission are unavailable in Limited access"})
+            }
+            _ => {
+                return self.send(json!({"type":"control_response","response":{"subtype":"error","request_id":value["request_id"],"error":"This request is not supported by Diff City"}})).await;
+            }
+        };
+        self.send(json!({"type":"control_response","response":{"subtype":"success","request_id":value["request_id"],"response":result}})).await
     }
 }
 fn models(value: &Value) -> Result<Vec<Model>> {
@@ -208,7 +312,7 @@ pub async fn connection(settings: &Settings, cwd: &Path) -> Result<(Connection, 
         status["loggedIn"] == true && output.status.success(),
         "Claude Code is not signed in. Run claude auth login, then refresh models."
     );
-    let mut session = Session::spawn(&binary, cwd, None, false).await?;
+    let mut session = Session::spawn(&binary, cwd, None, false, AgentAccess::Limited).await?;
     let init = session
         .initialize(
             "You are a read-only code review assistant. No tools are available.",
@@ -226,9 +330,10 @@ fn validate_event(
     preference: &ModelPreference,
     structured: bool,
     repository_access: bool,
+    access: AgentAccess,
 ) -> Result<()> {
     ensure!(
-        value["type"] != "control_request",
+        access.connected() || value["type"] != "control_request",
         "Claude requested a capability outside the review context"
     );
     if value["type"] == "system" && value["subtype"] == "init" {
@@ -237,15 +342,16 @@ fn validate_event(
             "Claude selected a different model; the previous guide is preserved"
         );
         ensure!(
-            value["tools"]
-                .as_array()
-                .is_some_and(|tools| tools.iter().all(|tool| tool
-                    .as_str()
-                    .is_some_and(|name| allowed_tool(name, structured, repository_access)))),
+            access.connected()
+                || value["tools"]
+                    .as_array()
+                    .is_some_and(|tools| tools.iter().all(|tool| tool
+                        .as_str()
+                        .is_some_and(|name| allowed_tool(name, structured, repository_access)))),
             "Claude exposed tools outside the review context"
         );
         ensure!(
-            value["mcp_servers"].as_array().is_some_and(Vec::is_empty),
+            access.connected() || value["mcp_servers"].as_array().is_some_and(Vec::is_empty),
             "Claude exposed MCP servers outside the review context"
         );
     }
@@ -259,11 +365,12 @@ fn validate_event(
         for block in value["message"]["content"].as_array().into_iter().flatten() {
             if block["type"] == "tool_use" {
                 ensure!(
-                    block["name"].as_str().is_some_and(|name| allowed_tool(
-                        name,
-                        structured,
-                        repository_access
-                    )),
+                    access.connected()
+                        || block["name"].as_str().is_some_and(|name| allowed_tool(
+                            name,
+                            structured,
+                            repository_access
+                        )),
                     "Claude attempted a tool outside the review context"
                 );
             }
@@ -283,22 +390,34 @@ pub async fn turn(
             request.cwd,
             Some(request.preference),
             request.repository_access,
+            request.access,
         )
         .await?;
         let structured = request.schema.is_some();
-        let init = session
-            .initialize(request.instructions, request.schema)
-            .await?;
+        let init = if request.access.connected() {
+            session.initialize_connected(request.instructions).await?
+        } else {
+            session
+                .initialize(request.instructions, request.schema)
+                .await?
+        };
         crate::models::validate_preference(request.preference, &models(&init)?)?;
         session.send(json!({"type":"user","message":{"role":"user","content":request.prompt},"parent_tool_use_id":null,"session_id":""})).await?;
         let mut initialized = false;
         loop {
             let v = session.read().await?;
+            if v["type"] == "control_request" && request.access.connected() {
+                session
+                    .handle_request(&v, request.interaction, &emit)
+                    .await?;
+                continue;
+            }
             validate_event(
                 &v,
                 request.preference,
                 structured,
                 request.repository_access,
+                request.access,
             )?;
             if v["type"] == "assistant"
                 && v["message"]["content"].as_array().is_some_and(|blocks| {
@@ -307,7 +426,15 @@ pub async fn turn(
                         .any(|b| b["type"] == "tool_use" && b["name"] != "StructuredOutput")
                 })
             {
-                emit("tool", "Reading local repository…");
+                let names = v["message"]["content"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|b| b["type"] == "tool_use")
+                    .filter_map(|b| b["name"].as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                emit("tool", &format!("Using {names}…"));
             }
             if v["type"] == "system" && v["subtype"] == "init" {
                 initialized = true;
@@ -355,7 +482,7 @@ pub async fn turn(
         bail!("Review cancelled");
     }
     tokio::select! {
-        result = tokio::time::timeout(Duration::from_secs(600), run) => result.context("Claude review timed out")?,
+        result = tokio::time::timeout(Duration::from_secs(3600), run) => result.context("Claude review timed out")?,
         _ = cancel.changed() => bail!("Review cancelled"),
     }
 }
@@ -386,8 +513,8 @@ mod tests {
     fn rejects_tools_mcp_and_silent_model_substitution() {
         let p = preference();
         let init = json!({"type":"system","subtype":"init","model":p.model,"tools":["StructuredOutput"],"mcp_servers":[]});
-        assert!(validate_event(&init, &p, true, false).is_ok());
-        assert!(validate_event(&init, &p, false, false).is_err());
+        assert!(validate_event(&init, &p, true, false, AgentAccess::Limited).is_ok());
+        assert!(validate_event(&init, &p, false, false, AgentAccess::Limited).is_err());
         for (key, value) in [
             ("model", json!("claude-other")),
             ("tools", json!(["Bash"])),
@@ -395,19 +522,29 @@ mod tests {
         ] {
             let mut invalid = init.clone();
             invalid[key] = value;
-            assert!(validate_event(&invalid, &p, true, false).is_err());
+            assert!(validate_event(&invalid, &p, true, false, AgentAccess::Limited).is_err());
         }
-        assert!(validate_event(&json!({"type":"control_request"}), &p, false, false).is_err());
+        assert!(
+            validate_event(
+                &json!({"type":"control_request"}),
+                &p,
+                false,
+                false,
+                AgentAccess::Limited
+            )
+            .is_err()
+        );
         assert!(
             validate_event(
                 &json!({"type":"assistant","message":{"model":"claude-other"}}),
                 &p,
                 true,
-                false
+                false,
+                AgentAccess::Limited
             )
             .is_err()
         );
-        assert!(validate_event(&json!({"type":"assistant","message":{"model":p.model,"content":[{"type":"tool_use","name":"Read"}]}}), &p, true, false).is_err());
+        assert!(validate_event(&json!({"type":"assistant","message":{"model":p.model,"content":[{"type":"tool_use","name":"Read"}]}}), &p, true, false, AgentAccess::Limited).is_err());
     }
     #[cfg(unix)]
     fn binary(root: &Path, mode: &str) -> String {
@@ -456,6 +593,8 @@ print(json.dumps(result),flush=True)
                 turn(
                     &settings,
                     TurnRequest {
+                        access: crate::contracts::AgentAccess::Limited,
+                        interaction: None,
                         cwd: root.path(),
                         repository_access: false,
                         preference: &p,

@@ -1,6 +1,53 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum AgentAccess {
+    #[default]
+    Limited,
+    Ask,
+    Full,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentInputOption {
+    pub label: String,
+    pub value: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentInputQuestion {
+    pub id: String,
+    pub label: String,
+    pub kind: String,
+    pub required: bool,
+    pub multiple: bool,
+    pub options: Vec<AgentInputOption>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentPrompt {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub details: String,
+    pub questions: Vec<AgentInputQuestion>,
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentAnswer {
+    pub allow: bool,
+    #[serde(default)]
+    pub answers: std::collections::BTreeMap<String, Vec<String>>,
+}
+
 /// A human review boundary, never advanced by capture, prefetch, or AI analysis.
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

@@ -231,6 +231,8 @@ impl Service {
                 crate::providers::turn(
                     &settings,
                     codex::TurnRequest {
+                        access: crate::contracts::AgentAccess::Limited,
+                        interaction: None,
                         cwd: &agent.cwd,
                         repository_access: agent.repository_access,
                         preference: &preference,

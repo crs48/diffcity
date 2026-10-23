@@ -1,3 +1,4 @@
+pub mod agent_access;
 mod ai_runs;
 pub mod claude;
 pub mod codex;
@@ -73,6 +74,7 @@ pub fn run() {
             commands::guide_versions,
             commands::select_guide,
             commands::ask_codex,
+            commands::respond_agent,
             commands::cancel_codex,
             commands::publish_review,
             commands::sample_review,

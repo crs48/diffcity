@@ -8,17 +8,28 @@ pub async fn turn(
     cancel: watch::Receiver<bool>,
     emit: impl Fn(&str, &str),
 ) -> Result<(String, String)> {
-    match request.preference.provider.as_str() {
-        "codex" => {
-            let mut rpc = codex::Rpc::spawn_for_review(
-                &codex::path(settings)?,
-                request.cwd,
-                request.repository_access,
-            )
-            .await?;
-            rpc.turn(request, cancel, emit).await
+    let run = async {
+        match request.preference.provider.as_str() {
+            "codex" => {
+                let mut rpc = codex::Rpc::spawn_for_access(
+                    &codex::path(settings)?,
+                    request.cwd,
+                    request.repository_access,
+                    request.access,
+                )
+                .await?;
+                rpc.turn(request, cancel.clone(), emit).await
+            }
+            "claude" => claude::turn(settings, request, cancel.clone(), emit).await,
+            _ => bail!("Unknown AI provider. Choose Codex or Claude in Model settings."),
         }
-        "claude" => claude::turn(settings, request, cancel, emit).await,
-        _ => bail!("Unknown AI provider. Choose Codex or Claude in Model settings."),
+    };
+    let mut stopped = cancel.clone();
+    if *stopped.borrow() {
+        bail!("Agent run cancelled");
+    }
+    tokio::select! {
+        result = tokio::time::timeout(std::time::Duration::from_secs(3600), run) => result.map_err(|_| anyhow::anyhow!("Agent run timed out"))?,
+        _ = stopped.changed() => bail!("Agent run cancelled"),
     }
 }
