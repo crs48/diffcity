@@ -699,6 +699,53 @@ flowchart LR
 
 Linked Claude sessions expose Read, Glob, Grep and Bash in plan mode, with permission prompts denied and only file/search tools explicitly preapproved. Linked Codex sessions enable shell/execution and their required code-mode host under its read-only sandbox. Both use the checkout as their working directory, retain their own login, and receive the captured PR SHA plus checkout metadata. Their instructions require investigation when needed and distinguish local source from the captured PR revision. The app continues to reconstruct independent conversation history per question; it does not attach to an existing terminal conversation.
 
-MCP integrations, hooks, skills and external agent network tools remain disabled. This release adds local source/Git exploration, not inheritance of every tool configured in a desktop chat. GitHub publication remains an explicit Finish review action. Guide annotations and findings still anchor only to captured diff coordinates.
+The initial local-context release kept MCP integrations, hooks, skills and external agent network tools disabled. The chat access controls below now allow configured integrations and requested actions in interactive conversations. Guide annotations and findings still anchor only to captured diff coordinates.
 
 Validation includes temporary repositories with mismatched folder names, duplicates, manual worktrees, stale bindings, dirty checkouts and missing PR commits; UI folder-choice/cancellation/error and stale-response tests; and `cargo run -p diffcity --bin local-code-smoke -- --infer claude` / `codex`. The live checks require each provider to retrieve random file and commit markers absent from its prompt, observe real tool activity, and leave the test checkout unchanged.
+
+## Chat access and inherited integrations — October 23, 2026
+
+Both inline and PR chat composers include a persistent access selector. The default is **Ask before actions**. Each submitted message captures its access mode, including queued messages; changing the selector affects subsequent submissions. Background guide generation and enrichment continue to use the restricted review policy.
+
+| Mode | Local tools | Integrations | Interaction |
+| --- | --- | --- | --- |
+| Limited access | Read/search the linked checkout | Disabled | No action approvals; unavailable actions are denied |
+| Ask before actions | Read/search; request commands and edits | Inherit the provider configuration | Approve or decline commands, edits, and integration calls, including MCP reads |
+| Full access | Native unrestricted execution | Inherit the provider configuration | No routine confirmations; explicit provider restrictions and required forms still apply |
+
+Connected chats run in the matched checkout, retain the native agent's system/project instructions and local login, and load that provider's configured MCP servers. They can investigate linked issues and perform actions requested in chat. Diff City does not copy integrations from this desktop chat, reuse another conversation, or configure missing credentials. A Linear integration must already be configured and authenticated for the selected Claude Code or Codex runtime. Without a checkout, the agent receives PR context and can still use configured integrations, but cannot claim to have explored unavailable local source.
+
+Claude uses its streaming control protocol with host permission prompts. Ask mode adds explicit rules for commands, file edits, and MCP calls; Full uses the native bypass-permissions mode. Codex uses app-server approvals with a read-only sandbox in Ask mode and full filesystem/network access in Full. Server configuration overrides retain transport, authentication, disabled states, and tool restrictions while setting the requested approval policy. Null configuration placeholders are omitted before the app-server converts overrides to TOML. Hooks remain disabled; this does not enable every native capability such as Codex computer use or subagents.
+
+```mermaid
+sequenceDiagram
+    actor Reviewer
+    participant Chat as Diff City chat
+    participant Agent as Local provider runtime
+    participant Tool as Configured tool or integration
+    Reviewer->>Chat: Send a message with chosen access
+    Chat->>Agent: Checkout, conversation, access policy
+    Agent->>Chat: Native approval or input request
+    Chat->>Reviewer: Show action details / required fields
+    Reviewer->>Chat: Allow once, answer, or decline
+    Chat->>Agent: Reply for this run and request only
+    alt Allowed
+        Agent->>Tool: Perform requested action
+        Tool-->>Agent: Actual result
+    else Declined
+        Agent->>Agent: Continue without the action
+    end
+    Agent-->>Chat: Response grounded in tool results
+```
+
+Approvals appear with the response and in a review-level notice, so they remain discoverable after closing chat or changing PRs. Forms never preselect consent. Decisions are scoped to a single run/request and consumed once; cancellation removes pending requests. Declining a form discards any selected answers. The provider's returned result, not the approval itself, establishes whether an action succeeded. Asking for a draft still produces a local draft; explicitly requesting publication can use connected tools according to the selected access mode. Text selections remain ineligible for GitHub line-draft conversion.
+
+Validation:
+
+- [x] Real Claude and Codex runs each pass allow, deny, and Full access cases against a local MCP fixture. Each agent retrieves a random marker absent from its prompt, and writes only when authorized. Ask requires two decisions; Full requires none. No remote service is changed.
+- [x] Protocol fixtures cover both providers and an approval arriving before the turn-start response. Unit checks cover one-shot/run-scoped decisions, cancellation cleanup, typed forms, denied answers, and preserving configured server transport and restrictions.
+- [x] Frontend checks cover persistent mode selection, queued-message access, request routing, required answers, denial, and retry after an expired request.
+- [x] Browser verification covers the approval card, allow/deny, queued follow-ups retaining their original mode, and reopening a request after closing chat. Sampled light/dark WCAG A/AA audits report no violations. All 175 frontend tests pass.
+- [x] The final ARM bundle verifies all 16 executables and its signature. The installed executable matches the build byte for byte, and the native app displays all three modes with Ask before actions selected. The previous app bundle is retained locally for rollback.
+
+Repeat the live check with `cargo run -p diffcity --bin agent-access-smoke -- --infer claude allow`, substituting `codex` and `deny` / `full` as appropriate. Test servers and databases are isolated under `.local/`; no private issue content or authentication values are written to the test output.

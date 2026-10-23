@@ -38,6 +38,80 @@ const anchor = {
   line: 1,
 };
 
+it("routes approvals to one run and preserves access chosen before queuing", async () => {
+  const { result } = renderHook(useAiRuns);
+  const work = [deferred<string>(), deferred<string>()];
+  const tasks = work.map((w) => vi.fn(() => w.promise));
+  let first!: Promise<unknown>, second!: Promise<unknown>;
+  act(() => {
+    first = result.current.start(
+      {
+        snapshotId: "s",
+        kind: "question",
+        question: { ...newNote("s", anchor, "First"), id: "first" },
+        preference: defaultModelPreference,
+        access: "ask",
+      },
+      tasks[0],
+    );
+    second = result.current.start(
+      {
+        snapshotId: "s",
+        kind: "question",
+        question: { ...newNote("s", anchor, "Next"), id: "next" },
+        preference: defaultModelPreference,
+        access: "limited",
+      },
+      tasks[1],
+    );
+  });
+  await waitFor(() => expect(tasks[0]).toHaveBeenCalled());
+  const runId = result.current.runs[0].id;
+  const prompt = {
+    id: "permission",
+    title: "Allow edit?",
+    description: "",
+    details: "example.ts",
+    questions: [],
+    url: null,
+  };
+  act(() =>
+    events.listener({
+      payload: {
+        snapshotId: "s",
+        runId,
+        phase: "approval",
+        text: JSON.stringify(prompt),
+      },
+    }),
+  );
+  expect(result.current.runs[0].prompt).toEqual(prompt);
+  expect(result.current.runs[1].prompt).toBeUndefined();
+  expect(result.current.runs[1].access).toBe("limited");
+  expect(tasks[1]).not.toHaveBeenCalled();
+  act(() =>
+    events.listener({
+      payload: {
+        snapshotId: "s",
+        runId,
+        phase: "approval-resolved",
+        text: "Allowed · continuing…",
+      },
+    }),
+  );
+  expect(result.current.runs[0].prompt).toBeUndefined();
+  await act(async () => {
+    work[0].resolve("First answer");
+    await first;
+  });
+  await waitFor(() => expect(tasks[1]).toHaveBeenCalled());
+  expect(result.current.runs[0].access).toBe("limited");
+  await act(async () => {
+    work[1].resolve("Next answer");
+    await second;
+  });
+});
+
 it("routes interleaved replies independently while a guide runs, and cancels only one job", async () => {
   const { result } = renderHook(useAiRuns);
   const a = { ...newNote("snapshot", anchor, "A"), id: "a" };

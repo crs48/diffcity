@@ -3860,3 +3860,110 @@
 .local-code-scope {
   font-size: 12px;
 }
+
+@layer components {
+  .agent-access-trigger {
+    margin-block: 6px;
+    font-size: 12px;
+  }
+  .agent-access-trigger.access-full {
+    color: var(--amber);
+  }
+  .agent-access-popover {
+    width: min(330px, calc(100vw - 24px));
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .agent-access-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    outline: none;
+  }
+  .agent-access-option[data-focused] {
+    background: var(--subtle);
+  }
+  .agent-access-option[data-selected] {
+    background: var(--blue-soft);
+  }
+  .agent-access-option [slot="label"] {
+    display: block;
+    font-weight: 600;
+  }
+  .agent-access-option [slot="description"],
+  .agent-access-popover > p {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .agent-access-popover > p {
+    margin: 8px 10px;
+  }
+  .agent-approval {
+    margin-block: 12px;
+    padding: 14px;
+    border: 1px solid var(--amber-border);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  .agent-approval > strong {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .agent-approval p {
+    margin-block: 8px;
+  }
+  .agent-approval pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+    padding: 10px;
+    background: var(--subtle);
+    border-radius: 6px;
+  }
+  .agent-approval fieldset {
+    min-width: 0;
+    padding: 8px 0;
+    border: 0;
+  }
+  .agent-approval legend {
+    font-weight: 600;
+    margin-top: 10px;
+  }
+  .agent-approval input:not([type="radio"]):not([type="checkbox"]) {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--control-border);
+    border-radius: 6px;
+    background: var(--bg);
+  }
+  .agent-answer-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+  }
+  .agent-answer-option input {
+    margin-top: 4px;
+  }
+  .agent-answer-option small {
+    display: block;
+    color: var(--muted);
+  }
+  .agent-approval-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+}

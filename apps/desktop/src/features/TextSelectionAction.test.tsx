@@ -194,7 +194,11 @@ it("offers only AI follow-up actions on both questions and answers", () => {
   expect(
     screen.getByRole("textbox", { name: "Follow-up about selected code" }),
   ).toBeTruthy();
-  expect(screen.getByText("AI only · never published to GitHub")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "AI conversation · selected text is not a GitHub line comment",
+    ),
+  ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Ask AI" }));
   expect(composer.submit).toHaveBeenCalledWith(conversation.ask);
 });

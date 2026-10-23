@@ -367,7 +367,7 @@ export function LocalCode({
         </section>
         <p className="muted local-code-scope">
           {t(
-            "Local access is for reading and searching. Your branch and files stay unchanged. GitHub publishing still uses Finish review. Linear and other MCP integrations are not connected to these agent sessions.",
+            "Chat access controls whether the agent can edit this checkout and use configured integrations. Choose Limited, Ask before actions, or Full access beside the message box. Guides only read code.",
           )}
         </p>
         {error && (

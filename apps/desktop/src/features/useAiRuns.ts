@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   api,
+  type AgentAccess,
+  type AgentPrompt,
   type Anchor,
   type ModelPreference,
   type Note,
@@ -15,6 +17,8 @@ export type AiRun = {
   snapshotId: string;
   kind: "guide" | "question" | "enrichment";
   guideId?: string;
+  access?: AgentAccess;
+  prompt?: AgentPrompt;
   question?: Note;
   preference: ModelPreference;
   phase:
@@ -96,6 +100,23 @@ export function useAiRuns() {
             run.phase === "cancelling"
           )
             return run;
+          if (event.phase === "approval") {
+            try {
+              return {
+                ...run,
+                phase: "working",
+                text: "Waiting for your response…",
+                prompt: JSON.parse(event.text) as AgentPrompt,
+              };
+            } catch {
+              return {
+                ...run,
+                text: "Could not display the agent request. Cancel and retry.",
+              };
+            }
+          }
+          if (event.phase === "approval-resolved")
+            return { ...run, prompt: undefined, text: event.text };
           return event.phase === "stream"
             ? { ...run, phase: "working", stream: run.stream + event.text }
             : {
@@ -121,7 +142,7 @@ export function useAiRuns() {
   const start = async <T>(
     details: Pick<
       AiRun,
-      "snapshotId" | "kind" | "question" | "preference" | "guideId"
+      "snapshotId" | "kind" | "question" | "preference" | "guideId" | "access"
     >,
     task: (id: string) => Promise<T>,
     onGuide?: (guide: Guide) => void,
@@ -206,6 +227,7 @@ export function useAiRuns() {
                 phase: r.phase === "cancelling" ? "cancelled" : "error",
                 text: String(error),
                 stream: "",
+                prompt: undefined,
               }
             : r,
         ),
@@ -237,7 +259,14 @@ export function useAiRuns() {
     }
     update((runs) =>
       runs.map((r) =>
-        r.id === id ? { ...r, phase: "cancelling", text: "Cancelling…" } : r,
+        r.id === id
+          ? {
+              ...r,
+              prompt: undefined,
+              phase: "cancelling",
+              text: "Cancelling…",
+            }
+          : r,
       ),
     );
     try {

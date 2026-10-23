@@ -302,9 +302,7 @@ impl Rpc {
             "mcpServer/elicitation/request" => {
                 json!({"action":if answer.allow {"accept"} else {"decline"},"content":if answer.allow {elicitation_content(p, &answer)?} else {Value::Null}})
             }
-            _ => {
-                json!({"answers":answer.answers.iter().map(|(key, values)| (key.clone(), json!({"answers":values}))).collect::<serde_json::Map<_,_>>() })
-            }
+            _ => input_answer(&answer),
         };
         self.send(json!({"id":value["id"],"result":result})).await
     }
@@ -562,6 +560,16 @@ pub async fn connection(settings: &Settings, cwd: &Path) -> Result<(Connection, 
     ))
 }
 
+fn input_answer(answer: &crate::contracts::AgentAnswer) -> Value {
+    let answers: serde_json::Map<_, _> = answer
+        .answers
+        .iter()
+        .filter(|_| answer.allow)
+        .map(|(key, values)| (key.clone(), json!({"answers": values})))
+        .collect();
+    json!({"answers": answers})
+}
+
 fn parse_models(page: &Value) -> Result<Vec<Model>> {
     Ok(page["data"]
         .as_array()
@@ -618,6 +626,20 @@ pub(crate) fn fake_binary(root: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn declining_input_discards_previously_selected_answers() {
+        let mut answer = crate::contracts::AgentAnswer {
+            allow: false,
+            answers: [("permission".into(), vec!["Accept".into()])].into(),
+        };
+        assert_eq!(input_answer(&answer), json!({"answers": {}}));
+        answer.allow = true;
+        assert_eq!(
+            input_answer(&answer),
+            json!({"answers": {"permission": {"answers": ["Accept"]}}})
+        );
+    }
 
     #[test]
     fn access_policy_preserves_server_configuration_and_omits_null_placeholders() {

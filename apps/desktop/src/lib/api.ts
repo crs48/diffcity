@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  AgentAccess,
+  AgentAnswer,
   Bootstrap,
   LocalCodeDirectory,
   RepositoryContext,
@@ -104,7 +106,17 @@ export const api = {
     noteId: string,
     runId: string,
     preference?: ModelPreference,
-  ) => invoke<AskReply>("ask_codex", { snapshotId, noteId, runId, preference }),
+    access?: AgentAccess,
+  ) =>
+    invoke<AskReply>("ask_codex", {
+      snapshotId,
+      noteId,
+      runId,
+      preference,
+      access,
+    }),
+  respondAgent: (runId: string, requestId: string, answer: AgentAnswer) =>
+    invoke<void>("respond_agent", { runId, requestId, answer }),
   cancel: (runId: string) => invoke<void>("cancel_codex", { runId }),
   publish: (request: PublishRequest) =>
     invoke<PublishResult>("publish_review", { request }),

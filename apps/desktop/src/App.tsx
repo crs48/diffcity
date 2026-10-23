@@ -1,3 +1,4 @@
+import { useAgentAccess } from "./features/AgentAccess";
 import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
 import { useReviewPrefetch } from "./features/useReviewPrefetch";
@@ -145,6 +146,7 @@ export default function App() {
   const [showLink, setShowLink] = useState(false);
   const [inboxVisible, setInboxVisible] = useState(true);
   const ai = useAiRuns();
+  const agentAccess = useAgentAccess();
   const [pendingGuides, setPendingGuides] = useState<Guide[]>([]);
   const pendingGuide = pendingGuides
     .filter((g) => g.snapshotId === workspace?.snapshot.id)
@@ -505,6 +507,7 @@ export default function App() {
       setDiscussion(false);
       setNewRevision(true);
       setMode("guide");
+      return w;
     } catch (e) {
       onError(e);
     } finally {
@@ -672,6 +675,7 @@ export default function App() {
     }
   };
   const ask = async (note: Note) => {
+    const access = agentAccess.access;
     const activeModel = threadRuns(ai.runs, note.snapshotId, note.anchor).find(
       isActiveRun,
     )?.preference;
@@ -688,8 +692,9 @@ export default function App() {
         snapshotId: note.snapshotId,
         question: note,
         preference,
+        access,
       },
-      (id) => api.ask(note.snapshotId, note.id, id, preference),
+      (id) => api.ask(note.snapshotId, note.id, id, preference, access),
     );
     if (answer) {
       onNote(answer.answer);
@@ -1219,6 +1224,40 @@ export default function App() {
                 {t("PR chat")} <span>{workspace.notes.length}</span>
               </Button>
             </div>
+            {ai.runs
+              .filter((run) => run.prompt && isActiveRun(run))
+              .map((run) => (
+                <div
+                  className="run-banner"
+                  key={`approval-${run.id}`}
+                  role="status"
+                >
+                  <span>
+                    {t("Agent needs your response")} · {run.prompt!.title}
+                  </span>
+                  <Button
+                    className="secondary"
+                    onPress={async () => {
+                      try {
+                        const review =
+                          workspace.snapshot.id === run.snapshotId
+                            ? workspace
+                            : await saved(run.snapshotId);
+                        if (!review) return;
+                        await chat.start(
+                          run.snapshotId,
+                          run.question?.anchor ?? null,
+                        );
+                        setDiscussion(true);
+                      } catch (e) {
+                        onError(e);
+                      }
+                    }}
+                  >
+                    {t("View request")}
+                  </Button>
+                </div>
+              ))}
             {mode === "guide" && (
               <GuideSwitcher
                 key={workspace.snapshot.id}
@@ -1321,6 +1360,9 @@ export default function App() {
             <ConversationContext.Provider
               value={{
                 workspace,
+                access: agentAccess.access,
+                setAccess: agentAccess.change,
+                respondAgent: api.respondAgent,
                 inline,
                 chat,
                 runs: ai.runs.filter(

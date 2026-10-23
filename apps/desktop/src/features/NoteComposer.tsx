@@ -1,3 +1,5 @@
+import { useConversation } from "./conversation";
+import { AgentAccessSelector } from "./AgentAccess";
 import { useTranslation } from "react-i18next";
 import "../i18n";
 import { useEffect, useLayoutEffect, useRef } from "react";
@@ -24,6 +26,7 @@ export function NoteComposer({
   onError: (error: unknown) => void;
 }) {
   const { t } = useTranslation();
+  const conversation = useConversation();
   const input = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (state.focus) input.current?.focus();
@@ -91,7 +94,7 @@ export function NoteComposer({
       />
       <div className="composer-status" role="status">
         {textOnly
-          ? t("AI only · never published to GitHub")
+          ? t("AI conversation · selected text is not a GitHub line comment")
           : editing
             ? t("GitHub draft · publish later in Finish review")
             : t(
@@ -102,6 +105,12 @@ export function NoteComposer({
         <p className="muted composer-model">
           {t("Replies use {{model}}", { model })}
         </p>
+      )}
+      {!editing && conversation?.access && conversation.setAccess && (
+        <AgentAccessSelector
+          value={conversation.access}
+          onChange={conversation.setAccess}
+        />
       )}
       {busy && (
         <p className="muted">

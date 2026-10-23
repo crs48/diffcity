@@ -1,3 +1,4 @@
+import { AgentApproval } from "./AgentAccess";
 import { isActiveRun, type AiRun } from "./useAiRuns";
 import { useTranslation } from "react-i18next";
 import "../i18n";
@@ -223,6 +224,14 @@ function RunReply({
         <CommentMarkdown
           body={visibleReply(run.stream)}
           diagrams={!isActiveRun(run)}
+        />
+      )}
+      {run.prompt && c.respondAgent && (
+        <AgentApproval
+          key={run.prompt.id}
+          prompt={run.prompt}
+          runId={run.id}
+          onRespond={c.respondAgent}
         />
       )}
       <Button

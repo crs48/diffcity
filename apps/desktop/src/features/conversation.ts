@@ -1,5 +1,7 @@
 import { createContext, useContext } from "react";
 import type {
+  AgentAccess,
+  AgentAnswer,
   Anchor,
   Note,
   ModelPreference,
@@ -10,6 +12,13 @@ import type { NoteComposerState } from "./useNoteComposer";
 
 export type Conversation = {
   workspace: ReviewWorkspace;
+  access?: AgentAccess;
+  setAccess?: (access: AgentAccess) => void;
+  respondAgent?: (
+    runId: string,
+    requestId: string,
+    answer: AgentAnswer,
+  ) => Promise<void>;
   inline: NoteComposerState;
   chat: NoteComposerState;
   runs: AiRun[];
