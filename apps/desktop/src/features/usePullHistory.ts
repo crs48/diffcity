@@ -49,5 +49,7 @@ export function usePullHistory(
       ++generation.current;
     };
   }, [load, enabled, repositoriesKey]);
-  return { pulls, nextPage, loading, error, load };
+  const update = (pull: PullRequest) =>
+    setPulls((pulls) => pulls.map((p) => (key(p) === key(pull) ? pull : p)));
+  return { pulls, nextPage, loading, error, load, update };
 }

@@ -340,6 +340,10 @@ pub fn guide_versions(
     service.guide_versions(&snapshot_id).map_err(error)
 }
 #[tauri::command]
+pub fn pull_guides(service: State<'_, Arc<Service>>) -> Output<Vec<PullGuide>> {
+    service.store.pull_guides().map_err(error)
+}
+#[tauri::command]
 pub fn select_guide(
     service: State<'_, Arc<Service>>,
     snapshot_id: String,

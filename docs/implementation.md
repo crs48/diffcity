@@ -749,3 +749,29 @@ Validation:
 - [x] The final ARM bundle verifies all 16 executables and its signature. The installed executable matches the build byte for byte, and the native app displays all three modes with Ask before actions selected. The previous app bundle is retained locally for rollback.
 
 Repeat the live check with `cargo run -p diffcity --bin agent-access-smoke -- --infer claude allow`, substituting `codex` and `deny` / `full` as appropriate. Test servers and databases are isolated under `.local/`; no private issue content or authentication values are written to the test output.
+
+## Guide status in the inbox — October 23, 2026
+
+Every inbox and history PR card has separate OpenAI/Codex and Claude buttons. Green means a saved guide matches both the PR head and base commits; amber means a guide exists for an earlier revision; gray means no guide has been saved for that provider. Comment/check activity does not invalidate guides. Tooltips and accessible labels expose status, model and reasoning effort; tooltips also show generation time and the settings the next run will use.
+
+Clicking a provider captures the latest PR revision and generates a guide without selecting the PR, changing the open review, or replacing its selected guide. The last model and effort used for that PR/provider are reused. With no previous run, the most recent guide settings for that provider elsewhere are used, followed by the matching default model or the provider default. Runs keep a spinner visible through capture and generation, reject duplicate clicks, and allow other PRs/providers to run independently through the existing scheduler. Failures remain visible and retryable. Completed guides enter the existing saved-guide selection flow.
+
+```mermaid
+flowchart LR
+    Saved[Local saved-guide metadata] --> Status[Two provider buttons per PR]
+    GitHub[Inbox head and base commits] --> Status
+    Status -->|Click provider| Capture[Capture latest PR revision]
+    Capture --> Run[Generate with remembered model and effort]
+    Run --> Retain[Retain immutable guide]
+    Retain --> Saved
+```
+
+One SQLite metadata query covers the inbox, including legacy selected guides and retained runs, with no per-card GitHub calls and no guide/diff bodies crossing IPC. The UI indexes it by PR/provider, refreshes after generation and periodically while visible, and preserves old data if a metadata refresh fails. Provider marks are vendored with their MIT attribution; they require no external icon requests.
+
+Validation:
+
+- [x] Storage tests cover restart persistence, legacy guides, revision/provider isolation and duplicate selected/version records.
+- [x] Status tests cover head/base changes, non-code activity, missing guides and choosing a current guide when a historical run finishes later.
+- [x] The application flow verifies background capture, exact model/effort reuse, independent providers, duplicate prevention, retries, keyboard activation and retaining the open review. All 178 frontend tests and 118 Rust tests pass; TypeScript, ESLint and Clippy pass.
+- [ ] Browser light/dark layout, tooltip, concurrent generation and accessibility checks.
+- [ ] Install and verify the native ARM bundle against the existing guide database.

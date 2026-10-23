@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { PullCard } from "./PullCard";
+import type { PullGuideActions } from "./PullGuideButtons";
 import type { PullRequest } from "../lib/api";
 import { key } from "../lib/review";
 import { pinKey, inboxGroup, inboxGroups } from "../lib/inbox";
@@ -13,6 +14,7 @@ export function PullList({
   pinned,
   saving,
   onPin,
+  guides,
 }: {
   pulls: PullRequest[];
   selected?: PullRequest;
@@ -22,6 +24,7 @@ export function PullList({
   pinned: ReadonlySet<string>;
   saving: boolean;
   onPin: (pull: PullRequest) => void;
+  guides?: PullGuideActions;
 }) {
   const { t } = useTranslation();
   const groups = [
@@ -51,6 +54,7 @@ export function PullList({
             saving={saving}
             onOpen={onOpen}
             onPin={onPin}
+            guides={guides}
           />
         ))}
       </section>

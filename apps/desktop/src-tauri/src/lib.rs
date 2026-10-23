@@ -72,6 +72,7 @@ pub fn run() {
             commands::enrich_guide,
             commands::dismiss_enrichment,
             commands::guide_versions,
+            commands::pull_guides,
             commands::select_guide,
             commands::ask_codex,
             commands::respond_agent,

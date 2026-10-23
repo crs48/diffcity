@@ -578,5 +578,16 @@
   "AI conversation · selected text is not a GitHub line comment": "Conversación con IA · el texto seleccionado no es un comentario de línea de GitHub",
   "Chat access controls whether the agent can edit this checkout and use configured integrations. Choose Limited, Ask before actions, or Full access beside the message box. Guides only read code.": "El acceso del chat controla si el agente puede editar este repositorio y usar integraciones configuradas. Elige Limitado, Preguntar antes de actuar o Acceso completo junto al mensaje. Las guías solo leen código.",
   "Agent needs your response": "El agente necesita tu respuesta",
-  "View request": "Ver solicitud"
+  "View request": "Ver solicitud",
+  "AI guides": "Guías de IA",
+  "Generating guide…": "Generando guía…",
+  "Loading guide status…": "Cargando estado de la guía…",
+  "Guide unavailable": "Guía no disponible",
+  "Guide up to date": "Guía actualizada",
+  "Guide out of date": "Guía desactualizada",
+  "No guide yet": "Aún no hay guía",
+  "Generated {{date}}": "Generada el {{date}}",
+  "Loading the latest PR revision…": "Cargando la última revisión del PR…",
+  "Click to retry": "Haz clic para reintentar",
+  "Generate with {{model}}": "Generar con {{model}}"
 }

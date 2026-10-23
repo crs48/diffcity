@@ -504,6 +504,19 @@ pub struct GuideVersion {
     pub section_count: usize,
 }
 
+/// Inbox metadata only: no diff, guide prose, or enrichment bodies.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PullGuide {
+    pub repository: String,
+    pub number: u32,
+    pub head: String,
+    pub base: String,
+    pub snapshot_id: String,
+    pub generated_at: String,
+    pub preference: ModelPreference,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {

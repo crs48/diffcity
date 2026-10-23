@@ -510,6 +510,84 @@
     top: 5px;
     right: 4px;
   }
+  .has-guide-buttons .pull-card {
+    padding-bottom: 43px;
+  }
+  .pull-guide-buttons {
+    position: absolute;
+    bottom: 9px;
+    left: 12px;
+    display: flex;
+    gap: 7px;
+  }
+  .pull-guide-button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--muted);
+    background: var(--surface);
+  }
+  .pull-guide-button:hover {
+    background: var(--subtle);
+    border-color: currentColor;
+  }
+  .pull-guide-button.guide-current {
+    color: var(--green);
+  }
+  .pull-guide-button.guide-stale,
+  .pull-guide-button.guide-error {
+    color: var(--amber);
+  }
+  .pull-guide-button[data-pending] {
+    color: var(--blue);
+    opacity: 1;
+  }
+  .provider-mark {
+    display: block;
+    width: 16px;
+    height: 16px;
+    background: currentColor;
+    mask: var(--provider-logo) center / contain no-repeat;
+  }
+  .provider-codex {
+    --provider-logo: url("./assets/providers/openai.svg");
+  }
+  .provider-claude {
+    --provider-logo: url("./assets/providers/claude.svg");
+  }
+  .guide-status-dot,
+  .guide-status-mark {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    background: var(--surface);
+  }
+  .guide-status-dot {
+    width: 7px;
+    height: 7px;
+    border: 2px solid var(--surface);
+    background: currentColor;
+  }
+  .guide-missing .guide-status-dot {
+    background: var(--surface);
+    border: 1px solid currentColor;
+  }
+  .guide-run-spinner {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+  }
+  .pull-guide-tooltip {
+    display: grid;
+    gap: 4px;
+    max-width: 300px;
+    overflow-wrap: anywhere;
+  }
   .pull-card {
     display: block;
     text-align: left;

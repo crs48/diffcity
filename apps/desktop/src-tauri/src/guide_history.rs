@@ -92,6 +92,55 @@ mod tests {
     use crate::fixtures;
 
     #[test]
+    fn inbox_inventory_keeps_revisions_and_providers_without_loading_guide_bodies() {
+        let root = tempfile::tempdir().unwrap();
+        let service = Service::new(root.path()).unwrap();
+        let (snapshot, mut legacy) = fixtures::sample().unwrap();
+        service
+            .store
+            .put("snapshot", &snapshot.id, &snapshot)
+            .unwrap();
+        legacy.source = "codex".into();
+        legacy.model = "gpt-6-astra".into();
+        legacy.reasoning_effort = Some("xhigh".into());
+        legacy.generated_at = "2026-10-23T09:00:00Z".into();
+        service.store.put("guide", &snapshot.id, &legacy).unwrap();
+        service.store.retain_guide(legacy.clone()).unwrap();
+        let mut claude = legacy.clone();
+        claude.id = Some("claude-new".into());
+        claude.source = "claude".into();
+        claude.model = "claude-fable-5".into();
+        claude.reasoning_effort = Some("high".into());
+        claude.generated_at = "2026-10-23T09:05:00Z".into();
+        service.store.retain_guide(claude).unwrap();
+        let mut old = snapshot.clone();
+        old.id = "old-snapshot".into();
+        old.pull.head = "old-head".into();
+        service.store.put("snapshot", &old.id, &old).unwrap();
+        legacy.snapshot_id = old.id;
+        legacy.id = Some("codex-old-revision".into());
+        service.store.retain_guide(legacy).unwrap();
+        drop(service);
+        let restarted = Service::new(root.path()).unwrap();
+        let inventory = restarted.store.pull_guides().unwrap();
+        assert_eq!(
+            inventory.len(),
+            3,
+            "Selected/version duplicates are collapsed; revisions and providers are retained"
+        );
+        assert_eq!(inventory[0].preference.provider, "claude");
+        assert_eq!(
+            inventory[0].preference.reasoning_effort.as_deref(),
+            Some("high")
+        );
+        assert_eq!(inventory[0].base, snapshot.pull.base);
+        assert!(inventory.iter().any(|g| g.head == "old-head"));
+        let serialized = serde_json::to_value(inventory).unwrap();
+        assert!(serialized[0].get("sections").is_none());
+        assert!(serialized[0].get("summary").is_none());
+    }
+
+    #[test]
     fn legacy_runs_coexist_and_switch_without_losing_notes_or_hunk_decisions() {
         let root = tempfile::tempdir().unwrap();
         let service = Service::new(root.path()).unwrap();

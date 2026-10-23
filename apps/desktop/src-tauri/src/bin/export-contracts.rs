@@ -50,6 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         GuideSection,
         Guide,
         GuideVersion,
+        PullGuide,
         Note,
         AskReply,
         ReviewProgress,

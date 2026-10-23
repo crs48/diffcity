@@ -44,6 +44,7 @@ export type GuideEnrichment = { files: Array<EnrichmentFile>, dismissed: boolean
 export type GuideSection = { annotations?: Array<GuideAnnotation>, id: string, title: string, summary: string, explanation: string, attention: Attention, category: string, reason: string, hunkIds: Array<string>, unavailablePaths: Array<string>, questions: Array<string>, findings: Array<Finding>, assessed: boolean, foldable: boolean, };
 export type Guide = { enrichment?: GuideEnrichment, id?: string, reasoningEffort?: string, snapshotId: string, summary: string, sections: Array<GuideSection>, source: string, model: string, generatedAt: string, limitations: Array<string>, policyVersion: number, };
 export type GuideVersion = { id: string, source: string, model: string, reasoningEffort: string | null, generatedAt: string, sectionCount: number, };
+export type PullGuide = { repository: string, number: number, head: string, base: string, snapshotId: string, generatedAt: string, preference: ModelPreference, };
 export type Note = { threadTitle?: string, model?: ModelPreference, id: string, snapshotId: string, anchor: Anchor | null, body: string, role: string, parentId: string | null, githubDraft: boolean, publishedUrl: string | null, createdAt: string, };
 export type AskReply = { answer: Note, draft: Note | null, };
 export type ReviewProgress = { reviewed: Array<string>, acknowledged: Array<string>, deferred: Array<string>, expanded: Array<string>, activeSection: string | null, };

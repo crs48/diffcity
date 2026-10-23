@@ -31,6 +31,7 @@ fn main() {
             "enrich_guide",
             "dismiss_enrichment",
             "guide_versions",
+            "pull_guides",
             "select_guide",
             "ask_codex",
             "respond_agent",

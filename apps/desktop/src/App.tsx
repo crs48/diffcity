@@ -1,4 +1,10 @@
 import { useAgentAccess } from "./features/AgentAccess";
+import { usePullGuides } from "./features/usePullGuides";
+import {
+  guideJobKey,
+  pullGuideStatus,
+  type GuideProvider,
+} from "./lib/pull-guides";
 import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
 import { useReviewPrefetch } from "./features/useReviewPrefetch";
@@ -148,6 +154,12 @@ export default function App() {
   const ai = useAiRuns();
   const agentAccess = useAgentAccess();
   const [pendingGuides, setPendingGuides] = useState<Guide[]>([]);
+  const guideInventory = usePullGuides();
+  const guideStartingRef = useRef(new Set<string>());
+  const [guideStarting, setGuideStarting] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const [guideErrors, setGuideErrors] = useState<Record<string, string>>({});
   const pendingGuide = pendingGuides
     .filter((g) => g.snapshotId === workspace?.snapshot.id)
     .at(-1);
@@ -655,12 +667,25 @@ export default function App() {
         await api.dismissEnrichment(guide.snapshotId, guide.id, dismissed),
       );
   };
-  const analyze = async (preference: ModelPreference) => {
-    if (!workspace) return;
-    const snapshotId = workspace.snapshot.id;
-    await flush();
+  const generateGuide = async (
+    review: ReviewWorkspace,
+    preference: ModelPreference,
+  ) => {
+    const snapshotId = review.snapshot.id;
+    const jobKey = guideJobKey(review.snapshot.pull, preference.provider);
+    setGuideErrors((errors) => ({ ...errors, [jobKey]: "" }));
+    ai.runs
+      .filter(
+        (r) => r.kind === "guide" && r.pullKey === jobKey && !isActiveRun(r),
+      )
+      .forEach((r) => ai.dismiss(r.id));
     const guide = await ai.start(
-      { kind: "guide", snapshotId, preference },
+      {
+        kind: "guide",
+        snapshotId,
+        preference,
+        pullKey: guideJobKey(review.snapshot.pull, preference.provider),
+      },
       (id) => api.analyze(snapshotId, id, preference),
     );
     if (guide) {
@@ -672,6 +697,71 @@ export default function App() {
         )
       )
         void enrich(guide, "priority").catch(onError);
+    }
+    await guideInventory.refresh();
+  };
+  const analyze = async (preference: ModelPreference) => {
+    if (!workspace) return;
+    const review = workspace;
+    await flush();
+    await generateGuide(review, preference);
+  };
+  const generateInboxGuide = async (
+    pull: PullRequest,
+    provider: GuideProvider,
+  ) => {
+    const jobKey = guideJobKey(pull, provider);
+    if (
+      guideStartingRef.current.has(jobKey) ||
+      ai.runs.some(
+        (r) => r.kind === "guide" && r.pullKey === jobKey && isActiveRun(r),
+      )
+    )
+      return;
+    const { preference } = pullGuideStatus(
+      guideInventory.inventory,
+      pull,
+      provider,
+      data?.modelPreference ?? defaultModelPreference,
+    );
+    guideStartingRef.current.add(jobKey);
+    setGuideStarting(new Set(guideStartingRef.current));
+    setGuideErrors((errors) => ({ ...errors, [jobKey]: "" }));
+    ai.runs
+      .filter(
+        (r) => r.kind === "guide" && r.pullKey === jobKey && !isActiveRun(r),
+      )
+      .forEach((r) => ai.dismiss(r.id));
+    try {
+      // Capture current code without activating a different review or altering its progress.
+      const review = await api.sync(pull.repository, pull.number);
+      if (review.syncError) throw new Error(review.syncError);
+      setPulls((pulls) =>
+        pulls.map((p) =>
+          pinKey(p) === pinKey(pull) ? review.snapshot.pull : p,
+        ),
+      );
+      history.update(review.snapshot.pull);
+      setData((data) =>
+        data
+          ? {
+              ...data,
+              pins: {
+                ...data.pins,
+                pulls: data.pins.pulls.map((p) =>
+                  pinKey(p) === pinKey(pull) ? review.snapshot.pull : p,
+                ),
+              },
+            }
+          : data,
+      );
+      await generateGuide(review, preference);
+    } catch (error) {
+      setGuideErrors((errors) => ({ ...errors, [jobKey]: String(error) }));
+      onError(error);
+    } finally {
+      guideStartingRef.current.delete(jobKey);
+      setGuideStarting(new Set(guideStartingRef.current));
     }
   };
   const ask = async (note: Note) => {
@@ -939,6 +1029,15 @@ export default function App() {
           <div className="pull-list">
             <PullList
               pulls={visible}
+              guides={{
+                ...guideInventory,
+                fallback: data?.modelPreference ?? defaultModelPreference,
+                runs: ai.runs,
+                starting: guideStarting,
+                errors: guideErrors,
+                generate: (p, provider) => void generateInboxGuide(p, provider),
+                retry: () => void guideInventory.refresh(),
+              }}
               pinned={pinned}
               saving={pinSaving}
               onPin={togglePullPin}

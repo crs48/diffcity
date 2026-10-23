@@ -22,6 +22,7 @@ import type {
   AskReply,
   Guide,
   GuideVersion,
+  PullGuide,
   EnrichmentTier,
   ReviewProgress,
   PublishRequest,
@@ -86,6 +87,7 @@ export const api = {
     invoke<ReviewProgress>("save_progress", { snapshotId, progress }),
   guides: (snapshotId: string) =>
     invoke<GuideVersion[]>("guide_versions", { snapshotId }),
+  pullGuides: () => invoke<PullGuide[]>("pull_guides"),
   selectGuide: (snapshotId: string, guideId: string) =>
     invoke<ReviewWorkspace>("select_guide", { snapshotId, guideId }),
   analyze: (snapshotId: string, runId: string, preference?: ModelPreference) =>

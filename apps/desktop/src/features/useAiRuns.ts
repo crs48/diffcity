@@ -17,6 +17,7 @@ export type AiRun = {
   snapshotId: string;
   kind: "guide" | "question" | "enrichment";
   guideId?: string;
+  pullKey?: string;
   access?: AgentAccess;
   prompt?: AgentPrompt;
   question?: Note;
@@ -142,7 +143,13 @@ export function useAiRuns() {
   const start = async <T>(
     details: Pick<
       AiRun,
-      "snapshotId" | "kind" | "question" | "preference" | "guideId" | "access"
+      | "snapshotId"
+      | "kind"
+      | "question"
+      | "preference"
+      | "guideId"
+      | "access"
+      | "pullKey"
     >,
     task: (id: string) => Promise<T>,
     onGuide?: (guide: Guide) => void,

@@ -32,6 +32,7 @@
     "allow-enrich-guide",
     "allow-dismiss-enrichment",
     "allow-guide-versions",
+    "allow-pull-guides",
     "allow-select-guide",
     "allow-ask-codex",
     "allow-respond-agent",

@@ -35,6 +35,7 @@ import {
   type PullSignal,
 } from "../lib/pull-status";
 import { PinToggle } from "../ui/PinToggle";
+import { PullGuideButtons, type PullGuideActions } from "./PullGuideButtons";
 
 const lifecycleIcons = {
   open: GitPullRequest,
@@ -83,6 +84,7 @@ export function PullCard({
   saving,
   onOpen,
   onPin,
+  guides,
 }: {
   pull: PullRequest;
   login: string;
@@ -92,6 +94,7 @@ export function PullCard({
   saving: boolean;
   onOpen: (pull: PullRequest) => void;
   onPin: (pull: PullRequest) => void;
+  guides?: PullGuideActions;
 }) {
   const { t, i18n } = useTranslation();
   const { lifecycle, badges, emphasis } = pullSignals(p, login);
@@ -106,7 +109,7 @@ export function PullCard({
         ? "Closed {{time}}"
         : "Updated {{time}}";
   return (
-    <div className="pull-card-row">
+    <div className={`pull-card-row ${guides ? "has-guide-buttons" : ""}`}>
       <Button
         className={`pull-card ${muted ? "pull-muted" : ""} ${selected ? "active" : ""}`}
         aria-current={selected ? "true" : undefined}
@@ -189,6 +192,7 @@ export function PullCard({
           </span>
         )}
       </Button>
+      {guides && <PullGuideButtons pull={p} actions={guides} />}
       <PinToggle
         id={pullPinId(p)}
         label={t(

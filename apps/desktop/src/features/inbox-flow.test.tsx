@@ -23,6 +23,8 @@ import type {
   RepositoryDirectory,
   InboxResult,
   Pins,
+  PullGuide,
+  Guide,
 } from "../lib/api";
 import fixture from "../../../../tests/fixtures/review-workspace.json";
 const workspace = fixture as ReviewWorkspace;
@@ -163,6 +165,7 @@ beforeEach(() => {
         return discovered;
       }
       if (command === "sample_inbox") return structuredClone(samples);
+      if (command === "pull_guides") return [];
       if (command === "open_pull" || command === "sync_pull")
         return {
           ...structuredClone(workspace),
@@ -210,6 +213,136 @@ afterEach(async () => {
   clearMocks();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+it("generates provider guides in the background using the latest revision and remembered model, with retry and no duplicate runs", async () => {
+  const user = userEvent.setup();
+  const pull = {
+    ...workspace.snapshot.pull,
+    repository: "owner/repo",
+    title: "Background guide target",
+  };
+  livePulls = [pull];
+  const preference = {
+    provider: "claude",
+    model: "claude-fable-5",
+    reasoningEffort: "high",
+  };
+  const metadata: PullGuide = {
+    repository: pull.repository,
+    number: pull.number,
+    head: "old-head",
+    base: pull.base,
+    snapshotId: "old-snapshot",
+    generatedAt: "2026-10-23T09:00:00Z",
+    preference,
+  };
+  let inventory = [metadata];
+  vi.spyOn(api, "pullGuides").mockImplementation(async () => inventory);
+  const opened = {
+    ...structuredClone(workspace),
+    snapshot: {
+      ...workspace.snapshot,
+      id: "reading",
+      pull: { ...pull, title: "The review I am reading" },
+    },
+  };
+  vi.spyOn(api, "sample").mockResolvedValue(opened);
+  const fresh = {
+    ...structuredClone(workspace),
+    snapshot: {
+      ...workspace.snapshot,
+      id: "fresh-snapshot",
+      pull: { ...pull, head: "latest-head" },
+    },
+  };
+  const sync = vi.spyOn(api, "sync").mockResolvedValue(fresh);
+  let finish!: (guide: Guide) => void;
+  const analyze = vi.spyOn(api, "analyze").mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(<App />);
+  await user.click(
+    await screen.findByRole("button", { name: "Try a guided review" }),
+  );
+  await screen.findByRole("heading", { name: "The review I am reading" });
+  const target = screen.getByRole("button", {
+    name: /Background guide target/,
+  });
+  const card = within(target.parentElement!);
+  const stale = card.getByRole("button", {
+    name: /Claude · Guide out of date/,
+  });
+  expect(stale.className).toContain("guide-stale");
+  expect(target.querySelector("button")).toBeNull();
+  await user.click(stale);
+  await waitFor(() => expect(analyze).toHaveBeenCalledTimes(1));
+  expect(sync).toHaveBeenCalledWith(pull.repository, pull.number);
+  expect(analyze).toHaveBeenLastCalledWith(
+    "fresh-snapshot",
+    expect.any(String),
+    preference,
+  );
+  const generating = card.getByRole("button", {
+    name: /Claude · Generating guide/,
+  });
+  expect(generating.getAttribute("aria-disabled")).toBe("true");
+  await user.click(generating);
+  expect(analyze).toHaveBeenCalledTimes(1);
+  expect(sync).toHaveBeenCalledTimes(1);
+  expect(
+    screen.getByRole("heading", { name: "The review I am reading" }),
+  ).toBeTruthy();
+
+  // A different provider remains independently actionable while Claude is busy.
+  analyze.mockRejectedValueOnce(new Error("Codex temporarily unavailable"));
+  const codex = card.getByRole("button", { name: /Codex · No guide yet/ });
+  codex.focus();
+  await user.keyboard("{Enter}");
+  await card.findByRole("button", { name: /Codex · Guide unavailable/ });
+  expect(analyze).toHaveBeenLastCalledWith(
+    "fresh-snapshot",
+    expect.any(String),
+    {
+      provider: "codex",
+      model: "gpt-6-astra",
+      reasoningEffort: "xhigh",
+    },
+  );
+  expect(
+    card.getByRole("button", { name: /Claude · Generating guide/ }),
+  ).toBeTruthy();
+  inventory = [
+    { ...metadata, head: "latest-head", snapshotId: "fresh-snapshot" },
+  ];
+  await act(async () =>
+    finish({
+      ...workspace.guide,
+      id: "new-guide",
+      source: "claude",
+      snapshotId: "fresh-snapshot",
+      sections: [],
+    }),
+  );
+  const current = await card.findByRole("button", {
+    name: /Claude · Guide up to date/,
+  });
+  expect(current.className).toContain("guide-current");
+  expect(current.getAttribute("aria-label")).toContain(
+    "claude-fable-5 · High",
+  );
+  expect(
+    screen.getByRole("heading", { name: "The review I am reading" }),
+  ).toBeTruthy();
+
+  analyze.mockResolvedValueOnce({ ...workspace.guide, sections: [] });
+  await user.click(
+    card.getByRole("button", { name: /Codex · Guide unavailable/ }),
+  );
+  await waitFor(() => expect(analyze).toHaveBeenCalledTimes(3));
+  await card.findByRole("button", { name: /Codex · No guide yet/ });
 });
 it("moves a sample review down and back up without publishing or changing real inbox data", async () => {
   const user = userEvent.setup();
