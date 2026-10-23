@@ -10,6 +10,7 @@ import {
   Pin,
   Settings2,
   Cpu,
+  FolderGit2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PinToggle } from "../ui/PinToggle";
@@ -97,6 +98,7 @@ export function AccountNavigation({
   onExample,
   onConnections,
   onModel,
+  onLocalCode,
   modelOpen,
   modelTriggerRef,
 }: {
@@ -110,6 +112,7 @@ export function AccountNavigation({
   onSamples: () => void;
   onExample: () => void;
   onConnections: () => void;
+  onLocalCode?: () => void;
   onModel: () => void;
   modelOpen: boolean;
   modelTriggerRef: RefObject<HTMLButtonElement | null>;
@@ -205,6 +208,11 @@ export function AccountNavigation({
         <RefreshCw size={19} aria-hidden="true" />
       </RailButton>
       <div className="rail-bottom">
+        {onLocalCode && (
+          <RailButton label={t("Local code")} onPress={onLocalCode}>
+            <FolderGit2 size={19} aria-hidden="true" />
+          </RailButton>
+        )}
         <RailButton
           label={t("Model")}
           buttonRef={modelTriggerRef}

@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Bootstrap,
+  LocalCodeDirectory,
+  RepositoryContext,
   ModelCatalog,
   ModelPreference,
   HunkContext,
@@ -25,6 +27,18 @@ import type {
 } from "../../../../packages/contracts/src";
 export type * from "../../../../packages/contracts/src";
 export const api = {
+  localRepositories: (refresh = false) =>
+    invoke<LocalCodeDirectory>("local_repositories", { refresh }),
+  saveCodeRoots: (roots: string[]) =>
+    invoke<LocalCodeDirectory>("save_code_roots", { roots }),
+  bindLocalRepository: (repository: string, path: string | null) =>
+    invoke<LocalCodeDirectory>("bind_local_repository", { repository, path }),
+  repositoryContext: (repository: string, head?: string) =>
+    invoke<RepositoryContext>("repository_context", {
+      repository,
+      head: head ?? null,
+    }),
+  chooseCodeFolder: () => invoke<string | null>("choose_code_folder"),
   bootstrap: () => invoke<Bootstrap>("bootstrap"),
   models: (provider = "codex") =>
     invoke<ModelCatalog>("model_catalog", { provider }),

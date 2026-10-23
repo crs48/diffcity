@@ -67,6 +67,7 @@ import { DisplaySettings } from "./features/DisplaySettings";
 import { GuideEnrichment } from "./features/GuideEnrichment";
 import { mergeEnrichment } from "./lib/enrichment";
 import { GuideSwitcher } from "./features/GuideSwitcher";
+import { LocalCode, RepositoryContextButton } from "./features/LocalCode";
 import { ModelSettings } from "./features/ModelSettings";
 import { defaultModelPreference } from "./lib/models";
 import { AccountNavigation, RepoFilter } from "./features/AccountNavigation";
@@ -127,8 +128,15 @@ export default function App() {
     if (reviewScroll.current) reviewScroll.current.scrollTop = 0;
   }, [mode, workspace?.snapshot.id]);
   const [dialog, setDialog] = useState<
-    "connections" | "finish" | "display" | "model" | "new-guide" | null
+    | "connections"
+    | "finish"
+    | "display"
+    | "model"
+    | "new-guide"
+    | "local-code"
+    | null
   >(null);
+  const [localCodeVersion, setLocalCodeVersion] = useState(0);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting your workspace…");
   const [loading, setLoading] = useState(false);
@@ -800,6 +808,7 @@ export default function App() {
         onSamples={() => void exploreInbox()}
         onExample={() => void sample()}
         onConnections={() => setDialog("connections")}
+        onLocalCode={() => setDialog("local-code")}
         onModel={() => setDialog("model")}
         modelOpen={dialog === "model"}
         modelTriggerRef={modelTriggerRef}
@@ -1181,6 +1190,13 @@ export default function App() {
                   </Tab>
                 ))}
               </TabList>
+              <RepositoryContextButton
+                key={pull.repository}
+                repository={pull.repository}
+                head={pull.head}
+                version={localCodeVersion}
+                onOpen={() => setDialog("local-code")}
+              />
               <Button
                 ref={chatToggle}
                 className="text-button"
@@ -1505,6 +1521,14 @@ export default function App() {
             }}
           />
         )}
+      {dialog === "local-code" && (
+        <LocalCode
+          repository={workspace?.snapshot.pull.repository}
+          head={workspace?.snapshot.pull.head}
+          onClose={() => setDialog(null)}
+          onChange={() => setLocalCodeVersion((v) => v + 1)}
+        />
+      )}
       {dialog === "connections" && data && (
         <Connections
           data={data}
