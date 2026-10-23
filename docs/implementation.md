@@ -677,3 +677,28 @@ Validation completed:
 - [x] All 13 bundled Mach-O executables contain ARM code and pass strict signature verification. The installed main executable matches the built bundle. All 18 pre-existing note/settings/model-preference documents match the fresh SQLite backup byte for byte. Two live-generated synthetic guides were added for immediate comparison; no GitHub feedback was published.
 
 The isolated live check is repeatable with `cargo run -p diffcity --bin guides-smoke -- --infer`. It reuses saved successful runs when repeated. Manual VoiceOver coverage and direct API-key/cloud-account management remain separate work; this implementation connects the installed Claude Code runtime.
+
+## Local repository context
+
+The Local code control in the account rail accepts code directories and a native folder picker. Discovery walks up to four levels, skips dependency/build/hidden directories and symlinks, and matches GitHub fetch remotes rather than folder names. SSH/HTTPS remotes, nested clones, multiple remotes, and Git worktrees are supported. Duplicate checkouts require a selection; manual bindings must match the requested GitHub repository. Settings survive restart independently of model/display settings. Rescan refreshes the directory index after adding or moving checkouts.
+
+Each review displays **Local code** or **PR context only**. The dialog shows the selected path, branch, commit, uncommitted changes, and revision mismatch. Runtime resolution revalidates the remote and directory before every guide, enrichment pass, or chat question. An absent or stale checkout falls back explicitly to supplied PR context. Discovery never fetches, switches branches, or alters the checkout.
+
+```mermaid
+flowchart LR
+    Roots[Code directories] --> Scan[Discover Git remotes]
+    Manual[Choose repository folder] --> Verify[Verify remote identity]
+    Scan --> Match{Unique match?}
+    Match -->|Yes| Context[Local checkout context]
+    Match -->|Multiple| Manual
+    Verify --> Context
+    Match -->|Missing| PR[Supplied PR context]
+    Context --> Claude[Claude reading and Git tools]
+    Context --> Codex[Codex read-only tools]
+```
+
+Linked Claude sessions expose Read, Glob, Grep and Bash in plan mode, with permission prompts denied and only file/search tools explicitly preapproved. Linked Codex sessions enable shell/execution and their required code-mode host under its read-only sandbox. Both use the checkout as their working directory, retain their own login, and receive the captured PR SHA plus checkout metadata. Their instructions require investigation when needed and distinguish local source from the captured PR revision. The app continues to reconstruct independent conversation history per question; it does not attach to an existing terminal conversation.
+
+MCP integrations, hooks, skills and external agent network tools remain disabled. This release adds local source/Git exploration, not inheritance of every tool configured in a desktop chat. GitHub publication remains an explicit Finish review action. Guide annotations and findings still anchor only to captured diff coordinates.
+
+Validation includes temporary repositories with mismatched folder names, duplicates, manual worktrees, stale bindings, dirty checkouts and missing PR commits; UI folder-choice/cancellation/error and stale-response tests; and `cargo run -p diffcity --bin local-code-smoke -- --infer claude` / `codex`. The live checks require each provider to retrieve random file and commit markers absent from its prompt, observe real tool activity, and leave the test checkout unchanged.

@@ -10,7 +10,12 @@ pub async fn turn(
 ) -> Result<(String, String)> {
     match request.preference.provider.as_str() {
         "codex" => {
-            let mut rpc = codex::Rpc::spawn(&codex::path(settings)?, request.cwd).await?;
+            let mut rpc = codex::Rpc::spawn_for_review(
+                &codex::path(settings)?,
+                request.cwd,
+                request.repository_access,
+            )
+            .await?;
             rpc.turn(request, cancel, emit).await
         }
         "claude" => claude::turn(settings, request, cancel, emit).await,

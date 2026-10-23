@@ -2,6 +2,11 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "bootstrap",
+            "local_repositories",
+            "save_code_roots",
+            "bind_local_repository",
+            "repository_context",
+            "choose_code_folder",
             "refresh_inbox",
             "list_pull_history",
             "refresh_directory",

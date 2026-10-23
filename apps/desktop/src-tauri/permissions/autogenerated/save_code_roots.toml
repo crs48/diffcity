@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-code-roots"
+description = "Enables the save_code_roots command without any pre-configured scope."
+commands.allow = ["save_code_roots"]
+
+[[permission]]
+identifier = "deny-save-code-roots"
+description = "Denies the save_code_roots command without any pre-configured scope."
+commands.deny = ["save_code_roots"]

@@ -6,6 +6,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     macro_rules! export { ($($t:ty),*) => { $(output.push_str("export "); output.push_str(&<$t>::decl(&ts_rs::Config::default())); output.push('\n');)* }; }
     export!(
         Settings,
+        LocalCodeSettings,
+        LocalCheckout,
+        LocalRepositoryIndex,
+        LocalCodeDirectory,
+        RepositoryContext,
         Connection,
         Model,
         ReasoningOption,

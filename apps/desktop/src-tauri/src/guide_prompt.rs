@@ -80,7 +80,7 @@ impl Input<'_> {
             json!({
                 "pullRequest":{"repository":snapshot.pull.repository,"number":snapshot.pull.number,"title":snapshot.pull.title,"description":snapshot.pull.body.chars().take(8_000).collect::<String>(),"head":snapshot.pull.head,"base":snapshot.pull.base},
                 "fileManifest":self.manifest,"hunks":self.hunks,"surroundingCode":surroundings,"limitations":self.limitations,
-                "contextScope":"Only supplied hunks and surrounding excerpts are available. Unchanged callers outside these excerpts have not been inspected. Tests have not been executed."
+                "contextScope":"This bundle contains supplied hunks and surrounding excerpts. Repository tools may be available as described in the session instructions. Unchanged callers are uninspected until read using those tools. Tests have not been executed."
             })
         )
     }

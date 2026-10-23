@@ -225,15 +225,16 @@ impl Service {
                 format!("Reading {} of {} · {path}", index + 1, paths.len()),
                 Some(self.store.enriched_guide(base.clone())?),
             );
-            let directory = self.store.directory.join("review-context");
+            let agent = self.agent_context(&snapshot).await?;
             let result = tokio::time::timeout(
                 Duration::from_secs(180),
                 crate::providers::turn(
                     &settings,
                     codex::TurnRequest {
-                        cwd: &directory,
+                        cwd: &agent.cwd,
+                        repository_access: agent.repository_access,
                         preference: &preference,
-                        instructions: notes::INSTRUCTIONS,
+                        instructions: &format!("{}\n{}", notes::INSTRUCTIONS, agent.instructions),
                         prompt: &input.prompt,
                         schema: Some(notes::schema()),
                     },

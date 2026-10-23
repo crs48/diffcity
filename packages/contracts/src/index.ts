@@ -1,5 +1,10 @@
 // Generated from Rust contracts. Run pnpm contracts; do not edit.
 export type Settings = { repositories: Array<string>, codexPath: string | null, claudePath?: string, ghPath: string | null, model: string | null, theme: string, locale: string, completedDays: number, };
+export type LocalCodeSettings = { roots: Array<string>, overrides: { [key in string]: string }, };
+export type LocalCheckout = { repository: string, path: string, };
+export type LocalRepositoryIndex = { checkouts: Array<LocalCheckout>, warnings: Array<string>, };
+export type LocalCodeDirectory = { settings: LocalCodeSettings, index: LocalRepositoryIndex, };
+export type RepositoryContext = { repository: string, path: string | null, candidates: Array<string>, branch: string | null, head: string | null, dirty: boolean, prHeadAvailable: boolean, detail: string, };
 export type Connection = { connected: boolean, identity: string, executable: string, detail: string, };
 export type Model = { id: string, name: string, isDefault: boolean, description: string, reasoningEfforts: Array<ReasoningOption>, defaultReasoningEffort: string | null, };
 export type ReasoningOption = { effort: string, description: string, };

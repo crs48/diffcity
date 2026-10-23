@@ -13,6 +13,7 @@ mod guide_annotations;
 mod guide_enrichment;
 mod guide_history;
 mod guide_prompt;
+mod local_repositories;
 pub mod migrations;
 mod models;
 mod pins;
@@ -31,6 +32,7 @@ pub mod storage;
 
 pub fn run() {
     let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let directory = std::env::var_os("DIFFCITY_DATA_DIR")
                 .map(std::path::PathBuf::from)
@@ -40,6 +42,11 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::bootstrap,
+            commands::local_repositories,
+            commands::save_code_roots,
+            commands::bind_local_repository,
+            commands::repository_context,
+            commands::choose_code_folder,
             commands::refresh_inbox,
             commands::list_pull_history,
             commands::refresh_directory,

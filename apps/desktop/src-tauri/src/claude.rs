@@ -1,5 +1,5 @@
 //! Claude Code's SDK streaming protocol, using its own stored login.
-//! Each request is isolated, ephemeral, and has no repository/tool access.
+//! Each request is ephemeral; linked checkouts enable a limited read-only tool set.
 use crate::{codex::TurnRequest, contracts::*, github::executable};
 use anyhow::{Context, Result, bail, ensure};
 use serde_json::{Value, json};
@@ -53,7 +53,12 @@ struct Session {
     output: Lines<BufReader<ChildStdout>>,
 }
 impl Session {
-    async fn spawn(binary: &str, cwd: &Path, preference: Option<&ModelPreference>) -> Result<Self> {
+    async fn spawn(
+        binary: &str,
+        cwd: &Path,
+        preference: Option<&ModelPreference>,
+        repository_access: bool,
+    ) -> Result<Self> {
         std::fs::create_dir_all(cwd)?;
         let mut cmd = command(binary);
         cmd.current_dir(cwd).args([
@@ -61,7 +66,7 @@ impl Session {
             "--safe-mode",
             "--restricted",
             "--tools",
-            "",
+            if repository_access { "Read,Glob,Grep,Bash" } else { "" },
             "--disable-slash-commands",
             "--strict-mcp-config",
             "--mcp-config",
@@ -72,7 +77,7 @@ impl Session {
             r#"{"disableAllHooks":true,"autoMemoryEnabled":false,"modelPicker":{"options":[{"model":"claude-fable-5","label":"Fable 5","description":"Fable 5 · A separate perspective on this review"}],"replaceBuiltInOptions":false}}"#,
             "--no-session-persistence",
             "--permission-mode",
-            "dontAsk",
+            if repository_access { "plan" } else { "dontAsk" },
             "--permission-prompts",
             "none",
             "--input-format",
@@ -82,6 +87,10 @@ impl Session {
             "--verbose",
             "--include-partial-messages",
         ]);
+        if repository_access {
+            cmd.args(["--allowedTools", "Read", "Glob", "Grep"]);
+            cmd.env("GIT_OPTIONAL_LOCKS", "0").env("GIT_PAGER", "cat");
+        }
         if let Some(p) = preference {
             cmd.args(["--model", &p.model]);
             if let Some(effort) = &p.reasoning_effort {
@@ -199,16 +208,25 @@ pub async fn connection(settings: &Settings, cwd: &Path) -> Result<(Connection, 
         status["loggedIn"] == true && output.status.success(),
         "Claude Code is not signed in. Run claude auth login, then refresh models."
     );
-    let mut session = Session::spawn(&binary, cwd, None).await?;
+    let mut session = Session::spawn(&binary, cwd, None, false).await?;
     let init = session
         .initialize(
             "You are a read-only code review assistant. No tools are available.",
             None,
         )
         .await?;
-    Ok((Connection { connected: true, identity: status["email"].as_str().unwrap_or("Local Claude account").into(), executable: binary, detail: "Using your local Claude Code login. Review requests have no tools or repository access.".into() }, models(&init)?))
+    Ok((Connection { connected: true, identity: status["email"].as_str().unwrap_or("Local Claude account").into(), executable: binary, detail: "Using your local Claude Code login. Link a local checkout to enable repository reading and search.".into() }, models(&init)?))
 }
-fn validate_event(value: &Value, preference: &ModelPreference, structured: bool) -> Result<()> {
+fn allowed_tool(name: &str, structured: bool, repository_access: bool) -> bool {
+    (structured && name == "StructuredOutput")
+        || (repository_access && matches!(name, "Read" | "Glob" | "Grep" | "Bash"))
+}
+fn validate_event(
+    value: &Value,
+    preference: &ModelPreference,
+    structured: bool,
+    repository_access: bool,
+) -> Result<()> {
     ensure!(
         value["type"] != "control_request",
         "Claude requested a capability outside the review context"
@@ -219,9 +237,11 @@ fn validate_event(value: &Value, preference: &ModelPreference, structured: bool)
             "Claude selected a different model; the previous guide is preserved"
         );
         ensure!(
-            value["tools"].as_array().is_some_and(|tools| tools
-                .iter()
-                .all(|tool| structured && tool == "StructuredOutput")),
+            value["tools"]
+                .as_array()
+                .is_some_and(|tools| tools.iter().all(|tool| tool
+                    .as_str()
+                    .is_some_and(|name| allowed_tool(name, structured, repository_access)))),
             "Claude exposed tools outside the review context"
         );
         ensure!(
@@ -239,7 +259,11 @@ fn validate_event(value: &Value, preference: &ModelPreference, structured: bool)
         for block in value["message"]["content"].as_array().into_iter().flatten() {
             if block["type"] == "tool_use" {
                 ensure!(
-                    structured && block["name"] == "StructuredOutput",
+                    block["name"].as_str().is_some_and(|name| allowed_tool(
+                        name,
+                        structured,
+                        repository_access
+                    )),
                     "Claude attempted a tool outside the review context"
                 );
             }
@@ -254,8 +278,13 @@ pub async fn turn(
     emit: impl Fn(&str, &str),
 ) -> Result<(String, String)> {
     let run = async {
-        let mut session =
-            Session::spawn(&path(settings)?, request.cwd, Some(request.preference)).await?;
+        let mut session = Session::spawn(
+            &path(settings)?,
+            request.cwd,
+            Some(request.preference),
+            request.repository_access,
+        )
+        .await?;
         let structured = request.schema.is_some();
         let init = session
             .initialize(request.instructions, request.schema)
@@ -265,7 +294,21 @@ pub async fn turn(
         let mut initialized = false;
         loop {
             let v = session.read().await?;
-            validate_event(&v, request.preference, structured)?;
+            validate_event(
+                &v,
+                request.preference,
+                structured,
+                request.repository_access,
+            )?;
+            if v["type"] == "assistant"
+                && v["message"]["content"].as_array().is_some_and(|blocks| {
+                    blocks
+                        .iter()
+                        .any(|b| b["type"] == "tool_use" && b["name"] != "StructuredOutput")
+                })
+            {
+                emit("tool", "Reading local repository…");
+            }
             if v["type"] == "system" && v["subtype"] == "init" {
                 initialized = true;
             }
@@ -343,8 +386,8 @@ mod tests {
     fn rejects_tools_mcp_and_silent_model_substitution() {
         let p = preference();
         let init = json!({"type":"system","subtype":"init","model":p.model,"tools":["StructuredOutput"],"mcp_servers":[]});
-        assert!(validate_event(&init, &p, true).is_ok());
-        assert!(validate_event(&init, &p, false).is_err());
+        assert!(validate_event(&init, &p, true, false).is_ok());
+        assert!(validate_event(&init, &p, false, false).is_err());
         for (key, value) in [
             ("model", json!("claude-other")),
             ("tools", json!(["Bash"])),
@@ -352,18 +395,19 @@ mod tests {
         ] {
             let mut invalid = init.clone();
             invalid[key] = value;
-            assert!(validate_event(&invalid, &p, true).is_err());
+            assert!(validate_event(&invalid, &p, true, false).is_err());
         }
-        assert!(validate_event(&json!({"type":"control_request"}), &p, false).is_err());
+        assert!(validate_event(&json!({"type":"control_request"}), &p, false, false).is_err());
         assert!(
             validate_event(
                 &json!({"type":"assistant","message":{"model":"claude-other"}}),
                 &p,
-                true
+                true,
+                false
             )
             .is_err()
         );
-        assert!(validate_event(&json!({"type":"assistant","message":{"model":p.model,"content":[{"type":"tool_use","name":"Read"}]}}), &p, true).is_err());
+        assert!(validate_event(&json!({"type":"assistant","message":{"model":p.model,"content":[{"type":"tool_use","name":"Read"}]}}), &p, true, false).is_err());
     }
     #[cfg(unix)]
     fn binary(root: &Path, mode: &str) -> String {
@@ -413,6 +457,7 @@ print(json.dumps(result),flush=True)
                     &settings,
                     TurnRequest {
                         cwd: root.path(),
+                        repository_access: false,
                         preference: &p,
                         instructions: "Review only supplied code.",
                         prompt: "Example PR",

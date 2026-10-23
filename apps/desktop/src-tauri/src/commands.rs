@@ -365,3 +365,60 @@ pub fn dismiss_enrichment(
         .dismiss_enrichment(&snapshot_id, &guide_id, dismissed)
         .map_err(error)
 }
+
+#[tauri::command]
+pub async fn local_repositories(
+    service: State<'_, Arc<Service>>,
+    refresh: bool,
+) -> Output<LocalCodeDirectory> {
+    service.local_repositories(refresh).await.map_err(error)
+}
+#[tauri::command]
+pub async fn save_code_roots(
+    service: State<'_, Arc<Service>>,
+    roots: Vec<String>,
+) -> Output<LocalCodeDirectory> {
+    service.save_code_roots(roots).await.map_err(error)
+}
+#[tauri::command]
+pub async fn bind_local_repository(
+    service: State<'_, Arc<Service>>,
+    repository: String,
+    path: Option<String>,
+) -> Output<LocalCodeDirectory> {
+    service
+        .bind_local_repository(&repository, path.as_deref())
+        .await
+        .map_err(error)
+}
+#[tauri::command]
+pub async fn repository_context(
+    service: State<'_, Arc<Service>>,
+    repository: String,
+    head: Option<String>,
+) -> Output<RepositoryContext> {
+    service
+        .repository_context(&repository, head.as_deref())
+        .await
+        .map_err(error)
+}
+#[tauri::command]
+pub async fn choose_code_folder(app: tauri::AppHandle) -> Output<Option<String>> {
+    use tauri_plugin_dialog::DialogExt;
+    let (send, receive) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_title("Choose a code directory or repository")
+        .pick_folder(move |folder| {
+            let _ = send.send(folder);
+        });
+    receive
+        .await
+        .map_err(|e| e.to_string())?
+        .map(|file| {
+            file.into_path()
+                .map(|p| p.to_string_lossy().into_owned())
+                .map_err(|e| e.to_string())
+        })
+        .transpose()
+}

@@ -1,7 +1,9 @@
 {
   "identifier": "main",
   "description": "The bundled diffcity main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "allow-bootstrap",
@@ -36,6 +38,11 @@
     "allow-publish-review",
     "allow-sample-review",
     "allow-sample-inbox",
-    "allow-open-external"
+    "allow-open-external",
+    "allow-local-repositories",
+    "allow-save-code-roots",
+    "allow-bind-local-repository",
+    "allow-repository-context",
+    "allow-choose-code-folder"
   ]
 }

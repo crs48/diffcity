@@ -41,6 +41,43 @@ pub struct Settings {
     pub completed_days: u32,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCodeSettings {
+    pub roots: Vec<String>,
+    pub overrides: std::collections::BTreeMap<String, String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCheckout {
+    pub repository: String,
+    pub path: String,
+}
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalRepositoryIndex {
+    pub checkouts: Vec<LocalCheckout>,
+    pub warnings: Vec<String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCodeDirectory {
+    pub settings: LocalCodeSettings,
+    pub index: LocalRepositoryIndex,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct RepositoryContext {
+    pub repository: String,
+    pub path: Option<String>,
+    pub candidates: Vec<String>,
+    pub branch: Option<String>,
+    pub head: Option<String>,
+    pub dirty: bool,
+    pub pr_head_available: bool,
+    pub detail: String,
+}
+
 pub fn default_completed_days() -> u32 {
     2
 }

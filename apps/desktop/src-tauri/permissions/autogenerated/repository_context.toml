@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-repository-context"
+description = "Enables the repository_context command without any pre-configured scope."
+commands.allow = ["repository_context"]
+
+[[permission]]
+identifier = "deny-repository-context"
+description = "Denies the repository_context command without any pre-configured scope."
+commands.deny = ["repository_context"]
