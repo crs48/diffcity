@@ -773,5 +773,5 @@ Validation:
 - [x] Storage tests cover restart persistence, legacy guides, revision/provider isolation and duplicate selected/version records.
 - [x] Status tests cover head/base changes, non-code activity, missing guides and choosing a current guide when a historical run finishes later.
 - [x] The application flow verifies background capture, exact model/effort reuse, independent providers, duplicate prevention, retries, keyboard activation and retaining the open review. All 178 frontend tests and 118 Rust tests pass; TypeScript, ESLint and Clippy pass.
-- [ ] Browser light/dark layout, tooltip, concurrent generation and accessibility checks.
-- [ ] Install and verify the native ARM bundle against the existing guide database.
+- [x] Browser checks confirm hover details (including while pending), independent concurrent generation, completion colors and no page overflow. Settled light/dark WCAG A/AA audits report no violations. Full-app screenshots are retained locally under `output/playwright/inbox-guides-*.png`.
+- [x] The installed ARM bundle matches the verified build and its signature passes. Native inbox inspection recognizes current, outdated and missing guides from the existing database, including legacy runs; both provider marks render correctly. The previous app bundle is retained locally for rollback.
