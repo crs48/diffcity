@@ -589,5 +589,10 @@
   "Generated {{date}}": "Generada el {{date}}",
   "Loading the latest PR revision…": "Cargando la última revisión del PR…",
   "Click to retry": "Haz clic para reintentar",
-  "Generate with {{model}}": "Generar con {{model}}"
+  "Generate with {{model}}": "Generar con {{model}}",
+  "Ask AI about selected code": "Preguntar a la IA sobre el código seleccionado",
+  "Question about selected code": "Pregunta sobre el código seleccionado",
+  "Ask about this code…": "Pregunta sobre este código…",
+  "Send question · Enter": "Enviar pregunta · Intro",
+  "AI only · Leave blank to explain · Esc to dismiss": "Solo IA · Dejar vacío para explicar · Esc para cerrar"
 }

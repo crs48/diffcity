@@ -8,6 +8,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { useRef } from "react";
+import userEvent from "@testing-library/user-event";
 import { TextSelectionAction } from "./TextSelectionAction";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
@@ -127,39 +128,133 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
-it("shows an AI action for a precise native selection and submits it without a composer step", async () => {
+it("focuses a question field for a precise selection and preserves the default explanation", async () => {
   render(<Example />);
   select();
   const action = await screen.findByRole("button", {
-    name: "Ask AI to explain selected code",
+    name: "Ask AI about selected code",
   });
+  expect(document.activeElement).toBe(
+    screen.getByRole("textbox", { name: "Question about selected code" }),
+  );
   fireEvent.pointerDown(action);
   fireEvent.click(action);
-  expect(conversation.explainText).toHaveBeenCalledExactlyOnceWith(anchor);
+  expect(conversation.explainText).toHaveBeenCalledExactlyOnceWith(
+    anchor,
+    undefined,
+  );
   expect(
-    screen.queryByRole("button", { name: "Ask AI to explain selected code" }),
+    screen.queryByRole("button", { name: "Ask AI about selected code" }),
   ).toBeNull();
+});
+it("sends a typed first question with the captured code even after input focus clears the browser selection", async () => {
+  const user = userEvent.setup();
+  render(<Example />);
+  select();
+  const input = await screen.findByRole("textbox", {
+    name: "Question about selected code",
+  });
+  expect(document.activeElement).toBe(input);
+  document.getSelection()?.removeAllRanges();
+  fireEvent(document, new Event("selectionchange"));
+  await user.keyboard("Why is this value shared?");
+  // Selection within the question itself must never replace the captured source.
+  fireEvent(document, new Event("selectionchange"));
+  await user.keyboard("{Enter}");
+  expect(conversation.explainText).toHaveBeenCalledExactlyOnceWith(
+    anchor,
+    "Why is this value shared?",
+  );
+  expect(
+    screen.queryByRole("dialog", { name: "Ask AI about selected code" }),
+  ).toBeNull();
+});
+it("waits for the end of pointer and keyboard selection before moving focus", async () => {
+  render(<Example />);
+  const gutter = screen.getByRole("button", { name: "Gutter" });
+  gutter.focus();
+  fireEvent.pointerDown(document.querySelector("code")!, { button: 0 });
+  select();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  fireEvent.pointerUp(document);
+  await screen.findByRole("textbox", { name: "Question about selected code" });
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(document.activeElement).toBe(gutter);
+  fireEvent.keyDown(gutter, { key: "Shift" });
+  select();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(gutter);
+  fireEvent.keyUp(gutter, { key: "Shift" });
+  expect(
+    await screen.findByRole("textbox", {
+      name: "Question about selected code",
+    }),
+  ).toBe(document.activeElement);
+});
+it("keeps the draft while scrolling, clamps its width, and dismisses when the source leaves view", async () => {
+  render(<Example />);
+  select();
+  const input = await screen.findByRole("textbox", {
+    name: "Question about selected code",
+  });
+  fireEvent.change(input, { target: { value: "What does this mean?" } });
+  Range.prototype.getClientRects = vi.fn(() => [
+    { top: 2, bottom: 27, left: 760, right: 790, width: 30, height: 25 },
+  ]) as unknown as typeof Range.prototype.getClientRects;
+  fireEvent.scroll(document);
+  const dialog = screen.getByRole("dialog");
+  expect(
+    Number.parseFloat(dialog.style.left) +
+      Number.parseFloat(dialog.style.width),
+  ).toBeLessThanOrEqual(792);
+  expect(Number.parseFloat(dialog.style.top)).toBeGreaterThanOrEqual(27);
+  expect((input as HTMLInputElement).value).toBe("What does this mean?");
+  Range.prototype.getClientRects = vi.fn(() => [
+    { top: -100, bottom: -75, left: 100, right: 140, width: 40, height: 25 },
+  ]) as unknown as typeof Range.prototype.getClientRects;
+  fireEvent.scroll(document);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(conversation.explainText).not.toHaveBeenCalled();
+});
+it("does not submit Enter while composing text or reopen after an outside click", async () => {
+  render(<Example />);
+  select();
+  const input = await screen.findByRole("textbox", {
+    name: "Question about selected code",
+  });
+  fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+  fireEvent.keyDown(input, { key: "Enter", altKey: true, keyCode: 229 });
+  expect(conversation.explainText).not.toHaveBeenCalled();
+  fireEvent.pointerDown(screen.getByRole("button", { name: "Gutter" }));
+  fireEvent.pointerUp(document);
+  fireEvent.scroll(document);
+  expect(screen.queryByRole("dialog")).toBeNull();
 });
 it("supports Alt+Enter and dismisses the action with Escape", async () => {
   render(<Example />);
   select();
   await screen.findByRole("button", {
-    name: "Ask AI to explain selected code",
+    name: "Ask AI about selected code",
   });
   fireEvent.keyDown(document, { key: "Escape" });
   expect(
-    screen.queryByRole("button", { name: "Ask AI to explain selected code" }),
+    screen.queryByRole("button", { name: "Ask AI about selected code" }),
   ).toBeNull();
   select();
   await screen.findByRole("button", {
-    name: "Ask AI to explain selected code",
+    name: "Ask AI about selected code",
   });
   fireEvent.keyDown(screen.getByRole("button", { name: "Gutter" }), {
     key: "Enter",
     altKey: true,
   });
   await waitFor(() =>
-    expect(conversation.explainText).toHaveBeenCalledExactlyOnceWith(anchor),
+    expect(conversation.explainText).toHaveBeenCalledExactlyOnceWith(
+      anchor,
+      undefined,
+    ),
   );
 });
 it("offers only AI follow-up actions on both questions and answers", () => {

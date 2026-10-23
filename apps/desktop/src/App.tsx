@@ -791,7 +791,7 @@ export default function App() {
       if (answer.draft) onNote(answer.draft);
     }
   };
-  const explainText = async (anchor: Anchor) => {
+  const explainText = async (anchor: Anchor, question?: string) => {
     if (
       !workspace ||
       !anchor.textSelection ||
@@ -808,9 +808,10 @@ export default function App() {
         newNote(
           snapshotId,
           anchor,
-          t(
-            "Help me understand this selected code. What does it do, and how does it fit into the surrounding code?",
-          ),
+          question?.trim() ||
+            t(
+              "Help me understand this selected code. What does it do, and how does it fit into the surrounding code?",
+            ),
         ),
       );
       onNote(note);

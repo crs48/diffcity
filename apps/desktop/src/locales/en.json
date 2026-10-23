@@ -589,5 +589,10 @@
   "Generated {{date}}": "Generated {{date}}",
   "Loading the latest PR revision…": "Loading the latest PR revision…",
   "Click to retry": "Click to retry",
-  "Generate with {{model}}": "Generate with {{model}}"
+  "Generate with {{model}}": "Generate with {{model}}",
+  "Ask AI about selected code": "Ask AI about selected code",
+  "Question about selected code": "Question about selected code",
+  "Ask about this code…": "Ask about this code…",
+  "Send question · Enter": "Send question · Enter",
+  "AI only · Leave blank to explain · Esc to dismiss": "AI only · Leave blank to explain · Esc to dismiss"
 }

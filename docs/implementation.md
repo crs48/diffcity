@@ -775,3 +775,16 @@ Validation:
 - [x] The application flow verifies background capture, exact model/effort reuse, independent providers, duplicate prevention, retries, keyboard activation and retaining the open review. All 178 frontend tests and 118 Rust tests pass; TypeScript, ESLint and Clippy pass.
 - [x] Browser checks confirm hover details (including while pending), independent concurrent generation, completion colors and no page overflow. Settled light/dark WCAG A/AA audits report no violations. Full-app screenshots are retained locally under `output/playwright/inbox-guides-*.png`.
 - [x] The installed ARM bundle matches the verified build and its signature passes. Native inbox inspection recognizes current, outdated and missing guides from the existing database, including legacy runs; both provider marks render correctly. The previous app bundle is retained locally for rollback.
+
+## Questions beside selected code — October 23, 2026
+
+Selecting source text opens a compact, focused question field beside the selection. Enter or the arrow button starts the existing private inline conversation with the typed question and exact selected code. An empty question retains the default explanation prompt; Escape dismisses the field. Text selections remain AI-only and never become GitHub drafts.
+
+The composer captures the source range before focusing the input, so typing or selecting text in the field cannot replace the attached code. Focus waits until a pointer drag or Shift-based keyboard selection finishes. Placement follows the source while it remains visible, stays within the review pane, and dismisses when the source leaves view. IME composition does not submit prematurely. English and Spanish labels include the keyboard controls.
+
+Validation:
+
+- [x] All 182 frontend tests pass, including captured context, typed/default questions, drag/keyboard focus timing, dismissal, viewport placement and IME handling. TypeScript and ESLint pass.
+- [x] Browser interaction selects an actual source substring, types without an extra click, sends on Enter, and renders the question followed by a mocked AI reply in the inline conversation. The persisted note retains exact text, columns and line anchors with `githubDraft: false`.
+- [x] Light/dark accessibility audits report no WCAG A/AA violations; the popover remains within a narrower window. Full-app screenshots are retained locally under `output/playwright/text-question-*.png`.
+- [x] The signed ARM bundle is installed and matches the build. Native WebKit verification confirms selection opens the focused field, typing works immediately, and Escape dismisses it. The previous app bundle is retained locally for rollback.
