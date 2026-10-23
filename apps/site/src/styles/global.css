@@ -1,35 +1,36 @@
 @import "tailwindcss";
+@import "../../../../packages/brand/palette.css";
 @theme {
   --font-sans: "Inter Variable", Inter, system-ui, sans-serif;
 }
 :root {
   color-scheme: light;
   --paper: #fff;
-  --ink: #181d1b;
-  --muted: #656e68;
-  --line: #e3e7e3;
-  --wash: #f5f7f4;
-  --green: #266344;
-  --green-light: #e7f3e9;
-  --red: #a14243;
-  --red-light: #fbecec;
-  --purple: #7358a3;
-  --code: #f9faf8;
-  --shadow: 0 24px 80px -40px #203b2440;
+  --ink: #1f2328;
+  --muted: #59636e;
+  --line: #d1d9e0;
+  --wash: #f6f8fa;
+  --green: var(--pr-green);
+  --green-light: var(--pr-green-soft);
+  --red: var(--pr-red);
+  --red-light: var(--pr-red-soft);
+  --purple: var(--pr-purple);
+  --code: #f6f8fa;
+  --shadow: 0 24px 80px -40px #1f232830;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #101411;
-  --ink: #edf1ec;
-  --muted: #a0aaa0;
-  --line: #2d352e;
-  --wash: #181e19;
-  --green: #a3dab2;
-  --green-light: #1c3426;
-  --red: #f0a7a8;
-  --red-light: #382123;
-  --purple: #c4b0ef;
-  --code: #141a15;
+  --paper: #0d1117;
+  --ink: #f0f6fc;
+  --muted: #9198a1;
+  --line: #3d444d;
+  --wash: #151b23;
+  --green: var(--pr-green);
+  --green-light: var(--pr-green-soft);
+  --red: var(--pr-red);
+  --red-light: var(--pr-red-soft);
+  --purple: var(--pr-purple);
+  --code: #151b23;
   --shadow: 0 24px 80px -40px #000;
 }
 @layer base {
@@ -61,7 +62,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   :focus-visible {
-    outline: 2px solid var(--green);
+    outline: 2px solid var(--pr-blue);
     outline-offset: 5px;
     border-radius: 3px;
   }
@@ -125,7 +126,7 @@
     white-space: nowrap;
   }
   .wordmark-dot {
-    color: var(--muted);
+    color: var(--purple);
   }
   .wordmark.large {
     font-size: 29px;
@@ -174,13 +175,17 @@
     transform: translateY(-1px);
   }
   .button-primary {
-    color: var(--paper);
-    background: var(--ink);
-    border-color: var(--ink);
+    color: var(--pr-on-action);
+    background: var(--pr-action);
+    border-color: var(--pr-action);
   }
   .button-primary:hover {
-    background: var(--green);
-    border-color: var(--green);
+    background: var(--pr-action-hover);
+    border-color: var(--pr-action-hover);
+  }
+  .button-primary:active {
+    background: var(--pr-action-active);
+    border-color: var(--pr-action-active);
   }
   .button-small {
     padding: 10px 14px;
@@ -236,21 +241,40 @@
     margin: 25px auto 25px;
   }
   .hero-diff {
-    position: relative;
-  }
-  .hero-diff::after {
-    content: "";
-    position: absolute;
-    bottom: 1px;
-    left: 0;
-    right: 0;
-    height: 6px;
-    background: var(--green-light);
-    z-index: -1;
-    border-radius: 2px;
+    color: var(--green);
   }
   .hero-period {
+    color: var(--purple);
+  }
+  .hero-change {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 auto 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: -0.02em;
+  }
+  .hero-change span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 11px;
+    border-radius: 5px;
+  }
+  .hero-change .change-before {
+    color: var(--red);
+    background: var(--red-light);
+  }
+  .hero-change .change-after {
     color: var(--green);
+    background: var(--green-light);
+  }
+  .hero-change b {
+    font-family: monospace;
+    font-size: 18px;
+    font-weight: 500;
   }
   .hero-description {
     color: var(--muted);
@@ -270,7 +294,7 @@
     font-weight: 500;
   }
   .text-link:hover {
-    color: var(--green);
+    color: var(--pr-blue);
   }
   .hero-note {
     color: var(--muted);
@@ -300,9 +324,9 @@
     border-radius: 6px;
   }
   .preview-tabs button[aria-selected="true"] {
-    background: var(--wash);
-    border-color: var(--line);
-    color: var(--ink);
+    background: var(--green-light);
+    border-color: var(--pr-green);
+    color: var(--green);
   }
   .preview-tabs button:hover {
     color: var(--ink);
@@ -458,6 +482,12 @@
   }
   .feature-top svg {
     color: var(--green);
+  }
+  .feature:nth-child(2) .feature-top svg {
+    color: var(--purple);
+  }
+  .feature:nth-child(3) .feature-top svg {
+    color: var(--pr-blue);
   }
   .feature h3 {
     font-size: 21px;
@@ -832,6 +862,12 @@
   }
   .feature-top {
     margin-bottom: 14px;
+  }
+  .feature:nth-child(2) .feature-top svg {
+    color: var(--purple);
+  }
+  .feature:nth-child(3) .feature-top svg {
+    color: var(--pr-blue);
   }
   .feature h3 {
     max-width: none;

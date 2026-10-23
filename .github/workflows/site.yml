@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "apps/site/**"
+      - "packages/brand/**"
       - ".github/workflows/site.yml"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -11,6 +12,7 @@ on:
   pull_request:
     paths:
       - "apps/site/**"
+      - "packages/brand/**"
       - ".github/workflows/site.yml"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"

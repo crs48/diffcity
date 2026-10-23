@@ -35,7 +35,8 @@ In repository **Settings → Pages**, the build source must be **GitHub Actions*
 
 - `src/pages/index.astro`: page content, metadata, theme toggle.
 - `src/components/ReviewPreview.astro`: keyboard-accessible screenshot tabs, captions, and source PR links.
-- `src/styles/global.css`: Tailwind entry point, theme tokens, responsive styles.
+- `src/styles/global.css`: Tailwind entry point, neutral surfaces, responsive styles.
+- `../../packages/brand/palette.css`: shared GitHub PR colors for both themes; see the [palette reference](../../packages/brand/README.md).
 - `src/config.ts`: repository and validated optional download URL.
 - `public/`: domain, favicon, social image, robots file, and sitemap.
 

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../../../packages/brand/palette.css";
 
 @theme inline {
   --color-canvas: var(--bg);
@@ -30,25 +31,25 @@
     --control-border: #858585;
     --text: #171717;
     --muted: #5c5c5c;
-    --focus: #171717;
+    --focus: var(--pr-blue);
     --selected: #e5e5e5;
-    --green: #166534;
-    --green-soft: #f0fdf4;
-    --action: #166534;
-    --action-hover: #14532d;
-    --on-action: #ffffff;
-    --amber: #854d0e;
-    --amber-soft: #fffbeb;
-    --amber-border: #d4a64a;
-    --red: #b91c1c;
-    --red-soft: #fef2f2;
-    --purple: #6d28d9;
-    --purple-soft: #f3e8ff;
-    --blue: #1d4ed8;
-    --blue-soft: #eff6ff;
+    --green: var(--pr-green);
+    --green-soft: var(--pr-green-soft);
+    --action: var(--pr-action);
+    --action-hover: var(--pr-action-hover);
+    --on-action: var(--pr-on-action);
+    --amber: var(--pr-amber);
+    --amber-soft: var(--pr-amber-soft);
+    --amber-border: var(--pr-amber-border);
+    --red: var(--pr-red);
+    --red-soft: var(--pr-red-soft);
+    --purple: var(--pr-purple);
+    --purple-soft: var(--pr-purple-soft);
+    --blue: var(--pr-blue);
+    --blue-soft: var(--pr-blue-soft);
     --code: #ffffff;
-    --added: #edf9f0;
-    --removed: #fff0f0;
+    --added: var(--pr-green-soft);
+    --removed: var(--pr-red-soft);
     --code-selected: #d9e9fa;
     --syntax-keyword: #b42330;
     --syntax-string: #176630;
@@ -66,25 +67,25 @@
     --control-border: #737373;
     --text: #fafafa;
     --muted: #a3a3a3;
-    --focus: #fafafa;
+    --focus: var(--pr-blue);
     --selected: #303030;
-    --green: #86efac;
-    --green-soft: #102b18;
-    --action: #86efac;
-    --action-hover: #bbf7d0;
-    --on-action: #052e16;
-    --amber: #fcd34d;
-    --amber-soft: #2b210c;
-    --amber-border: #8b6b22;
-    --red: #fca5a5;
-    --red-soft: #350f0f;
-    --purple: #c4b5fd;
-    --purple-soft: #281447;
-    --blue: #93c5fd;
-    --blue-soft: #102541;
+    --green: var(--pr-green);
+    --green-soft: var(--pr-green-soft);
+    --action: var(--pr-action);
+    --action-hover: var(--pr-action-hover);
+    --on-action: var(--pr-on-action);
+    --amber: var(--pr-amber);
+    --amber-soft: var(--pr-amber-soft);
+    --amber-border: var(--pr-amber-border);
+    --red: var(--pr-red);
+    --red-soft: var(--pr-red-soft);
+    --purple: var(--pr-purple);
+    --purple-soft: var(--pr-purple-soft);
+    --blue: var(--pr-blue);
+    --blue-soft: var(--pr-blue-soft);
     --code: #0a0a0a;
-    --added: #102b18;
-    --removed: #350f0f;
+    --added: var(--pr-green-soft);
+    --removed: var(--pr-red-soft);
     --code-selected: #173c59;
     --syntax-keyword: #ff9caa;
     --syntax-string: #9fe2ad;
@@ -220,15 +221,17 @@
     height: 22px;
   }
   .brand-mark i {
-    background: currentColor;
+    background: var(--red);
     width: 6px;
     height: 15px;
     border-radius: 1px;
   }
   .brand-mark i:nth-child(2) {
+    background: var(--green);
     height: 23px;
   }
   .brand-mark i:nth-child(3) {
+    background: var(--purple);
     height: 19px;
   }
   .account-list {

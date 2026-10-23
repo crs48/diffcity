@@ -1,0 +1,33 @@
+/* GitHub Primer Primitives 11.10.0. See README.md and PRIMER-LICENSE. */
+:root {
+  --pr-green: #1a7f37;
+  --pr-green-soft: #dafbe1;
+  --pr-red: #d1242f;
+  --pr-red-soft: #ffebe9;
+  --pr-purple: #8250df;
+  --pr-purple-soft: #fbefff;
+  --pr-blue: #0969da;
+  --pr-blue-soft: #ddf4ff;
+  --pr-amber: #9a6700;
+  --pr-amber-soft: #fff8c5;
+  --pr-amber-border: #d4a72c;
+  --pr-action: #1f883d;
+  --pr-action-hover: #1c8139;
+  --pr-action-active: #197935;
+  --pr-on-action: #ffffff;
+}
+:root[data-theme="dark"] {
+  --pr-green: #3fb950;
+  --pr-green-soft: #2ea04326;
+  --pr-red: #f85149;
+  --pr-red-soft: #f851491a;
+  --pr-purple: #ab7df8;
+  --pr-purple-soft: #ab7df826;
+  --pr-blue: #4493f8;
+  --pr-blue-soft: #388bfd1a;
+  --pr-amber: #d29922;
+  --pr-amber-soft: #bb800926;
+  --pr-amber-border: #9e6a03;
+  --pr-action: #238636;
+  /* Keep the darker light-theme hover/active tokens for 4.5:1 white labels. */
+}
