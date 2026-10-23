@@ -594,5 +594,21 @@
   "Question about selected code": "Question about selected code",
   "Ask about this code…": "Ask about this code…",
   "Send question · Enter": "Send question · Enter",
-  "AI only · Leave blank to explain · Esc to dismiss": "AI only · Leave blank to explain · Esc to dismiss"
+  "AI only · Leave blank to explain · Esc to dismiss": "AI only · Leave blank to explain · Esc to dismiss",
+  "Naming decisions": "Naming decisions",
+  "Names to confirm": "Names to confirm",
+  "Names become contracts. Review the vocabulary this PR introduces before it becomes expensive to change.": "Names become contracts. Review the vocabulary this PR introduces before it becomes expensive to change.",
+  "Review naming decision: {{name}}": "Review naming decision: {{name}}",
+  "Database name": "Database name",
+  "Domain concept": "Domain concept",
+  "Configuration name": "Configuration name",
+  "Naming decisions for this section": "Naming decisions for this section",
+  "Decision to make": "Decision to make",
+  "Discuss name: {{name}}": "Discuss name: {{name}}",
+  "Discuss name": "Discuss name",
+  "Choose New guide to highlight database names, API contracts, and important naming decisions.": "Choose New guide to highlight database names, API contracts, and important naming decisions.",
+  "{{count}} names to confirm_one": "{{count}} name to confirm",
+  "{{count}} names to confirm_other": "{{count}} names to confirm",
+  "No consequential naming decisions were identified in the supplied code.": "No consequential naming decisions were identified in the supplied code.",
+  "renamed to": "renamed to"
 }

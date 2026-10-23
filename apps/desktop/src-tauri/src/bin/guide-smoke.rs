@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
         )
         .await?;
     ensure!(
-        ["codex", "claude"].contains(&guide.source.as_str()) && guide.policy_version == 4,
+        ["codex", "claude"].contains(&guide.source.as_str()) && guide.policy_version == 5,
         "Expected new live guide"
     );
     ensure!(

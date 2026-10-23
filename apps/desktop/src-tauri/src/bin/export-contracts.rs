@@ -43,6 +43,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         TextSelection,
         Finding,
         GuideAnnotation,
+        NamingKind,
+        NamingDecision,
         EnrichmentStatus,
         EnrichmentTier,
         EnrichmentFile,

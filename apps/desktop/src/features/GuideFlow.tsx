@@ -25,6 +25,7 @@ import {
   FileCode2,
   Flag,
   Sparkles,
+  Tag,
 } from "lucide-react";
 import type {
   Anchor,
@@ -42,6 +43,7 @@ import { GuideMargin } from "./GuideMargin";
 import { orderedAnnotations } from "../lib/guideAnnotations";
 import { GuideCodeNotes } from "./GuideCodeNotes";
 import { Walkthrough } from "./Walkthrough";
+import { NamingDecisions, NamingOverview } from "./GuideNaming";
 
 const OVERVIEW = "guide-overview";
 
@@ -190,6 +192,7 @@ export function GuideFlow(props: Props) {
         <h2 id="guide-overview-heading" tabIndex={-1}>
           {t("PR overview")}
         </h2>
+        <NamingOverview sections={sections} onNavigate={navigate} />
         {w.guide.source === "provisional" ? (
           <>
             <h3>{t("Guide not generated yet")}</h3>
@@ -226,6 +229,22 @@ export function GuideFlow(props: Props) {
             <p className="muted">
               {t(
                 "Choose New guide to add line-by-line explanations of the important passages.",
+              )}
+            </p>
+          )}
+        {["codex", "claude"].includes(w.guide.source) &&
+          w.guide.policyVersion < 5 && (
+            <p className="muted">
+              {t(
+                "Choose New guide to highlight database names, API contracts, and important naming decisions.",
+              )}
+            </p>
+          )}
+        {w.guide.policyVersion >= 5 &&
+          !sections.some((s) => s.namingDecisions?.length) && (
+            <p className="muted">
+              {t(
+                "No consequential naming decisions were identified in the supplied code.",
               )}
             </p>
           )}
@@ -409,6 +428,14 @@ function GuideChapter({
           {t("{{count}} files", { count: files.length })} ·{" "}
           {t("{{count}} hunks", { count: s.hunkIds.length })}
         </p>
+        {!!s.namingDecisions?.length && (
+          <p className="naming-section-cue">
+            <Tag size={14} aria-hidden />
+            {t("{{count}} names to confirm", {
+              count: s.namingDecisions.length,
+            })}
+          </p>
+        )}
         <Button
           className="text-button"
           aria-expanded={contextOpen}
@@ -420,6 +447,7 @@ function GuideChapter({
         </Button>
       </GuideMargin>
       <div className="guide-code">
+        <NamingDecisions section={s} onDiscuss={onDiscuss} />
         {contextOpen && <Walkthrough id={contextId} section={s} />}
         {(annotations.length > 0 ||
           (w.guide.enrichment && !s.foldable && s.assessed)) && (

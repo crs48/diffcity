@@ -414,9 +414,33 @@ pub struct GuideAnnotation {
     pub anchor: Anchor,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum NamingKind {
+    Database,
+    Api,
+    Domain,
+    Configuration,
+}
+
+/// A durable vocabulary decision for the reviewer, not a defect or approval.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NamingDecision {
+    pub name: String,
+    pub previous_name: Option<String>,
+    pub kind: NamingKind,
+    pub reason: String,
+    pub question: String,
+    pub anchor: Anchor,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct GuideSection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(optional, as = "Option<Vec<NamingDecision>>")]
+    pub naming_decisions: Vec<NamingDecision>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[ts(optional, as = "Option<Vec<GuideAnnotation>>")]
     pub annotations: Vec<GuideAnnotation>,

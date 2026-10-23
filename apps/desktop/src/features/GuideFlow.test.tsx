@@ -71,8 +71,10 @@ afterEach(() => {
 });
 function Example({
   initial = fixture as ReviewWorkspace,
+  onDiscuss = () => {},
 }: {
   initial?: ReviewWorkspace;
+  onDiscuss?: (anchor: import("../lib/api").Anchor) => void;
 }) {
   const [w, setW] = useState(structuredClone(initial));
   return (
@@ -91,7 +93,7 @@ function Example({
         mode="guide"
         selection={null}
         onSelect={() => {}}
-        onDiscuss={() => {}}
+        onDiscuss={onDiscuss}
         onProgress={(p) => setW((current) => ({ ...current, progress: p }))}
         onFinish={() => {}}
       />
@@ -343,4 +345,80 @@ it("retains an overview for guides with no text chapters", () => {
     (screen.getByRole("button", { name: "Next section" }) as HTMLButtonElement)
       .disabled,
   ).toBe(true);
+});
+
+it("puts naming decisions up front, navigates to their chapter, and opens the exact code conversation", async () => {
+  const user = userEvent.setup();
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  w.guide.policyVersion = 5;
+  const hunk = w.snapshot.files[0].hunks[0];
+  const decision = {
+    name: "expires_at",
+    previousName: "valid_until",
+    kind: "database" as const,
+    reason:
+      "This stored deadline determines when an invitation **stops working**.",
+    question:
+      "Does `expires_at` mean the invitation deadline, including after redemption?",
+    anchor: {
+      hunkId: hunk.id,
+      path: hunk.path,
+      side: "RIGHT" as const,
+      startLine: 1,
+      line: 1,
+    },
+  };
+  w.guide.sections[0].namingDecisions = [decision];
+  const discuss = vi.fn();
+  render(<Example initial={w} onDiscuss={discuss} />);
+  document
+    .querySelectorAll<HTMLElement>("[data-guide-section]")
+    .forEach((el, i) => (el.dataset.testChapter = String(i)));
+  const overview = screen.getByRole("region", { name: "PR overview" });
+  const naming = within(overview).getByRole("region", {
+    name: "Naming decisions",
+  });
+  expect(naming.textContent).toContain("valid_until");
+  expect(naming.textContent).toContain("expires_at");
+  await user.click(
+    within(naming).getByRole("button", {
+      name: "Review naming decision: expires_at",
+    }),
+  );
+  expect(document.activeElement?.textContent).toBe(w.guide.sections[0].title);
+  const chapter = screen.getByRole("region", {
+    name: w.guide.sections[0].title,
+  });
+  const card = within(chapter).getByRole("region", {
+    name: "Naming decisions for this section",
+  });
+  expect(card.querySelector("strong")?.textContent).toBe("stops working");
+  await user.click(
+    within(chapter).getByRole("button", { name: "Hide walkthrough" }),
+  );
+  expect(card.isConnected).toBe(true);
+  await user.click(
+    within(card).getByRole("button", { name: "Discuss name: expires_at" }),
+  );
+  expect(discuss).toHaveBeenCalledWith(decision.anchor);
+  expect(within(chapter).queryByText(/finding$/)).toBeNull();
+});
+
+it("distinguishes older guides from a naming review with no decisions", () => {
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  w.guide.source = "claude";
+  w.guide.policyVersion = 4;
+  mount(w);
+  expect(
+    screen.getByText(/Choose New guide to highlight database names/),
+  ).toBeTruthy();
+  expect(screen.queryByText(/No consequential naming decisions/)).toBeNull();
+  cleanup();
+  w.guide.policyVersion = 5;
+  mount(w);
+  expect(screen.queryByRole("region", { name: "Naming decisions" })).toBeNull();
+  expect(screen.getByText(/No consequential naming decisions/)).toBeTruthy();
+  expect(
+    screen.queryByText(/Choose New guide to highlight database names/),
+  ).toBeNull();
 });

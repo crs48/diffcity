@@ -13,6 +13,7 @@ pub mod guide;
 mod guide_annotations;
 mod guide_enrichment;
 mod guide_history;
+mod guide_naming;
 mod guide_prompt;
 mod local_repositories;
 pub mod migrations;

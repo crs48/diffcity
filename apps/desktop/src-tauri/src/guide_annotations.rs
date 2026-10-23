@@ -77,6 +77,7 @@ pub fn input(snapshot: &Snapshot, guide: &Guide, path: &str) -> Option<Input> {
             let explanation: String = s.explanation.chars().take(context_budget.min(2000)).collect();
             context_budget -= explanation.chars().count();
             Some(json!({"id":s.id,"title":s.title,"explanation":explanation,"hunks":hunks,
+                "namingDecisions":s.naming_decisions.iter().filter(|n| n.anchor.path == path).collect::<Vec<_>>(),
                 "existingNotes":s.annotations.iter().map(|n|json!({"title":n.title,"anchor":n.anchor})).collect::<Vec<_>>()}))
         }).collect();
     partial |= supplied.len() < file.hunks.len();

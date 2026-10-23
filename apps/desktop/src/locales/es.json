@@ -594,5 +594,21 @@
   "Question about selected code": "Pregunta sobre el código seleccionado",
   "Ask about this code…": "Pregunta sobre este código…",
   "Send question · Enter": "Enviar pregunta · Intro",
-  "AI only · Leave blank to explain · Esc to dismiss": "Solo IA · Dejar vacío para explicar · Esc para cerrar"
+  "AI only · Leave blank to explain · Esc to dismiss": "Solo IA · Dejar vacío para explicar · Esc para cerrar",
+  "Naming decisions": "Decisiones de nombres",
+  "Names to confirm": "Nombres por confirmar",
+  "Names become contracts. Review the vocabulary this PR introduces before it becomes expensive to change.": "Los nombres se convierten en contratos. Revisa el vocabulario que introduce este PR antes de que cambiarlo resulte costoso.",
+  "Review naming decision: {{name}}": "Revisar decisión de nombre: {{name}}",
+  "Database name": "Nombre de base de datos",
+  "Domain concept": "Concepto de dominio",
+  "Configuration name": "Nombre de configuración",
+  "Naming decisions for this section": "Decisiones de nombres para esta sección",
+  "Decision to make": "Decisión por tomar",
+  "Discuss name: {{name}}": "Conversar sobre el nombre: {{name}}",
+  "Discuss name": "Conversar sobre el nombre",
+  "Choose New guide to highlight database names, API contracts, and important naming decisions.": "Elige Nueva guía para destacar nombres de bases de datos, contratos de API y decisiones importantes de nombres.",
+  "{{count}} names to confirm_one": "{{count}} nombre por confirmar",
+  "{{count}} names to confirm_other": "{{count}} nombres por confirmar",
+  "No consequential naming decisions were identified in the supplied code.": "No se identificaron decisiones de nombres relevantes en el código proporcionado.",
+  "renamed to": "renombrado a"
 }

@@ -246,6 +246,8 @@ pub struct Proposal {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ProposedSection {
+    #[serde(default)]
+    pub naming_decisions: Vec<NamingDecision>,
     pub title: String,
     pub summary: String,
     pub explanation: String,
@@ -273,6 +275,7 @@ pub fn validate_guide(
         .map(|h| (h.id.clone(), h))
         .collect();
     let mut seen = HashSet::new();
+    let mut named = HashSet::new();
     let mut sections = Vec::new();
     for s in proposal.sections {
         if s.hunk_ids.is_empty()
@@ -296,6 +299,7 @@ pub fn validate_guide(
                 bail!("Finding is not grounded in its section");
             }
         }
+        crate::guide_naming::validate(snapshot, &s.hunk_ids, &s.naming_decisions, &mut named)?;
         let mut attention = s.attention;
         let mut reasons = vec![s.reason];
         let mut categories = vec![s.category];
@@ -314,7 +318,9 @@ pub fn validate_guide(
             .hunk_ids
             .iter()
             .all(|id| matches!(rule(hunks[id]).1.as_str(), "Documentation" | "Localization"));
-        if attention == Attention::Routine && (!routine_candidate || !s.findings.is_empty()) {
+        if attention == Attention::Routine
+            && (!routine_candidate || !s.findings.is_empty() || !s.naming_decisions.is_empty())
+        {
             attention = Attention::Standard;
         }
         let foldable = assessed && attention == Attention::Routine && s.findings.is_empty();
@@ -322,6 +328,7 @@ pub fn validate_guide(
         reasons.dedup();
         categories.dedup();
         sections.push(GuideSection {
+            naming_decisions: s.naming_decisions,
             annotations: vec![],
             id,
             title: s.title,
@@ -365,7 +372,7 @@ pub fn validate_guide(
         model: model.into(),
         generated_at: chrono::Utc::now().to_rfc3339(),
         limitations,
-        policy_version: 3,
+        policy_version: 5,
     })
 }
 

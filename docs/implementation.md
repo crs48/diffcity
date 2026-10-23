@@ -788,3 +788,28 @@ Validation:
 - [x] Browser interaction selects an actual source substring, types without an extra click, sends on Enter, and renders the question followed by a mocked AI reply in the inline conversation. The persisted note retains exact text, columns and line anchors with `githubDraft: false`.
 - [x] Light/dark accessibility audits report no WCAG A/AA violations; the popover remains within a narrower window. Full-app screenshots are retained locally under `output/playwright/text-question-*.png`.
 - [x] The signed ARM bundle is installed and matches the build. Native WebKit verification confirms selection opens the focused field, typing works immediately, and Escape dismisses it. The previous app bundle is retained locally for rollback.
+
+## Naming as a design review — October 23, 2026
+
+Guide policy 5 makes durable naming decisions part of the main guide generation for both Claude and Codex. Database tables, columns and persisted values come first, followed by API contracts, domain concepts and configuration names. The prompt asks what each name actually represents, whether it matches established vocabulary, and why changing it later would be costly. Routine local variables and subjective style preferences do not need a naming card.
+
+The overview begins with **Names to confirm**, linking into the relevant chapters. Each chapter's naming cards show the exact current name, a former name for an evidenced rename, a concise rationale, and a concrete question for the human. **Discuss name** opens the existing inline conversation at the cited code. Cards remain visible when the prose walkthrough is collapsed. They are design questions, separate from defect findings and GitHub review approval.
+
+```mermaid
+flowchart LR
+    Source[Captured PR evidence] --> Guide[Main guide: behavior and naming]
+    Guide --> Overview[Names to confirm]
+    Overview --> Chapter[Anchored decision in its chapter]
+    Chapter --> Discussion[Private inline discussion]
+    Guide --> Enrichment[Existing bounded enrichment]
+    Enrichment --> Notes[Deeper semantic notes where useful]
+```
+
+There is no additional automatic naming call. The existing bounded enrichment pass receives the naming decisions for its file and may deepen their semantic/compatibility evidence within its unchanged note budget. Main-guide decisions are capped at four per section and twelve per guide, prioritizing durable contracts; the prompt must disclose material omissions. Validation rejects invented or partial identifiers, unsupported former names, duplicate decisions, invalid anchors and names absent from changed lines. Naming sections cannot be automatically folded as routine. Saved decisions survive guide switching, persistence and section compaction; older guides still load and offer a New guide reminder instead of being silently regenerated.
+
+Validation:
+
+- [x] All 121 Rust tests and 184 frontend tests pass, covering source grounding, rename evidence, storage, compaction, enrichment context, legacy guides, navigation, collapsed walkthroughs and exact discussion anchors. TypeScript, ESLint and Clippy pass.
+- [x] Live local-provider checks generate and persist naming decisions from synthetic code: Claude returned two decisions and Codex one, including the durable meaning of `expires_at`. Neither run needed an enrichment call to produce them.
+- [x] Browser checks using the real Claude output confirm readable callouts, chapter navigation and a focused inline discussion on the cited code. Light/dark WCAG A/AA audits report no violations. Full-app screenshots are retained under `output/playwright/naming-live-*.png`.
+- [x] The verified ARM build is installed, its signature passes, and its executable matches the build. Native inspection confirms existing saved guides load and offer the naming-review upgrade reminder. The previous app is retained locally for rollback.

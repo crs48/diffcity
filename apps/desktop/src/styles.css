@@ -3282,6 +3282,124 @@
   .overview-start {
     margin-top: 28px;
   }
+  .naming-overview,
+  .naming-decisions {
+    max-width: 96ch;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    background: var(--surface);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .naming-overview > p {
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .naming-count {
+    border-radius: 12px;
+    background: var(--purple-soft);
+    padding: 1px 7px;
+    color: var(--purple);
+  }
+  .naming-overview ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .naming-overview li + li,
+  .naming-decision + .naming-decision {
+    border-top: 1px solid var(--border);
+  }
+  .naming-summary {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    border-radius: 6px;
+    padding: 12px 8px;
+  }
+  .naming-summary:hover {
+    background: var(--subtle);
+  }
+  .naming-summary > span {
+    flex: 1;
+    min-width: 0;
+  }
+  .naming-summary small {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted);
+  }
+  .naming-summary svg,
+  .naming-name svg {
+    flex-shrink: 0;
+  }
+  .naming-name {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .naming-name code {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .naming-decision {
+    padding: 16px 0 4px;
+  }
+  .naming-kind {
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+  .naming-decision h4 {
+    margin: 0 0 12px;
+  }
+  .naming-decision .comment-markdown {
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .naming-question {
+    margin: 16px 0;
+    padding: 12px 14px;
+    background: var(--subtle);
+    border-radius: 6px;
+    border-left: 2px solid var(--control-border);
+  }
+  .naming-question > strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+  }
+  .naming-decision footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-bottom: 12px;
+  }
+  .naming-decision footer > code {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .naming-section-cue {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 10px 0;
+    font-size: 12px;
+    color: var(--purple);
+  }
+  .naming-overview .walkthrough-heading > svg,
+  .naming-decisions .walkthrough-heading > svg {
+    color: var(--purple);
+  }
   .markdown-diagram {
     margin: 24px 0;
     padding: 20px;

@@ -579,7 +579,7 @@ impl Service {
         if *rx.borrow() {
             bail!("Guide generation cancelled; the previous guide is preserved");
         }
-        guide.policy_version = 4;
+        guide.policy_version = 5;
         for limitation in input.limitations {
             if !guide.limitations.contains(&limitation) {
                 guide.limitations.push(limitation);
@@ -1114,9 +1114,22 @@ pub fn guide_schema() -> Value {
     let finding = object(
         json!({"title":string(),"body":string(),"severity":{"type":"string","enum":["critical","high","medium","low"]},"anchor":anchor}),
     );
-    let section = object(
+    let naming = object(json!({
+        "name":described("Exact significant name in the anchored changed source. Not a proposed alternative."),
+        "previousName":{"type":["string","null"],"description":"Exact former name only for an evidenced rename; otherwise null."},
+        "kind":{"type":"string","enum":["database","api","domain","configuration"]},
+        "reason":described("Brief Markdown: what this name denotes, why its meaning/scope deserves agreement, and the durable cost or ambiguity. Qualify uncertainty."),
+        "question":described("One concrete naming decision for the human to confirm. Never claim approval or a defect based on taste."),
+        "anchor":anchor
+    }));
+    let mut section = object(
         json!({"title":string(),"summary":described("Compact takeaway for the sticky annotation: one or two sentences explaining the outcome."),"explanation":described("Full Markdown walkthrough: why, before/after behavior, concrete flow through symbols and paths, design choices, and test evidence or gaps. Use short headings, focused labeled bullets, compact comparison tables, or a grounded Mermaid diagram when useful; avoid walls of text."),"attention":{"type":"string","enum":["high","standard","routine","needsAssessment"]},"category":string(),"reason":string(),"hunkIds":array(string()),"questions":array(described("A concrete reviewer check naming a scenario and expected behavior or evidence; not a claim that a test was run.")),"findings":array(finding)}),
     );
+    section["properties"]["namingDecisions"] = json!({"type":"array","maxItems":4,"items":naming});
+    section["required"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!("namingDecisions"));
     object(
         json!({"summary":described("Full Markdown PR overview shown before code: purpose, before/after behavior, cross-file flow, risks and rollout, test evidence and gaps, and the reading path. Use headings, lists or tables as helpful; typically 300–600 words for a substantial PR. Include fenced mermaid diagrams with accTitle/accDescr when they clarify the supplied evidence. No HTML, images, links in diagrams, or Mermaid configuration."),"sections":{"type":"array","items":section,"maxItems":crate::guide::MAX_SECTIONS},"limitations":array(string())}),
     )

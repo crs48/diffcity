@@ -36,6 +36,7 @@ pub fn provisional_sections(snapshot: &Snapshot, excluded: &HashSet<String>) -> 
                 }
                 .to_string();
                 sections.push(GuideSection {
+                    naming_decisions: vec![],
                     annotations: vec![],
                     id: String::new(), title, summary: "Review these related changes together. Run Codex for an explanation grounded in the code.".into(),
                     explanation: String::new(), attention, category, reason, hunk_ids: vec![hunk.id.clone()], unavailable_paths: vec![],
@@ -51,6 +52,7 @@ pub fn provisional_sections(snapshot: &Snapshot, excluded: &HashSet<String>) -> 
                 section.unavailable_paths.push(file.path.clone());
             } else {
                 sections.push(GuideSection {
+                    naming_decisions: vec![],
                     annotations: vec![],
                     id: String::new(), title: "Changes that need additional context".into(),
                     summary: "These files could not be captured as text. Inspect their limitations before finishing the review.".into(),
@@ -139,6 +141,7 @@ pub fn compact_sections(mut sections: Vec<GuideSection>) -> Vec<GuideSection> {
         earlier.questions.extend(later.questions);
         earlier.findings.extend(later.findings);
         earlier.annotations.extend(later.annotations);
+        earlier.naming_decisions.extend(later.naming_decisions);
         earlier.id = section_id(earlier);
     }
     sections
@@ -202,6 +205,7 @@ mod tests {
             summary: "Partially assessed".into(),
             limitations: vec![],
             sections: vec![domain::ProposedSection {
+                naming_decisions: vec![],
                 title: "Reviewed behavior".into(),
                 summary: "Only the first hunk was supplied.".into(),
                 explanation: "This behavior is supported by the first captured hunk.".into(),

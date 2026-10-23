@@ -39,7 +39,7 @@ async fn both_providers_generate_and_persist_anchored_marginalia() {
             )
             .await
             .unwrap();
-        assert_eq!(guide.policy_version, 4);
+        assert_eq!(guide.policy_version, 5);
         assert!(
             guide.sections.iter().all(|s| s.annotations.is_empty()),
             "The first guide must be readable before enrichment"
