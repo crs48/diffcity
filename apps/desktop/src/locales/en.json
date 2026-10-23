@@ -518,5 +518,12 @@
   "Ask AI about": "Ask AI about",
   "Reply context": "Reply context",
   "Replying to code": "Replying to code",
-  "Replying to this PR": "Replying to this PR"
+  "Replying to this PR": "Replying to this PR",
+  "Keep asking. Your questions will be sent in order after each reply.": "Keep asking. Your questions will be sent in order after each reply.",
+  "Queue question": "Queue question",
+  "Waiting for earlier replies…": "Waiting for earlier replies…",
+  "Queued AI question": "Queued AI question",
+  "Queued · {{position}}": "Queued · {{position}}",
+  "Remove from queue": "Remove from queue",
+  "Removed from queue · saved as a private note": "Removed from queue · saved as a private note"
 }

@@ -518,5 +518,12 @@
   "Ask AI about": "Preguntar a la IA sobre",
   "Reply context": "Contexto de la respuesta",
   "Replying to code": "Respondiendo sobre el código",
-  "Replying to this PR": "Respondiendo sobre este PR"
+  "Replying to this PR": "Respondiendo sobre este PR",
+  "Keep asking. Your questions will be sent in order after each reply.": "Sigue preguntando. Tus preguntas se enviarán en orden después de cada respuesta.",
+  "Queue question": "Poner pregunta en cola",
+  "Waiting for earlier replies…": "Esperando las respuestas anteriores…",
+  "Queued AI question": "Pregunta a la IA en cola",
+  "Queued · {{position}}": "En cola · {{position}}",
+  "Remove from queue": "Quitar de la cola",
+  "Removed from queue · saved as a private note": "Fuera de la cola · guardada como nota privada"
 }

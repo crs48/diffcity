@@ -948,8 +948,46 @@ fn discussion_history(notes: &[Note], current: &Note) -> Vec<Value> {
                 && !n.github_draft
         })
         .collect();
-    relevant.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-    relevant.into_iter().rev().take(24).collect::<Vec<_>>().into_iter().rev()
+    relevant.sort_by(|a, b| {
+        match (
+            chrono::DateTime::parse_from_rfc3339(&a.created_at),
+            chrono::DateTime::parse_from_rfc3339(&b.created_at),
+        ) {
+            (Ok(a), Ok(b)) => a.cmp(&b),
+            _ => a.created_at.cmp(&b.created_at),
+        }
+    });
+    let mut replies = std::collections::HashMap::<&str, Vec<&Note>>::new();
+    for note in &relevant {
+        if note.role == "assistant"
+            && let Some(parent) = &note.parent_id
+        {
+            replies.entry(parent).or_default().push(note);
+        }
+    }
+    // Autosaves and queued questions can predate the answer currently being
+    // written. Only completed exchanges belong in the next request's context;
+    // unanswered private notes (including removed queue items) stay private.
+    let history: Vec<_> = relevant
+        .iter()
+        .flat_map(|note| {
+            if note.role == "user" {
+                replies
+                    .get(note.id.as_str())
+                    .map(|answers| {
+                        std::iter::once(*note)
+                            .chain(answers.iter().copied())
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default()
+            } else if note.role == "assistant" && note.parent_id.is_none() {
+                vec![*note] // Keep older conversations without reply metadata usable.
+            } else {
+                Vec::new()
+            }
+        })
+        .collect();
+    history.into_iter().rev().take(24).collect::<Vec<_>>().into_iter().rev()
         .map(|n| {
             let mut anchor = n.anchor.clone();
             let mut selection_text_truncated = false;
@@ -1145,9 +1183,49 @@ mod discussion_tests {
     }
 
     #[test]
+    fn queued_questions_receive_completed_exchanges_but_not_future_or_removed_questions() {
+        let first = message(1, None);
+        let second = message(2, None);
+        let removed = message(3, None);
+        let later = message(4, None);
+        // Both follow-ups were saved while the first answer was still running.
+        let mut first_answer = message(5, None);
+        first_answer.role = "assistant".into();
+        first_answer.parent_id = Some(first.id.clone());
+        let mut notes = vec![later.clone(), removed, first_answer, second.clone(), first];
+        let history = discussion_history(&notes, &second);
+        assert_eq!(
+            history
+                .iter()
+                .map(|m| m["text"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            vec!["Message 1", "Message 5"]
+        );
+        let mut second_answer = message(6, None);
+        second_answer.role = "assistant".into();
+        second_answer.parent_id = Some(second.id.clone());
+        notes.push(second_answer);
+        let history = discussion_history(&notes, &later);
+        assert_eq!(
+            history
+                .iter()
+                .map(|m| m["text"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            vec!["Message 1", "Message 5", "Message 2", "Message 6"]
+        );
+        // Retrying an earlier question excludes its old answers, but retains
+        // other completed exchanges instead of inheriting a future queued turn.
+        assert_eq!(discussion_history(&notes, &second).len(), 2);
+    }
+
+    #[test]
     fn thread_history_is_bounded_and_in_chronological_order() {
         let current = message(50, None);
         let mut notes: Vec<_> = (0..50).map(|i| message(i, None)).collect();
+        for index in (1..50).step_by(2) {
+            notes[index].role = "assistant".into();
+            notes[index].parent_id = Some((index - 1).to_string());
+        }
         notes[49].body = "é".repeat(3000);
         let history = discussion_history(&notes, &current);
         assert_eq!(history.len(), 24);
@@ -1170,8 +1248,11 @@ mod discussion_tests {
                 text: "é".repeat(16_000),
             }),
         };
-        let notes = vec![message(1, Some(anchor.clone()))];
-        let history = discussion_history(&notes, &message(2, Some(anchor)));
+        let mut answer = message(2, Some(anchor.clone()));
+        answer.role = "assistant".into();
+        answer.parent_id = Some("1".into());
+        let notes = vec![message(1, Some(anchor.clone())), answer];
+        let history = discussion_history(&notes, &message(3, Some(anchor)));
         assert_eq!(history[0]["selectionTextTruncated"], true);
         assert_eq!(
             history[0]["anchor"]["textSelection"]["text"]

@@ -258,3 +258,142 @@ it("routes incremental enrichment only to its guide while question responses rem
   });
   expect(updates).toHaveBeenCalledTimes(1);
 });
+
+const questionInput = (
+  id: string,
+  selected = anchor,
+  snapshotId = "snapshot",
+) => ({
+  kind: "question" as const,
+  snapshotId,
+  question: { ...newNote(snapshotId, selected, id), id },
+  preference: defaultModelPreference,
+});
+
+it("dispatches follow-ups FIFO only after each answer settles, with other conversations independent", async () => {
+  const { result } = renderHook(useAiRuns);
+  const work = Array.from({ length: 5 }, () => deferred<string>());
+  const tasks = work.map((w) => vi.fn(() => w.promise));
+  const inputs = [
+    questionInput("one"),
+    questionInput("two"),
+    questionInput("three"),
+    questionInput("other-line", { ...anchor, line: 2, startLine: 2 }),
+    questionInput("other-revision", anchor, "other-snapshot"),
+  ];
+  let promises: Promise<string | undefined>[] = [];
+  act(() => {
+    promises = inputs.map((input, i) => result.current.start(input, tasks[i]));
+  });
+  await waitFor(() =>
+    expect(tasks.map((t) => t.mock.calls.length)).toEqual([1, 0, 0, 1, 1]),
+  );
+  expect(result.current.runs.map((r) => r.phase)).toEqual([
+    "queued",
+    "waiting",
+    "waiting",
+    "queued",
+    "queued",
+  ]);
+  const duplicate = vi.fn();
+  await act(() => result.current.start(inputs[1], duplicate));
+  expect(duplicate).not.toHaveBeenCalled();
+  await act(async () => {
+    work[0].resolve("first answer saved");
+    await promises[0];
+  });
+  await waitFor(() =>
+    expect(tasks.map((t) => t.mock.calls.length)).toEqual([1, 1, 0, 1, 1]),
+  );
+  await act(async () => {
+    work[1].resolve("second answer saved");
+    await promises[1];
+  });
+  await waitFor(() => expect(tasks[2]).toHaveBeenCalledTimes(1));
+  await act(async () => {
+    work[2].resolve("third answer");
+    work[3].resolve("other line");
+    work[4].resolve("other revision");
+    await Promise.all(promises);
+  });
+  expect(result.current.runs).toEqual([]);
+});
+
+it("removing the middle or tail question never dispatches it or lets a later question bypass the running reply", async () => {
+  const { result } = renderHook(useAiRuns);
+  const cancel = vi.spyOn(api, "cancel").mockResolvedValue(undefined);
+  const first = deferred<string>();
+  const last = deferred<string>();
+  const tasks = [
+    vi.fn(() => first.promise),
+    vi.fn(async () => "removed"),
+    vi.fn(() => last.promise),
+  ];
+  let promises: Promise<string | undefined>[] = [];
+  act(() => {
+    promises = tasks
+      .slice(0, 2)
+      .map((task, i) => result.current.start(questionInput(String(i)), task));
+  });
+  await waitFor(() => expect(tasks[0]).toHaveBeenCalledTimes(1));
+  const middleId = result.current.runs[1].id;
+  await act(async () => {
+    await result.current.cancel(middleId);
+    await promises[1];
+  });
+  expect(cancel).not.toHaveBeenCalled();
+  expect(result.current.runs[1].phase).toBe("cancelled");
+  // Queue a new question after removing the tail: the cancelled barrier must
+  // continue waiting on the active first question.
+  act(() => {
+    promises.push(result.current.start(questionInput("third"), tasks[2]));
+  });
+  await act(async () => {});
+  expect(tasks[1]).not.toHaveBeenCalled();
+  expect(tasks[2]).not.toHaveBeenCalled();
+  await act(async () => {
+    first.resolve("answer");
+    await promises[0];
+  });
+  await waitFor(() => expect(tasks[2]).toHaveBeenCalledTimes(1));
+  await act(async () => {
+    last.resolve("last");
+    await promises[2];
+  });
+  expect(result.current.runs).toHaveLength(1);
+  expect(result.current.runs[0].text).toBe(
+    "Removed from queue · saved as a private note",
+  );
+});
+
+it.each([false, true])(
+  "advances after a failed or cancelled response without affecting other queued questions (cancel: %s)",
+  async (cancelled) => {
+    const { result } = renderHook(useAiRuns);
+    const first = deferred<string>();
+    const next = vi.fn(async () => "next answer");
+    const cancel = vi.spyOn(api, "cancel").mockResolvedValue(undefined);
+    let pending!: Promise<string | undefined>;
+    let queued!: Promise<string | undefined>;
+    act(() => {
+      pending = result.current.start(
+        questionInput("first"),
+        () => first.promise,
+      );
+      queued = result.current.start(questionInput("second"), next);
+    });
+    await act(async () => {});
+    const firstId = result.current.runs[0].id;
+    if (cancelled) await act(() => result.current.cancel(firstId));
+    expect(next).not.toHaveBeenCalled();
+    await act(async () => {
+      first.reject(new Error(cancelled ? "cancelled" : "Provider unavailable"));
+      await Promise.all([pending, queued]);
+    });
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(result.current.runs[0].phase).toBe(
+      cancelled ? "cancelled" : "error",
+    );
+    expect(cancel).toHaveBeenCalledTimes(cancelled ? 1 : 0);
+  },
+);

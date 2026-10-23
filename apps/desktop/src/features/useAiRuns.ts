@@ -17,7 +17,8 @@ export type AiRun = {
   guideId?: string;
   question?: Note;
   preference: ModelPreference;
-  phase: "queued" | "working" | "cancelling" | "error" | "cancelled";
+  phase:
+    "waiting" | "queued" | "working" | "cancelling" | "error" | "cancelled";
   text: string;
   stream: string;
 };
@@ -53,6 +54,17 @@ export function useAiRuns() {
   const [runs, setRuns] = useState<AiRun[]>([]);
   const current = useRef<AiRun[]>([]);
   const progress = useRef(new Map<string, (guide: Guide) => void>());
+  const pending = useRef(
+    new Map<
+      string,
+      {
+        question?: Note;
+        done: Promise<void>;
+        stopWaiting: () => void;
+        dispatched: boolean;
+      }
+    >(),
+  );
   const ready = useRef<Promise<unknown>>(Promise.resolve());
   const update = useCallback((change: (runs: AiRun[]) => AiRun[]) => {
     current.current = change(current.current);
@@ -121,7 +133,7 @@ export function useAiRuns() {
           r.snapshotId === details.snapshotId &&
           r.kind === details.kind &&
           (r.kind === "question"
-            ? sameAnchor(r.question!.anchor, details.question!.anchor)
+            ? r.question!.id === details.question!.id
             : r.kind === "enrichment"
               ? r.guideId === details.guideId
               : JSON.stringify(r.preference) ===
@@ -130,23 +142,58 @@ export function useAiRuns() {
     )
       return;
     const id = crypto.randomUUID();
+    const previous = details.question
+      ? [...pending.current.values()]
+          .reverse()
+          .find(
+            (entry) =>
+              entry.question?.snapshotId === details.snapshotId &&
+              sameAnchor(entry.question.anchor, details.question!.anchor),
+          )
+      : undefined;
+    let release!: () => void;
+    const completed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let stopWaiting!: () => void;
+    const stopped = new Promise<void>((resolve) => {
+      stopWaiting = resolve;
+    });
+    const entry = {
+      question: details.question,
+      // A removed question still waits for its predecessor before releasing the
+      // next question. Otherwise removing the middle item would bypass FIFO.
+      done: (previous?.done ?? Promise.resolve()).then(() => completed),
+      stopWaiting,
+      dispatched: false,
+    };
+    pending.current.set(id, entry);
     if (onGuide) progress.current.set(id, onGuide);
     update((runs) => [
       ...runs,
       {
         ...details,
         id,
-        phase: "queued",
-        text: "Waiting for an AI slot…",
+        phase: previous ? "waiting" : "queued",
+        text: previous
+          ? "Waiting for earlier replies…"
+          : "Waiting for an AI slot…",
         stream: "",
       },
     ]);
     try {
-      await ready.current;
-      if (current.current.find((r) => r.id === id)?.phase === "cancelling") {
-        dismiss(id);
-        return;
-      }
+      if (previous) await Promise.race([previous.done, stopped]);
+      await Promise.race([ready.current, stopped]);
+      const run = current.current.find((r) => r.id === id);
+      if (!run || !isActiveRun(run) || run.phase === "cancelling") return;
+      entry.dispatched = true;
+      update((runs) =>
+        runs.map((r) =>
+          r.id === id
+            ? { ...r, phase: "queued", text: "Waiting for an AI slot…" }
+            : r,
+        ),
+      );
       const result = await task(id);
       dismiss(id);
       return result;
@@ -165,9 +212,29 @@ export function useAiRuns() {
       );
     } finally {
       progress.current.delete(id);
+      release();
+      void entry.done.then(() => pending.current.delete(id));
     }
   };
   const cancel = async (id: string) => {
+    const entry = pending.current.get(id);
+    if (!entry?.dispatched) {
+      update((runs) =>
+        runs.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                phase: "cancelled",
+                text: r.question
+                  ? "Removed from queue · saved as a private note"
+                  : "Cancelled",
+              }
+            : r,
+        ),
+      );
+      entry?.stopWaiting();
+      return;
+    }
     update((runs) =>
       runs.map((r) =>
         r.id === id ? { ...r, phase: "cancelling", text: "Cancelling…" } : r,

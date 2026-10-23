@@ -223,7 +223,7 @@ describe("GitHub flavored comment Markdown", () => {
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Ask AI about this comment" }));
-    await waitFor(() => expect(ask).toHaveBeenCalledExactlyOnceWith(note));
+    expect(ask).not.toHaveBeenCalled(); // The same question is already running.
     expect(note.body).toBe(body);
     rerender(
       <ReviewMessages
@@ -242,6 +242,18 @@ describe("GitHub flavored comment Markdown", () => {
       screen.getByLabelText("AI response in progress").querySelector("pre code")
         ?.textContent,
     ).toBe("SELECT *\n");
+    rerender(
+      <ReviewMessages
+        notes={[note]}
+        remote={[remote]}
+        conversation={{ ...conversation, runs: [] }}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Ask AI about this comment" }));
+    await waitFor(() => expect(ask).toHaveBeenCalledExactlyOnceWith(note));
+    expect(note.body).toBe(body);
   });
 });
 

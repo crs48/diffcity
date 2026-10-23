@@ -1959,6 +1959,16 @@
     background: transparent;
     border: 0;
   }
+  .message.message-queued {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    color: var(--muted);
+  }
+  .message-queued .message-label {
+    margin: 0;
+  }
   .message.github-comment,
   .message.remote {
     border-left: 2px solid var(--border);

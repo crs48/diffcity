@@ -75,15 +75,18 @@ it("private notes and GitHub drafts require their own explicit buttons", () => {
   expect(submit).toHaveBeenLastCalledWith(undefined, true);
   expect(ask).not.toHaveBeenCalled();
 });
-it("cannot accidentally send a draft to AI or send into an active conversation", () => {
+it("cannot accidentally send a GitHub draft to AI", () => {
   const { input, submit } = setup({ editing: true });
   fireEvent.keyDown(input, { key: "Enter" });
   expect(submit).not.toHaveBeenCalled();
   expect(screen.queryByRole("button", { name: "Ask AI" })).toBeNull();
-  cleanup();
+});
+it("queues another question with Enter or the button while a conversation responds", () => {
   const busy = setup({ busy: true });
   fireEvent.keyDown(busy.input, { key: "Enter" });
-  expect(busy.submit).not.toHaveBeenCalled();
+  expect(busy.submit).toHaveBeenCalledExactlyOnceWith(busy.ask);
+  fireEvent.click(screen.getByRole("button", { name: "Queue question" }));
+  expect(busy.submit).toHaveBeenCalledTimes(2);
 });
 it("text selections remain AI-only", () => {
   setup({ text: true });

@@ -664,12 +664,15 @@ export default function App() {
     }
   };
   const ask = async (note: Note) => {
+    const activeModel = threadRuns(ai.runs, note.snapshotId, note.anchor).find(
+      isActiveRun,
+    )?.preference;
     const preference = threadModel(
       current.current?.snapshot.id === note.snapshotId
         ? current.current.notes
         : [],
       note.anchor,
-      data?.modelPreference ?? defaultModelPreference,
+      activeModel ?? data?.modelPreference ?? defaultModelPreference,
     );
     const answer = await ai.start(
       {

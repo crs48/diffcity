@@ -86,8 +86,7 @@ export function NoteComposer({
           )
             return;
           event.preventDefault();
-          if (!busy && state.draft?.body.trim())
-            void state.submit(onAsk).catch(onError);
+          if (state.draft?.body.trim()) void state.submit(onAsk).catch(onError);
         }}
       />
       <div className="composer-status" role="status">
@@ -106,7 +105,9 @@ export function NoteComposer({
       )}
       {busy && (
         <p className="muted">
-          {t("This conversation is responding. You can ask in another thread.")}
+          {t(
+            "Keep asking. Your questions will be sent in order after each reply.",
+          )}
         </p>
       )}
       <div className="composer-actions">
@@ -133,11 +134,11 @@ export function NoteComposer({
         {!editing && (
           <Button
             className="primary"
-            isDisabled={busy || editing || !state.draft.body.trim()}
+            isDisabled={!state.draft.body.trim()}
             onPress={() => void state.submit(onAsk).catch(onError)}
           >
             <Send size={13} />
-            {t("Ask AI")}{" "}
+            {t(busy ? "Queue question" : "Ask AI")}{" "}
           </Button>
         )}
       </div>

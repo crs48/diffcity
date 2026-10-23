@@ -2,10 +2,10 @@ import { isActiveRun, type AiRun } from "./useAiRuns";
 import { useTranslation } from "react-i18next";
 import "../i18n";
 import { Button } from "react-aria-components";
-import { Github, MessageSquare, Sparkles } from "lucide-react";
+import { Github, ListOrdered, MessageSquare, Sparkles } from "lucide-react";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import type { Note, RemoteComment } from "../lib/api";
-import { lineRange } from "../lib/selection";
+import { lineRange, sameAnchor } from "../lib/selection";
 import type { Conversation } from "./conversation";
 import { SelectionQuote } from "./SelectionQuote";
 import { visibleReply } from "../lib/threadTitle";
@@ -95,7 +95,9 @@ export function ReviewMessages({
                 {n.role === "user" && !n.githubDraft && (
                   <Button
                     className="text-button"
-                    isDisabled={c.isBusy(n.anchor)}
+                    isDisabled={c.runs.some(
+                      (r) => r.question?.id === n.id && isActiveRun(r),
+                    )}
                     onPress={() => void c.ask(n).catch(c.onError)}
                   >
                     <Sparkles size={12} />
@@ -170,6 +172,34 @@ function RunReply({
   conversation: Conversation;
 }) {
   const { t } = useTranslation();
+  if (run.phase === "waiting") {
+    const position =
+      c.runs
+        .filter(
+          (r) =>
+            r.phase === "waiting" &&
+            r.snapshotId === run.snapshotId &&
+            sameAnchor(
+              r.question?.anchor ?? null,
+              run.question?.anchor ?? null,
+            ),
+        )
+        .findIndex((r) => r.id === run.id) + 1;
+    return (
+      <article
+        className="message message-queued"
+        data-run-id={run.id}
+        aria-label={t("Queued AI question")}
+      >
+        <div className="message-label" role="status">
+          <ListOrdered size={14} /> {t("Queued · {{position}}", { position })}
+        </div>
+        <Button className="text-button" onPress={() => void c.cancel(run.id)}>
+          {t("Remove from queue")}
+        </Button>
+      </article>
+    );
+  }
   return (
     <article
       className="message assistant streaming"
@@ -181,7 +211,12 @@ function RunReply({
       <div className="message-label">
         <Sparkles size={12} /> {run.preference.model}
         <span className="muted" role="status">
-          {t(run.phase === "cancelled" ? "Cancelled" : run.text)}
+          {t(
+            run.phase === "cancelled" &&
+              run.text !== "Removed from queue · saved as a private note"
+              ? "Cancelled"
+              : run.text,
+          )}
         </span>
       </div>
       {run.stream && (

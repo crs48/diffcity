@@ -23,7 +23,14 @@ pub fn context(notes: &[Note], current: &Note) -> Option<Value> {
     thread.sort_by(|a, b| a.created_at.cmp(&b.created_at).then(a.id.cmp(&b.id)));
     let first = thread
         .iter()
-        .find(|n| n.role == "user")
+        .find(|n| {
+            n.role == "user"
+                && (n.id == current.id
+                    || thread.iter().any(|reply| {
+                        reply.role == "assistant"
+                            && reply.parent_id.as_deref() == Some(n.id.as_str())
+                    }))
+        })
         .copied()
         .unwrap_or(current);
     let reply = thread
@@ -84,6 +91,17 @@ mod tests {
             context(std::slice::from_ref(&first), &first).unwrap()["firstResponse"],
             Value::Null
         );
+    }
+
+    #[test]
+    fn titles_do_not_use_unsent_or_removed_questions_as_the_opening_exchange() {
+        let unsent = note("1", "user", "An unfinished private thought");
+        let current = note("2", "user", "Explain the migration rollout");
+        let future = note("3", "user", "A follow-up still in the queue");
+        let notes = vec![unsent, current.clone(), future];
+        let title = context(&notes, &current).unwrap();
+        assert_eq!(title["firstMessage"], current.body);
+        assert_eq!(title["firstResponse"], Value::Null);
     }
 
     #[test]
