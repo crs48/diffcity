@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GuideAnnotation } from "../lib/api";
 import { annotationLine, annotationLayout } from "../lib/guideAnnotations";
-import { mapRowAtLine, mapYAtLine } from "../lib/minimap";
+import { clamp, mapRowAtLine, mapYAtLine } from "../lib/minimap";
 import { followScrollOffset, followScrollTarget } from "../lib/scrollTarget";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { FileNavigationContext, type MapSource } from "./fileNavigation";
@@ -35,7 +35,7 @@ export function GuideMargin({
   const { t } = useTranslation();
   const registry = useContext(FileNavigationContext);
   const root = useRef<HTMLElement>(null);
-  const connector = useRef<SVGPathElement>(null);
+  const connector = useRef<SVGSVGElement>(null);
   const located = useRef<Located[]>([]);
   const stopJump = useRef(() => {});
 
@@ -47,6 +47,11 @@ export function GuideMargin({
     const overview = element?.querySelector<HTMLElement>(".code-note-overview");
     if (!element || !chapter || !viewport || !code || !overview) return;
     const slots = [...element.querySelectorAll<HTMLElement>("[data-note-id]")];
+    const paths = new Map(
+      [
+        ...(connector.current?.querySelectorAll<SVGPathElement>("path") ?? []),
+      ].map((path) => [path.dataset.noteConnector!, path]),
+    );
     let frame = 0;
     let needsLayout = true;
     let marked = new Set<HTMLElement>();
@@ -108,7 +113,10 @@ export function GuideMargin({
           );
         });
       }
-      if (bounds.bottom < view.top || bounds.top > view.bottom) return;
+      if (bounds.bottom < view.top || bounds.top > view.bottom) {
+        paths.forEach((path) => path.setAttribute("d", ""));
+        return;
+      }
       const readingY = view.top + inset + 120;
       const target = wide
         ? targets
@@ -131,33 +139,45 @@ export function GuideMargin({
         row.dataset.guideNote = "true";
       });
       marked = covered;
-      const path = connector.current;
-      if (!path) return;
       const margin = element.getBoundingClientRect();
-      const file =
-        target?.source.element.closest<HTMLElement>("[data-file-path]");
-      const startY = target ? mapYAtLine(target.source, target.start) : 0;
-      const endRow = target ? mapRowAtLine(target.source, target.end) : null;
-      const endY = endRow?.getBoundingClientRect().bottom ?? startY + 25;
-      const top = Math.max(
-        startY,
-        view.top +
-          inset +
-          (file?.querySelector<HTMLElement>(".file-bar")?.offsetHeight ?? 52),
-      );
-      const bottom = Math.min(endY, view.bottom - 8);
-      if (!target || bottom <= top) {
-        path.setAttribute("d", "");
-        return;
-      }
-      const x =
-        target.source.element.getBoundingClientRect().left - margin.right - 2;
-      const y = (top + bottom) / 2 - margin.top;
-      const from = target.content.getBoundingClientRect().top - margin.top + 32;
-      path.setAttribute(
-        "d",
-        `M 0 ${from} H ${x / 2} V ${y} H ${x} M ${x} ${top - margin.top} V ${bottom - margin.top}`,
-      );
+      paths.forEach((path, id) => {
+        const passage = wide
+          ? targets.find((p) => p.note.id === id)
+          : undefined;
+        if (!passage) {
+          path.setAttribute("d", "");
+          return;
+        }
+        // Connect every note, including one entering below the reading line.
+        // Keep code coordinates in document flow: the viewport clips the SVG
+        // naturally when the referenced range scrolls away or is virtualized.
+        const top = mapYAtLine(passage.source, passage.start);
+        const bottom =
+          mapRowAtLine(passage.source, passage.end)?.getBoundingClientRect()
+            .bottom ?? mapYAtLine(passage.source, passage.end + 1);
+        const content = passage.content.getBoundingClientRect();
+        const visibleTop = Math.max(content.top, view.top + inset);
+        const visibleBottom = Math.min(content.bottom, view.bottom);
+        // A tall note still has a visible connection while its heading scrolls
+        // away. Notes outside the viewport retain their actual attachment point.
+        const from =
+          visibleBottom > visibleTop
+            ? clamp(
+                content.top + 32,
+                visibleTop + Math.min(16, (visibleBottom - visibleTop) / 2),
+                visibleBottom - Math.min(16, (visibleBottom - visibleTop) / 2),
+              )
+            : content.top + 32;
+        const x =
+          passage.source.element.getBoundingClientRect().left -
+          margin.right -
+          2;
+        const y = (top + bottom) / 2 - margin.top;
+        path.setAttribute(
+          "d",
+          `M 0 ${from - margin.top} H ${x / 2} V ${y} H ${x} M ${x} ${top - margin.top} V ${bottom - margin.top}`,
+        );
+      });
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -316,8 +336,10 @@ export function GuideMargin({
           </div>
         </div>
       ))}
-      <svg className="code-note-connector" aria-hidden="true">
-        <path ref={connector} />
+      <svg ref={connector} className="code-note-connector" aria-hidden="true">
+        {notes.map((note) => (
+          <path key={note.id} data-note-connector={note.id} />
+        ))}
       </svg>
     </aside>
   );

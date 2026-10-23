@@ -2871,7 +2871,7 @@
     left: 100%;
     top: 0;
     width: 1px;
-    height: 1px;
+    height: 100%;
     overflow: visible;
     pointer-events: none;
   }
@@ -2879,7 +2879,7 @@
     fill: none;
     stroke: var(--muted);
     stroke-width: 1;
-    opacity: 0.6;
+    opacity: 0.8;
   }
   [data-guide-note="true"] > .diff-line {
     box-shadow: inset 2px 0 var(--muted);
