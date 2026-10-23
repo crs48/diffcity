@@ -825,4 +825,4 @@ Validation:
 - [x] All 184 frontend tests pass, including queued turns, line/text anchors, explicit draft actions and keyboard submission. TypeScript, ESLint and formatting pass. A repeat during native compilation hit three timeouts; the final run with four workers passed without changing test timeouts.
 - [x] Browser checks confirm question/reply interleaving, queue completion, inline-to-PR-chat navigation and tooltip visibility on keyboard focus. Light/dark WCAG A/AA audits report no violations; the compact composer fits a 1050-pixel window without horizontal overflow. Whole-app screenshots are retained locally under `output/playwright/style-*.png`.
 - [x] The production ARM bundle builds and passes architecture/signature checks.
-- [ ] Install and verify the update in native WebKit after macOS is unlocked.
+- [x] Installed and opened the verified ARM bundle after macOS was unlocked. Native WebKit confirms the lighter inbox and guide surfaces, retained conversations, compact composer, model/access metadata and accessible note/send controls. The installed executable matches the build; the previous app bundle is retained locally for rollback.
