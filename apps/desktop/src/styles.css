@@ -1816,7 +1816,7 @@
     font-size: 12px;
   }
   .inline-messages {
-    padding: 0 14px;
+    padding: 8px 14px 0;
   }
   .inline-thread .composer {
     padding: 12px;
@@ -1825,8 +1825,7 @@
     min-height: 72px;
   }
   .inline-thread .message:last-of-type {
-    border-bottom: 0;
-    margin-bottom: 4px;
+    margin-bottom: 16px;
   }
   .inline-reply {
     margin: 6px 14px 12px;
@@ -1836,6 +1835,7 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    margin-top: 8px;
   }
   .message-location {
     display: block;
@@ -1941,17 +1941,34 @@
     line-height: 1.8;
   }
   .message {
-    margin: 10px 0 21px;
-    padding-bottom: 13px;
-    border-bottom: 1px solid var(--border);
+    margin: 10px 0 24px;
+    min-width: 0;
     font-size: 12px;
     line-height: 1.8;
     overflow-wrap: anywhere;
+  }
+  .message.user:not(.github-comment) {
+    width: fit-content;
+    max-width: min(calc(100% - 20px), 78ch);
+    margin-left: auto;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--subtle);
+  }
+  .message.assistant {
+    background: transparent;
+    border: 0;
+  }
+  .message.github-comment,
+  .message.remote {
+    border-left: 2px solid var(--border);
+    padding-left: 12px;
   }
   .message-label {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
     font-size: 12px;
     font-weight: 600;
     color: var(--muted);

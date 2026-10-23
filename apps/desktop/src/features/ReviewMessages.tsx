@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { isActiveRun, type AiRun } from "./useAiRuns";
 import { useTranslation } from "react-i18next";
 import "../i18n";
@@ -10,6 +9,7 @@ import { lineRange } from "../lib/selection";
 import type { Conversation } from "./conversation";
 import { SelectionQuote } from "./SelectionQuote";
 import { visibleReply } from "../lib/threadTitle";
+import { orderReviewMessages } from "./orderReviewMessages";
 
 export function ReviewMessages({
   notes,
@@ -23,124 +23,120 @@ export function ReviewMessages({
   inline?: boolean;
 }) {
   const { t } = useTranslation();
-  const ordered = [
-    ...notes.map((note) => ({ kind: "local" as const, message: note })),
-    ...remote
-      .filter((r) => !notes.some((n) => n.publishedUrl === r.url))
-      .map((message) => ({ kind: "remote" as const, message })),
-  ].sort((a, b) => a.message.createdAt.localeCompare(b.message.createdAt));
+  const ordered = orderReviewMessages(notes, remote, c.runs);
   return (
     <>
       {ordered.map((entry) => {
+        if (entry.kind === "run")
+          return (
+            <RunReply
+              key={`run:${entry.run.id}`}
+              run={entry.run}
+              conversation={c}
+            />
+          );
         if (entry.kind === "local") {
           const n = entry.message;
           return (
-            <Fragment key={n.id}>
-              <article
-                className={`message ${n.role}`}
-                key={n.id}
-                data-note-id={n.id}
-              >
-                <div className="message-label">
-                  {n.role === "assistant" ? (
-                    <Sparkles size={12} />
-                  ) : (
-                    <MessageSquare size={12} />
-                  )}
-                  {n.role === "assistant"
-                    ? n.model
-                      ? `${n.model.provider === "claude" ? "Claude" : "Codex"} · ${n.model.model}`
-                      : "Codex"
-                    : t("You")}
-                  {n.githubDraft && (
-                    <span className="draft-tag">
-                      {t("GitHub draft · not published")}{" "}
-                    </span>
-                  )}
-                  {n.publishedUrl && (
-                    <span className="draft-tag">{t("Published")} </span>
-                  )}
-                </div>
-                {!inline && n.anchor && (
+            <article
+              className={`message ${n.role}${n.githubDraft || n.publishedUrl ? " github-comment" : ""}`}
+              key={`local:${n.id}`}
+              data-note-id={n.id}
+            >
+              <div className="message-label">
+                {n.role === "assistant" ? (
+                  <Sparkles size={12} />
+                ) : (
+                  <MessageSquare size={12} />
+                )}
+                {n.role === "assistant"
+                  ? n.model
+                    ? `${n.model.provider === "claude" ? "Claude" : "Codex"} · ${n.model.model}`
+                    : "Codex"
+                  : t("You")}
+                {n.githubDraft && (
+                  <span className="draft-tag">
+                    {t("GitHub draft · not published")}{" "}
+                  </span>
+                )}
+                {n.publishedUrl && (
+                  <span className="draft-tag">{t("Published")} </span>
+                )}
+              </div>
+              {!inline && n.anchor && (
+                <Button
+                  className="message-location text-button"
+                  onPress={() =>
+                    n.anchor?.textSelection
+                      ? c.openChat(n.anchor)
+                      : c.openInline(n.anchor!)
+                  }
+                >
+                  {n.anchor.path} · {n.anchor.side === "LEFT" ? "Old" : "New"}{" "}
+                  {lineRange(n.anchor)}
+                </Button>
+              )}
+              {!inline && !n.anchor && (
+                <span className="message-scope">{t("PR discussion")} </span>
+              )}
+              {!inline && n.anchor?.textSelection && n.role === "user" && (
+                <SelectionQuote anchor={n.anchor} />
+              )}
+              <CommentMarkdown body={n.body} />
+              <div className="message-actions">
+                {!inline && (
                   <Button
-                    className="message-location text-button"
-                    onPress={() =>
-                      n.anchor?.textSelection
-                        ? c.openChat(n.anchor)
-                        : c.openInline(n.anchor!)
-                    }
+                    className="text-button"
+                    onPress={() => c.openChat(n.anchor)}
                   >
-                    {n.anchor.path} · {n.anchor.side === "LEFT" ? "Old" : "New"}{" "}
-                    {lineRange(n.anchor)}
+                    {t("Continue conversation")}
                   </Button>
                 )}
-                {!inline && !n.anchor && (
-                  <span className="message-scope">{t("PR discussion")} </span>
+                {n.role === "user" && !n.githubDraft && (
+                  <Button
+                    className="text-button"
+                    isDisabled={c.isBusy(n.anchor)}
+                    onPress={() => void c.ask(n).catch(c.onError)}
+                  >
+                    <Sparkles size={12} />
+                    {t(
+                      n.anchor?.textSelection
+                        ? "Ask again about this selection"
+                        : "Ask AI about this comment",
+                    )}{" "}
+                  </Button>
                 )}
-                {!inline && n.anchor?.textSelection && n.role === "user" && (
-                  <SelectionQuote anchor={n.anchor} />
+                {n.githubDraft && !n.publishedUrl && (
+                  <Button
+                    className="text-button"
+                    onPress={() => void c.edit(n, inline).catch(c.onError)}
+                  >
+                    {t("Edit draft")}{" "}
+                  </Button>
                 )}
-                <CommentMarkdown body={n.body} />
-                <div className="message-actions">
-                  {!inline && (
+                {!n.githubDraft &&
+                  !n.publishedUrl &&
+                  !n.anchor?.textSelection && (
                     <Button
                       className="text-button"
-                      onPress={() => c.openChat(n.anchor)}
+                      isDisabled={c.workspace.notes.some(
+                        (other) =>
+                          other.parentId === n.id &&
+                          (other.githubDraft || !!other.publishedUrl),
+                      )}
+                      onPress={() => void c.prepare(n).catch(c.onError)}
                     >
-                      {t("Continue conversation")}
+                      <Github size={12} />
+                      {t("Prepare GitHub draft")}{" "}
                     </Button>
                   )}
-                  {n.role === "user" && !n.githubDraft && (
-                    <Button
-                      className="text-button"
-                      isDisabled={c.isBusy(n.anchor)}
-                      onPress={() => void c.ask(n).catch(c.onError)}
-                    >
-                      <Sparkles size={12} />
-                      {t(
-                        n.anchor?.textSelection
-                          ? "Ask again about this selection"
-                          : "Ask AI about this comment",
-                      )}{" "}
-                    </Button>
-                  )}
-                  {n.githubDraft && !n.publishedUrl && (
-                    <Button
-                      className="text-button"
-                      onPress={() => void c.edit(n, inline).catch(c.onError)}
-                    >
-                      {t("Edit draft")}{" "}
-                    </Button>
-                  )}
-                  {!n.githubDraft &&
-                    !n.publishedUrl &&
-                    !n.anchor?.textSelection && (
-                      <Button
-                        className="text-button"
-                        isDisabled={c.workspace.notes.some(
-                          (other) =>
-                            other.parentId === n.id &&
-                            (other.githubDraft || !!other.publishedUrl),
-                        )}
-                        onPress={() => void c.prepare(n).catch(c.onError)}
-                      >
-                        <Github size={12} />
-                        {t("Prepare GitHub draft")}{" "}
-                      </Button>
-                    )}
-                </div>
-              </article>
-              {c.runs
-                .filter((run) => run.question?.id === n.id)
-                .map((run) => (
-                  <RunReply key={run.id} run={run} conversation={c} />
-                ))}
-            </Fragment>
+              </div>
+            </article>
           );
         }
         const r = entry.message;
         return (
-          <article className="message remote" key={r.id}>
+          <article className="message remote" key={`remote:${r.id}`}>
             <div className="message-label">
               <Github size={12} />
               {r.author} · GitHub
