@@ -610,5 +610,8 @@
   "{{count}} names to confirm_one": "{{count}} name to confirm",
   "{{count}} names to confirm_other": "{{count}} names to confirm",
   "No consequential naming decisions were identified in the supplied code.": "No consequential naming decisions were identified in the supplied code.",
-  "renamed to": "renamed to"
+  "renamed to": "renamed to",
+  "Private": "Private",
+  "Unpublished draft": "Unpublished draft",
+  "Your next question will be queued.": "Your next question will be queued."
 }

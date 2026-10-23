@@ -2,9 +2,16 @@ import { useConversation } from "./conversation";
 import { AgentAccessSelector } from "./AgentAccess";
 import { useTranslation } from "react-i18next";
 import "../i18n";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useId, useLayoutEffect, useRef } from "react";
 import { Button } from "react-aria-components";
-import { Github, Send, StickyNote } from "lucide-react";
+import {
+  ArrowUp,
+  Github,
+  ListOrdered,
+  LockKeyhole,
+  StickyNote,
+} from "lucide-react";
+import { IconAction } from "../ui/IconAction";
 import type { Note } from "../lib/api";
 import type { NoteComposerState } from "./useNoteComposer";
 
@@ -28,6 +35,7 @@ export function NoteComposer({
   const { t } = useTranslation();
   const conversation = useConversation();
   const input = useRef<HTMLTextAreaElement>(null);
+  const helpId = useId();
   useEffect(() => {
     if (state.focus) input.current?.focus();
   }, [state.focus]);
@@ -57,7 +65,9 @@ export function NoteComposer({
     <div className="composer">
       <textarea
         ref={input}
-        aria-describedby={contextDescriptionId}
+        aria-describedby={[contextDescriptionId, helpId]
+          .filter(Boolean)
+          .join(" ")}
         aria-label={
           textOnly
             ? t("Follow-up about selected code")
@@ -92,7 +102,7 @@ export function NoteComposer({
           if (state.draft?.body.trim()) void state.submit(onAsk).catch(onError);
         }}
       />
-      <div className="composer-status" role="status">
+      <div className="sr-only" id={helpId}>
         {textOnly
           ? t("AI conversation · selected text is not a GitHub line comment")
           : editing
@@ -101,56 +111,87 @@ export function NoteComposer({
                 "Private conversation · Enter to ask AI · Shift+Enter for a new line",
               )}
       </div>
-      {model && !editing && (
-        <p className="muted composer-model">
-          {t("Replies use {{model}}", { model })}
-        </p>
-      )}
-      {!editing && conversation?.access && conversation.setAccess && (
-        <AgentAccessSelector
-          value={conversation.access}
-          onChange={conversation.setAccess}
-        />
-      )}
-      {busy && (
-        <p className="muted">
-          {t(
-            "Keep asking. Your questions will be sent in order after each reply.",
+      <div className="composer-footer">
+        <div className="composer-settings">
+          <span
+            className="composer-privacy"
+            title={t(
+              editing
+                ? "GitHub draft · publish later in Finish review"
+                : "Private AI conversation",
+            )}
+          >
+            {editing ? (
+              <Github size={12} aria-hidden />
+            ) : (
+              <LockKeyhole size={12} aria-hidden />
+            )}
+            {t(editing ? "Unpublished draft" : "Private")}
+          </span>
+          {!editing && conversation?.access && conversation.setAccess && (
+            <AgentAccessSelector
+              value={conversation.access}
+              onChange={conversation.setAccess}
+            />
           )}
+        </div>
+        <div className="composer-actions">
+          {model && !editing && (
+            <span
+              className="composer-model"
+              title={t("Replies use {{model}}", { model })}
+            >
+              {model}
+            </span>
+          )}
+          {!textOnly &&
+            (editing ? (
+              <Button
+                className="secondary"
+                isDisabled={!state.draft.body.trim()}
+                onPress={() => void state.submit().catch(onError)}
+              >
+                {t("Save draft")}
+              </Button>
+            ) : (
+              <IconAction
+                label={t("Save private note")}
+                isDisabled={!state.draft.body.trim()}
+                onPress={() => void state.submit().catch(onError)}
+              >
+                <StickyNote size={15} aria-hidden />
+              </IconAction>
+            ))}
+          {!textOnly && !editing && (
+            <IconAction
+              label={t("Save GitHub draft")}
+              isDisabled={!state.draft.body.trim()}
+              onPress={() => void state.submit(undefined, true).catch(onError)}
+            >
+              <Github size={15} aria-hidden />
+            </IconAction>
+          )}
+          {!editing && (
+            <IconAction
+              label={t(busy ? "Queue question" : "Ask AI")}
+              className="composer-send"
+              isDisabled={!state.draft.body.trim()}
+              onPress={() => void state.submit(onAsk).catch(onError)}
+            >
+              {busy ? (
+                <ListOrdered size={17} aria-hidden />
+              ) : (
+                <ArrowUp size={18} aria-hidden />
+              )}
+            </IconAction>
+          )}
+        </div>
+      </div>
+      {busy && (
+        <p className="composer-queue-hint" role="status">
+          {t("Your next question will be queued.")}
         </p>
       )}
-      <div className="composer-actions">
-        {!textOnly && (
-          <Button
-            className="secondary"
-            isDisabled={!state.draft.body.trim()}
-            onPress={() => void state.submit().catch(onError)}
-          >
-            <StickyNote size={13} />
-            {editing ? t("Save draft") : t("Save private note")}
-          </Button>
-        )}
-        {!textOnly && !editing && (
-          <Button
-            className="secondary"
-            isDisabled={!state.draft.body.trim()}
-            onPress={() => void state.submit(undefined, true).catch(onError)}
-          >
-            <Github size={13} />
-            {t("Save GitHub draft")}
-          </Button>
-        )}
-        {!editing && (
-          <Button
-            className="primary"
-            isDisabled={!state.draft.body.trim()}
-            onPress={() => void state.submit(onAsk).catch(onError)}
-          >
-            <Send size={13} />
-            {t(busy ? "Queue question" : "Ask AI")}{" "}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

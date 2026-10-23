@@ -449,8 +449,7 @@ function GuideChapter({
       <div className="guide-code">
         <NamingDecisions section={s} onDiscuss={onDiscuss} />
         {contextOpen && <Walkthrough id={contextId} section={s} />}
-        {(annotations.length > 0 ||
-          (w.guide.enrichment && !s.foldable && s.assessed)) && (
+        {annotations.length > 0 && (
           <GuideCodeNotes
             notes={annotations}
             open={notesOpen}

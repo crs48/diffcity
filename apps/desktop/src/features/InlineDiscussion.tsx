@@ -17,6 +17,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { SelectionQuote } from "./SelectionQuote";
 import { threadTitle } from "../lib/threadTitle";
 import { followScrollTarget } from "../lib/scrollTarget";
+import { IconAction } from "../ui/IconAction";
 
 export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const { t } = useTranslation();
@@ -82,13 +83,12 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
             {t("Private AI conversation")}
           </span>
         </div>
-        <Button
-          className="text-button"
+        <IconAction
+          label={t("Continue in PR chat")}
           onPress={() => c.openChat(thread.anchor)}
         >
-          <PanelRightOpen size={13} />
-          {t("Continue in PR chat")}{" "}
-        </Button>
+          <PanelRightOpen size={15} aria-hidden />
+        </IconAction>
         {active && (
           <Button
             className="icon-button"

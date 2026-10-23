@@ -813,3 +813,16 @@ Validation:
 - [x] Live local-provider checks generate and persist naming decisions from synthetic code: Claude returned two decisions and Codex one, including the durable meaning of `expires_at`. Neither run needed an enrichment call to produce them.
 - [x] Browser checks using the real Claude output confirm readable callouts, chapter navigation and a focused inline discussion on the cited code. Light/dark WCAG A/AA audits report no violations. Full-app screenshots are retained under `output/playwright/naming-live-*.png`.
 - [x] The verified ARM build is installed, its signature passes, and its executable matches the build. Native inspection confirms existing saved guides load and offer the naming-review upgrade reminder. The previous app is retained locally for rollback.
+
+## A quieter review workspace — October 23, 2026
+
+The desktop app uses softer neutral surfaces, low-contrast structural borders and small elevation shadows. Green/red diffs and colored PR signals retain their semantic palette. Selected PR cards and account controls avoid heavy outlines; guide selection is a quiet dropdown, walkthrough prose is unboxed, and empty code-note disclosures stay hidden until notes exist.
+
+Inline discussions and PR chat share a compact composer with one surface, a circular send/queue action and tooltip-labeled private-note/GitHub-draft buttons. Privacy, model and access remain visible in the footer; detailed keyboard and publishing guidance stays associated with the text field for assistive technology. Human messages use soft bubbles while AI responses remain open prose. Retry, draft preparation and opening PR chat use small accessible actions instead of repeated text links. Text selection conversations remain AI-only, and saving a draft still never publishes it.
+
+Validation:
+
+- [x] All 184 frontend tests pass, including queued turns, line/text anchors, explicit draft actions and keyboard submission. TypeScript, ESLint and formatting pass. A repeat during native compilation hit three timeouts; the final run with four workers passed without changing test timeouts.
+- [x] Browser checks confirm question/reply interleaving, queue completion, inline-to-PR-chat navigation and tooltip visibility on keyboard focus. Light/dark WCAG A/AA audits report no violations; the compact composer fits a 1050-pixel window without horizontal overflow. Whole-app screenshots are retained locally under `output/playwright/style-*.png`.
+- [x] The production ARM bundle builds and passes architecture/signature checks.
+- [ ] Install and verify the update in native WebKit after macOS is unlocked.

@@ -3,7 +3,14 @@ import { isActiveRun, type AiRun } from "./useAiRuns";
 import { useTranslation } from "react-i18next";
 import "../i18n";
 import { Button } from "react-aria-components";
-import { Github, ListOrdered, MessageSquare, Sparkles } from "lucide-react";
+import {
+  Github,
+  ListOrdered,
+  MessageSquare,
+  Reply,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import type { Note, RemoteComment } from "../lib/api";
 import { lineRange, sameAnchor } from "../lib/selection";
@@ -11,6 +18,7 @@ import type { Conversation } from "./conversation";
 import { SelectionQuote } from "./SelectionQuote";
 import { visibleReply } from "../lib/threadTitle";
 import { orderReviewMessages } from "./orderReviewMessages";
+import { IconAction } from "../ui/IconAction";
 
 export function ReviewMessages({
   notes,
@@ -86,28 +94,27 @@ export function ReviewMessages({
               <CommentMarkdown body={n.body} />
               <div className="message-actions">
                 {!inline && (
-                  <Button
-                    className="text-button"
+                  <IconAction
+                    label={t("Continue conversation")}
                     onPress={() => c.openChat(n.anchor)}
                   >
-                    {t("Continue conversation")}
-                  </Button>
+                    <Reply size={14} aria-hidden />
+                  </IconAction>
                 )}
                 {n.role === "user" && !n.githubDraft && (
-                  <Button
-                    className="text-button"
+                  <IconAction
+                    label={t(
+                      n.anchor?.textSelection
+                        ? "Ask again about this selection"
+                        : "Ask AI about this comment",
+                    )}
                     isDisabled={c.runs.some(
                       (r) => r.question?.id === n.id && isActiveRun(r),
                     )}
                     onPress={() => void c.ask(n).catch(c.onError)}
                   >
-                    <Sparkles size={12} />
-                    {t(
-                      n.anchor?.textSelection
-                        ? "Ask again about this selection"
-                        : "Ask AI about this comment",
-                    )}{" "}
-                  </Button>
+                    <RotateCcw size={14} aria-hidden />
+                  </IconAction>
                 )}
                 {n.githubDraft && !n.publishedUrl && (
                   <Button
@@ -120,8 +127,8 @@ export function ReviewMessages({
                 {!n.githubDraft &&
                   !n.publishedUrl &&
                   !n.anchor?.textSelection && (
-                    <Button
-                      className="text-button"
+                    <IconAction
+                      label={t("Prepare GitHub draft")}
                       isDisabled={c.workspace.notes.some(
                         (other) =>
                           other.parentId === n.id &&
@@ -129,9 +136,8 @@ export function ReviewMessages({
                       )}
                       onPress={() => void c.prepare(n).catch(c.onError)}
                     >
-                      <Github size={12} />
-                      {t("Prepare GitHub draft")}{" "}
-                    </Button>
+                      <Github size={14} aria-hidden />
+                    </IconAction>
                   )}
               </div>
             </article>

@@ -610,5 +610,8 @@
   "{{count}} names to confirm_one": "{{count}} nombre por confirmar",
   "{{count}} names to confirm_other": "{{count}} nombres por confirmar",
   "No consequential naming decisions were identified in the supplied code.": "No se identificaron decisiones de nombres relevantes en el código proporcionado.",
-  "renamed to": "renombrado a"
+  "renamed to": "renombrado a",
+  "Private": "Privado",
+  "Unpublished draft": "Borrador sin publicar",
+  "Your next question will be queued.": "Tu siguiente pregunta se añadirá a la cola."
 }
