@@ -209,9 +209,12 @@ export function LocalCode({
               placeholder="~/Code"
               value={root}
               onChange={(e) => setRoot(e.target.value)}
-              disabled={busy}
+              disabled={busy || !directory}
             />
-            <Button type="submit" isDisabled={busy || !root.trim()}>
+            <Button
+              type="submit"
+              isDisabled={busy || !directory || !root.trim()}
+            >
               {t("Add directory")}
             </Button>
             <Button
@@ -257,7 +260,7 @@ export function LocalCode({
                 {t("Available checkouts")}
                 <select
                   value={context.path ?? ""}
-                  disabled={busy}
+                  disabled={busy || !directory}
                   onChange={(e) => {
                     if (e.target.value)
                       void act(() =>
@@ -290,13 +293,16 @@ export function LocalCode({
                 placeholder="/path/to/repository"
                 value={checkout}
                 onChange={(e) => setCheckout(e.target.value)}
-                disabled={busy}
+                disabled={busy || !directory}
               />
-              <Button type="submit" isDisabled={busy || !checkout.trim()}>
+              <Button
+                type="submit"
+                isDisabled={busy || !directory || !checkout.trim()}
+              >
                 {t("Use folder")}
               </Button>
               <Button
-                isDisabled={busy}
+                isDisabled={busy || !directory}
                 onPress={() =>
                   void act(async () => {
                     const path = await api.chooseCodeFolder();
