@@ -410,6 +410,40 @@ it("persists display choices and keeps older and other-author completions in His
   );
 });
 
+it("hides other account avatars for captures and restores them when disabled", async () => {
+  settings.repositories = ["acme/api", "me/api"];
+  const user = userEvent.setup();
+  const view = render(<App />);
+  await user.click(await screen.findByRole("button", { name: "me" }));
+  await user.click(screen.getByRole("button", { name: "Display settings" }));
+  await user.click(screen.getByLabelText("Hide other account avatars"));
+  await user.click(
+    screen.getByRole("button", { name: "Close display settings" }),
+  );
+  const accounts = screen.getByRole("navigation", {
+    name: "Choose an organization or account",
+  });
+  expect(within(accounts).getByRole("button", { name: "me" })).toBeTruthy();
+  expect(
+    within(accounts).queryByRole("button", { name: "acme", hidden: true }),
+  ).toBeNull();
+  expect(accounts.querySelectorAll("img")).toHaveLength(1);
+  view.unmount();
+  render(<App />);
+  await screen.findByRole("button", { name: "me" });
+  expect(
+    screen.queryByRole("button", { name: "acme", hidden: true }),
+  ).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Display settings" }));
+  await user.click(screen.getByLabelText("Hide other account avatars"));
+  await user.click(
+    screen.getByRole("button", { name: "Close display settings" }),
+  );
+  expect(
+    screen.getByRole("button", { name: /Show inactive accounts/ }),
+  ).toBeTruthy();
+});
+
 it("filters all accounts to an account then a repo, preserving search and history scope", async () => {
   settings.repositories = ["acme/api", "acme/web", "me/api"];
   livePulls = settings.repositories.map((repository, index) => ({

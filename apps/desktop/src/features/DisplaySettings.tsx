@@ -4,10 +4,14 @@ import { Check, X } from "lucide-react";
 import { AppDialog } from "../ui/AppDialog";
 export function DisplaySettings({
   days,
+  hideOtherAccounts,
+  onHideOtherAccounts,
   onSave,
   onClose,
 }: {
   days: number;
+  hideOtherAccounts: boolean;
+  onHideOtherAccounts: (hidden: boolean) => void;
   onSave: (days: number) => Promise<void>;
   onClose: () => void;
 }) {
@@ -29,6 +33,20 @@ export function DisplaySettings({
         </button>
       </header>
       <div className="modal-content">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={hideOtherAccounts}
+            onChange={(event) => onHideOtherAccounts(event.target.checked)}
+            aria-describedby="account-visibility-help"
+          />
+          {t("Hide other account avatars")}
+        </label>
+        <p id="account-visibility-help" className="muted">
+          {t(
+            "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share.",
+          )}
+        </p>
         <label>
           {t("Show your completed PRs")}
           <select

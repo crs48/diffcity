@@ -110,6 +110,9 @@ export default function App() {
   const modelTriggerRef = useRef<HTMLButtonElement>(null);
   const [inboxView, setInboxView] = useState<"open" | "history">("open");
   const [data, setData] = useState<Bootstrap | null>(null);
+  const [hideOtherAccounts, setHideOtherAccounts] = useState(
+    () => localStorage.getItem("diffcity.hideOtherAccounts") === "true",
+  );
   const [pulls, setPulls] = useState<PullRequest[]>([]);
   const [scope, setScope] = useState<InboxScope>({
     owner: null,
@@ -902,6 +905,7 @@ export default function App() {
       </div>
       <AccountNavigation
         owners={owners}
+        hideOtherAccounts={hideOtherAccounts}
         activity={activity}
         owner={owner}
         samples={samples}
@@ -1714,6 +1718,11 @@ export default function App() {
       {dialog === "display" && data && (
         <DisplaySettings
           days={data.settings.completedDays ?? 2}
+          hideOtherAccounts={hideOtherAccounts}
+          onHideOtherAccounts={(hidden) => {
+            localStorage.setItem("diffcity.hideOtherAccounts", String(hidden));
+            setHideOtherAccounts(hidden);
+          }}
           onClose={() => setDialog(null)}
           onSave={async (completedDays) => {
             const settings = await api.settings({

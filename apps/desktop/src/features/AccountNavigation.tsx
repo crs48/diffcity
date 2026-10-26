@@ -88,6 +88,7 @@ function AccountAvatar({ owner }: { owner: string }) {
 
 export function AccountNavigation({
   owners,
+  hideOtherAccounts = false,
   activity,
   owner,
   samples,
@@ -103,6 +104,7 @@ export function AccountNavigation({
   modelTriggerRef,
 }: {
   owners: string[];
+  hideOtherAccounts?: boolean;
   activity: ReadonlyMap<string, number>;
   owner: string | null;
   samples: boolean;
@@ -120,7 +122,11 @@ export function AccountNavigation({
   const { t } = useTranslation();
   const [showInactive, setShowInactive] = useState(false);
   const { visible, inactive } = groupAccountOwners(
-    owners,
+    hideOtherAccounts
+      ? owners.filter((name) =>
+          sameLogin(name, owner || data?.github.identity || ""),
+        )
+      : owners,
     activity,
     data?.github.identity ?? "",
     owner,

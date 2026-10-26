@@ -2333,6 +2333,16 @@
     font-size: 12px;
     width: 100%;
   }
+  .modal-content .checkbox-label {
+    flex-direction: row;
+    align-items: center;
+    gap: 9px;
+  }
+  .modal-content .checkbox-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--green);
+  }
   .modal-content textarea {
     width: 100%;
     min-height: 90px;

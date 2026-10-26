@@ -651,5 +651,7 @@
   "Copy PR chat with context": "Copiar chat del PR con contexto",
   "Copied": "Copiado",
   "Could not copy. Try again.": "No se pudo copiar. Vuelve a intentarlo.",
-  "Reviewed section": "Sección revisada"
+  "Reviewed section": "Sección revisada",
+  "Hide other account avatars": "Ocultar los avatares de otras cuentas",
+  "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share.": "Mantén solo la cuenta seleccionada en la barra lateral, o tu cuenta personal al ver todas las cuentas. Para capturas de pantalla, filtra también la bandeja al repositorio que quieras compartir."
 }

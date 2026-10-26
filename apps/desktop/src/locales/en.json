@@ -651,5 +651,7 @@
   "Copy PR chat with context": "Copy PR chat with context",
   "Copied": "Copied",
   "Could not copy. Try again.": "Could not copy. Try again.",
-  "Reviewed section": "Reviewed section"
+  "Reviewed section": "Reviewed section",
+  "Hide other account avatars": "Hide other account avatars",
+  "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share.": "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share."
 }
