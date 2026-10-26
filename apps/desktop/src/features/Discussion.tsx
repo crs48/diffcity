@@ -10,6 +10,7 @@ import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
 import { useLayoutEffect, useRef } from "react";
 import { SelectionQuote } from "./SelectionQuote";
+import { CopyConversation } from "./CopyConversation";
 
 export function Discussion({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
       <header>
         <Sparkles size={16} />
         <strong>{t("PR chat")} </strong>
+        <CopyConversation conversation={c} />
         <Button
           className="icon-button"
           aria-label={t("Close PR chat")}

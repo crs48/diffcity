@@ -5,17 +5,68 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { ReviewMessages } from "./ReviewMessages";
 import type { Conversation } from "./conversation";
 import type { AiRun } from "./useAiRuns";
 import { newNote } from "../lib/review";
+import { copyText } from "../lib/clipboard";
+import { indexedWorkspace } from "../lib/guideIndex.fixture";
+import { CopyConversation } from "./CopyConversation";
 
 vi.mock("../ui/CommentMarkdown", () => ({
   CommentMarkdown: ({ body }: { body: string }) => <p>{body}</p>,
 }));
+vi.mock("../lib/clipboard", () => ({
+  copyText: vi.fn().mockResolvedValue(undefined),
+}));
 afterEach(cleanup);
+
+it.each([true, false])(
+  "copies the response alone and the conversation with context (inline: %s)",
+  async (inline) => {
+    const workspace = indexedWorkspace();
+    const answer = workspace.notes[1];
+    answer.body =
+      "**Original Markdown**\n\n```mermaid\nflowchart TD\nA --> B\n```";
+    const c = {
+      workspace,
+      runs: [],
+      chat: { draft: null },
+    } as unknown as Conversation;
+    render(
+      <>
+        <CopyConversation
+          conversation={c}
+          anchor={inline ? answer.anchor! : undefined}
+        />
+        <ReviewMessages
+          notes={workspace.notes}
+          conversation={c}
+          inline={inline}
+        />
+      </>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Copy response" }));
+    await waitFor(() => expect(copyText).toHaveBeenLastCalledWith(answer.body));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: inline ? "Copy thread with context" : "Copy PR chat with context",
+      }),
+    );
+    await waitFor(() =>
+      expect(copyText).toHaveBeenLastCalledWith(
+        expect.stringContaining("Please add smoke coverage."),
+      ),
+    );
+    const text = vi.mocked(copyText).mock.calls.at(-1)![0];
+    expect(text).toContain(answer.body);
+    expect(text).toContain(answer.anchor!.path);
+    expect(text.includes("How should we roll this out?")).toBe(!inline);
+  },
+);
 
 it.each([true, false])(
   "labels waiting questions in order and removes only the requested one (inline: %s)",

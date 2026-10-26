@@ -20,6 +20,7 @@ import { followScrollTarget } from "../lib/scrollTarget";
 import { IconAction } from "../ui/IconAction";
 import { threadTarget } from "../lib/guideIndex";
 import { useGuideJump } from "./guideJump";
+import { CopyConversation } from "./CopyConversation";
 
 export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const { t } = useTranslation();
@@ -88,6 +89,11 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
             {t("Private AI conversation")}
           </span>
         </div>
+        <CopyConversation
+          conversation={c}
+          anchor={thread.anchor}
+          excludeNoteId={active ? c.inline.draft?.id : undefined}
+        />
         <IconAction
           label={t("Continue in PR chat")}
           onPress={() => c.openChat(thread.anchor)}

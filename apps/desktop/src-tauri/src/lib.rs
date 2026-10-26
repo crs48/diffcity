@@ -36,6 +36,7 @@ pub mod storage;
 pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             let directory = std::env::var_os("DIFFCITY_DATA_DIR")
                 .map(std::path::PathBuf::from)

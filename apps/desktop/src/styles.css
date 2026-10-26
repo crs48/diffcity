@@ -1923,6 +1923,12 @@
     margin-top: 8px;
     color: var(--muted);
   }
+  .copy-success {
+    color: var(--green);
+  }
+  .copy-error {
+    color: var(--red);
+  }
   .message-actions .icon-button {
     width: 28px;
     min-width: 28px;

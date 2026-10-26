@@ -19,6 +19,7 @@ import { SelectionQuote } from "./SelectionQuote";
 import { visibleReply } from "../lib/threadTitle";
 import { orderReviewMessages } from "./orderReviewMessages";
 import { IconAction } from "../ui/IconAction";
+import { CopyAction } from "../ui/CopyAction";
 
 export function ReviewMessages({
   notes,
@@ -93,6 +94,12 @@ export function ReviewMessages({
               )}
               <CommentMarkdown body={n.body} />
               <div className="message-actions">
+                <CopyAction
+                  label={t(
+                    n.role === "assistant" ? "Copy response" : "Copy message",
+                  )}
+                  getText={() => visibleReply(n.body)}
+                />
                 {!inline && (
                   <IconAction
                     label={t("Continue conversation")}

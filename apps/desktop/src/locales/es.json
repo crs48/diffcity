@@ -644,5 +644,11 @@
   "Review activity needs attention": "La actividad de revisión requiere atención",
   "Guide generation in progress": "Generación de guía en curso",
   "Guide generation and enrichment": "Generación y ampliación de guías",
-  "Section {{number}}: {{title}}": "Sección {{number}}: {{title}}"
+  "Section {{number}}: {{title}}": "Sección {{number}}: {{title}}",
+  "Copy response": "Copiar respuesta",
+  "Copy message": "Copiar mensaje",
+  "Copy thread with context": "Copiar conversación con contexto",
+  "Copy PR chat with context": "Copiar chat del PR con contexto",
+  "Copied": "Copiado",
+  "Could not copy. Try again.": "No se pudo copiar. Vuelve a intentarlo."
 }

@@ -885,3 +885,15 @@ Validation:
 - [x] All 199 frontend tests, TypeScript and ESLint pass. The existing clustering/navigation coverage remains unchanged because destinations and packing behavior are preserved.
 - [x] Browser geometry verifies the 36-pixel rail, aligned activity markers, outboard chapter dots and non-overlapping targets. Mouse and keyboard jumps reach the intended sections; hover previews retain chapter numbers and titles. Narrow-window checks and light/dark WCAG A/AA audits, including minimum target sizes, pass. Full-app screenshots are retained locally under `output/playwright/slim-index-*.png`.
 - [x] Built and installed the signed ARM update; all 17 bundled executables match the build. Native WebKit verifies the single-column rail on a sample PR and a chapter-dot jump to section 2 with heading focus. The previous bundle remains available locally for rollback.
+
+## Copy conversations with context — October 26, 2026
+
+Messages have a small Copy action; inline thread headers and the PR chat header can copy the whole conversation with its context. Copies preserve Markdown, code fences, tables and Mermaid source. A checkmark, tooltip and live announcement confirm success, and a failed clipboard write stays retryable. The native app uses Tauri's clipboard plugin with text-write permission only; browser previews use the browser clipboard.
+
+Thread exports include PR identity, description and revisions; the selected text and referenced diff; relevant guide explanations, code notes and naming decisions; and linked GitHub comments with authors, replies, URLs and revision metadata. Inline copies stay scoped to that conversation. The PR chat action copies the complete displayed feed and current reply context. Answers remain paired with their questions, including queued or incomplete responses clearly labeled as such. Saved content is exported directly, so folding and virtualization cannot omit messages. Exporting makes no AI or GitHub requests.
+
+Validation:
+
+- [x] All 211 frontend and 126 Rust tests pass, along with TypeScript, ESLint, Clippy and formatting. Regression coverage checks conversation scope, comment context, response ordering, Markdown preservation, selected text, drafts, incomplete responses, clipboard failures and native/browser routing.
+- [x] Browser checks verify actual clipboard contents for a response, an inline conversation and the entire PR chat, including keyboard activation and success feedback. Light-mode WCAG A/AA checks pass. Whole-app screenshots are retained locally under `output/playwright/copy-chat-*.png`.
+- [ ] Install the ARM build and verify native clipboard actions.

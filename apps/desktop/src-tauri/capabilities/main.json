@@ -6,6 +6,7 @@
   ],
   "permissions": [
     "core:default",
+    "clipboard-manager:allow-write-text",
     "allow-bootstrap",
     "allow-refresh-inbox",
     "allow-list-pull-history",
