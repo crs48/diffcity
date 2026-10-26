@@ -874,4 +874,4 @@ Validation:
 
 - [x] All 199 frontend tests pass. Regression coverage checks navigation docked beside the tabs, keyboard opening and focus restoration, background job controls, ready results and discovering a new revision without switching away from the current code. TypeScript, ESLint and formatting pass.
 - [x] Browser checks exercise section jumps, saved guide switching, mock generation, PR chat and activity popovers. The two rows remain exactly 88 pixels tall with no toolbar overflow from 420 to 1500 pixels. Settled light/dark WCAG A/AA checks report no violations, including the activity popover. Full-app screenshots are retained locally under `output/playwright/compact-header-*.png`.
-- [ ] Build, install and verify the signed ARM app.
+- [x] Built and installed the signed ARM app; all 17 bundled executables match the verified build. Native WebKit confirms the two-row layout, section jumps, saved-guide/activity popovers and Escape focus restoration. The prior app bundle is retained locally for rollback.
