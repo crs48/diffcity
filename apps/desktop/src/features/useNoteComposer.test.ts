@@ -98,3 +98,15 @@ it("converts an autosaved private note to one unpublished draft without sending 
   });
   expect(result.current.draft?.body).toBe("");
 });
+
+it("can reveal an existing conversation without stealing focus from its indexed message", async () => {
+  const save = vi.spyOn(api, "note").mockImplementation(async (n) => n);
+  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  await act(() => result.current.start("s", null));
+  expect(result.current.focus).toBeGreaterThan(0);
+  await act(() => result.current.start("s", null, undefined, false));
+  expect(result.current.focus).toBe(0);
+  expect(save).not.toHaveBeenCalled();
+  await act(() => result.current.start("s", null));
+  expect(result.current.focus).toBeGreaterThan(0);
+});

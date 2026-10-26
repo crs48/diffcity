@@ -838,3 +838,28 @@ Validation:
 - [x] Regression tests capture the actual Claude and Codex protocols over two turns, including newly synced replies. Selection tests cover full bodies, authors, parent chains, stale locations, cycles, legacy caches, scope isolation and explicit bounds.
 - [x] All 187 frontend and 126 Rust tests pass; TypeScript, ESLint, Clippy and formatting pass. A concurrent compile caused seven UI timeouts; the final two-worker run passed without changing timeouts. Live Claude and Codex smoke tests answer “what's this?” using the original finding and both replies. Synthetic conversations and responses are saved locally under `.local/comment-context-*`; no GitHub comments were posted.
 - [x] Built and installed the signed ARM app; all 17 bundled executables match the verified build. Native WebKit reopened the affected PR and rendered its GitHub smoke-coverage comment. The previous bundle is retained locally for rollback. GitHub CI and the site build pass.
+
+## A guide index beside the document — October 26, 2026
+
+A 64-pixel rail sits to the left of the guide, separate from its scrolling viewport and the file minimap. Section numbers and an overview marker share one lane; AI conversations, review comments, naming decisions, code notes and findings use distinct icons in the other. A viewport indicator follows the reader. Hover or keyboard focus previews the location; clicking jumps to it. Dense areas group nearby markers into a list, preserving every destination without stacking icons. The top button opens a searchable index with category filters; the bottom key explains the icons. Arrow keys, Home and End move through markers.
+
+Destinations come from the selected guide and saved discussions, with no additional AI calls. Replies are grouped into conversations. Jumps reopen collapsed chapters, files and inline threads without changing code selection or sending a question. Code-note destinations expose the complete rich note. PR-wide or out-of-guide discussions open PR chat and focus the matching message without the composer stealing focus. Changing guides rebuilds the index from that guide's locations.
+
+```mermaid
+flowchart LR
+    Guide[Selected guide] --> Index[Section and activity index]
+    Threads[Saved discussions] --> Index
+    Index --> Preview[Hover or focus preview]
+    Index --> Jump[Click a destination]
+    Jump --> Reveal[Reveal collapsed content]
+    Reveal --> Location[Scroll and focus the exact location]
+```
+
+Scrolling updates only the viewport indicator through the existing shared animation-frame listener. Layout changes remeasure destinations; code virtualization retains its bounded rendering. Marker count is capped by the rail's available height, while clustered and searchable lists retain all entries. Interface labels are available in English and Spanish.
+
+Validation:
+
+- [x] All 195 frontend tests pass; TypeScript, ESLint and formatting pass. Regression coverage includes grouping, missing/stale locations, 3,000 clustered entries, hover/keyboard/filtering, collapsed destinations and chat focus.
+- [x] Browser checks visit all 13 destinations in a mixed guide, including names, findings, complete code notes, inline conversations, GitHub comments and PR chat. No AI requests are issued. Light/dark WCAG A/AA audits pass after settling theme transitions; the filter contrast was corrected. The rail fits a 1050-pixel window without page overflow.
+- [x] A 20,000-line, 20-section guide reopens a collapsed final chapter and reaches its line-950 conversation. Five distant scroll positions show no blank visible chunks; only 1,552–1,744 code rows and 38 map markers are mounted during those checks. Full-app screenshots are retained locally under `output/playwright/guide-index-*.png`.
+- [x] Built and installed the signed ARM app. All 17 bundled executables match the verified build. Native WebKit verifies index search and navigation to an existing saved conversation, with focus on the thread. The prior app bundle is retained locally for rollback.

@@ -145,7 +145,11 @@ export function ReviewMessages({
         }
         const r = entry.message;
         return (
-          <article className="message remote" key={`remote:${r.id}`}>
+          <article
+            className="message remote"
+            data-remote-comment-id={r.id}
+            key={`remote:${r.id}`}
+          >
             <div className="message-label">
               <Github size={12} />
               {r.author} · GitHub

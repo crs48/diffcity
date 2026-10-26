@@ -561,10 +561,10 @@ export default function App() {
       onError(e);
     }
   };
-  const openChat = async (anchor: Anchor | null) => {
+  const openChat = async (anchor: Anchor | null, focusComposer = true) => {
     if (!workspace) return;
     try {
-      await chat.start(workspace.snapshot.id, anchor);
+      await chat.start(workspace.snapshot.id, anchor, undefined, focusComposer);
       setDiscussion(true);
     } catch (e) {
       onError(e);
@@ -1482,7 +1482,7 @@ export default function App() {
                 prepare,
                 edit,
                 openInline: (a) => void select(a, true, true),
-                openChat: (a) => void openChat(a),
+                openChat: (a, focus) => void openChat(a, focus),
                 onError,
               }}
             >
@@ -1490,6 +1490,7 @@ export default function App() {
                 <div className="review-document">
                   <div id="review-guide-navigation" />
                   <div className="review-canvas">
+                    <div id="review-guide-index" />
                     <div
                       ref={reviewScroll}
                       className="review-scroll"

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { GuideAnnotation } from "../lib/api";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { annotationLine } from "../lib/guideAnnotations";
+import { noteTarget } from "../lib/guideIndex";
 
 export function NoteDetails({ body }: { body: string }) {
   const { t } = useTranslation();
@@ -23,11 +24,13 @@ export function GuideCodeNotes({
   open,
   onOpen,
   request,
+  sectionId,
 }: {
   notes: GuideAnnotation[];
   open: boolean;
   onOpen: (open: boolean) => void;
   request: { id: string; sequence: number } | null;
+  sectionId: string;
 }) {
   const { t } = useTranslation();
   const root = useRef<HTMLDetailsElement>(null);
@@ -53,7 +56,12 @@ export function GuideCodeNotes({
       {open &&
         (notes.length ? (
           notes.map((note) => (
-            <article key={note.id} data-note-detail={note.id} tabIndex={-1}>
+            <article
+              key={note.id}
+              data-note-detail={note.id}
+              data-guide-index-target={noteTarget(sectionId, note.id)}
+              tabIndex={-1}
+            >
               <h3>{note.title}</h3>
               <code>
                 {note.anchor.path} · {annotationLine(note, t("Old"), t("New"))}

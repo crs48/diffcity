@@ -31,7 +31,7 @@ export type Conversation = {
   prepare: (note: Note) => Promise<void>;
   edit: (note: Note, inline: boolean) => Promise<void>;
   openInline: (anchor: Anchor) => void;
-  openChat: (anchor: Anchor | null) => void;
+  openChat: (anchor: Anchor | null, focusComposer?: boolean) => void;
   onError: (error: unknown) => void;
 };
 export const ConversationContext = createContext<Conversation | null>(null);

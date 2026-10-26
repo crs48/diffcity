@@ -14,6 +14,7 @@ import { useConversation } from "./conversation";
 import { followScrollTarget } from "../lib/scrollTarget";
 import { contextAfter, contextBefore, sharedContext } from "../lib/contextGaps";
 import { ContextGap } from "./ContextGap";
+import { useGuideJump } from "./guideJump";
 
 /** One header for consecutive hunks of a file, preserving the guide's reading order. */
 export function FileDiff({
@@ -48,6 +49,7 @@ export function FileDiff({
     return () => observer.disconnect();
   }, []);
   const conversation = useConversation();
+  const jump = useGuideJump(hunks.map((h) => h.id))?.sequence ?? 0;
   const selected =
     selection && hunks.some((h) => h.id === selection.hunkId)
       ? selection
@@ -60,9 +62,13 @@ export function FileDiff({
   const [closed, setClosed] = useState<{
     selected: Anchor | null;
     focus: number | undefined;
+    jump: number;
   } | null>(null);
   const collapsed =
-    !!closed && closed.selected === selected && closed.focus === focus;
+    !!closed &&
+    closed.selected === selected &&
+    closed.focus === focus &&
+    closed.jump === jump;
   const keepHeader = useRef(false);
   const stopJump = useRef(() => {});
   useLayoutEffect(() => {
@@ -108,7 +114,7 @@ export function FileDiff({
               !!viewport &&
               root.current!.getBoundingClientRect().top <
                 viewport.getBoundingClientRect().top;
-            setClosed(collapsed ? null : { selected, focus });
+            setClosed(collapsed ? null : { selected, focus, jump });
           }}
         >
           {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}

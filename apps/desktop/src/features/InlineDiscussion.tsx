@@ -18,6 +18,8 @@ import { SelectionQuote } from "./SelectionQuote";
 import { threadTitle } from "../lib/threadTitle";
 import { followScrollTarget } from "../lib/scrollTarget";
 import { IconAction } from "../ui/IconAction";
+import { threadTarget } from "../lib/guideIndex";
+import { useGuideJump } from "./guideJump";
 
 export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const { t } = useTranslation();
@@ -25,8 +27,9 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
   const root = useRef<HTMLElement>(null);
   const header = useRef<HTMLElement>(null);
   const keepHeader = useRef(false);
-  const [collapsedAt, setCollapsedAt] = useState<number | null>(null);
-  const focus = c?.inline.focus ?? 0;
+  const jump = useGuideJump([thread.anchor.hunkId]);
+  const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
+  const focus = `${c?.inline.focus ?? 0}/${jump?.entry.target === threadTarget(thread.anchor) ? jump.sequence : 0}`;
   const collapsed = collapsedAt === focus;
   useLayoutEffect(() => {
     if (!collapsed || !keepHeader.current) return;
@@ -48,6 +51,8 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
     <section
       ref={root}
       className="inline-thread"
+      data-guide-index-target={threadTarget(thread.anchor)}
+      tabIndex={-1}
       aria-label={`Discussion for ${thread.anchor.path}, ${label}`}
     >
       <header ref={header}>

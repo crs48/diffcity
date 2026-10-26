@@ -129,6 +129,7 @@ it("defers rich note rendering until opened and keeps it in the document", async
     const [open, setOpen] = useState(false);
     return (
       <GuideCodeNotes
+        sectionId="example"
         notes={notes}
         open={open}
         onOpen={setOpen}

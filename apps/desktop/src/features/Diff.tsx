@@ -26,6 +26,7 @@ import { CodeText } from "../ui/CodeText";
 import { NoteDetails } from "./GuideCodeNotes";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { annotationLine } from "../lib/guideAnnotations";
+import { useGuideJump } from "./guideJump";
 
 const NO_ANNOTATIONS: GuideAnnotation[] = [];
 
@@ -118,7 +119,8 @@ const DiffContent = memo(function DiffContent({
   const contextFile = file?.hunks
     ? { status: file.status, hunks: file.hunks }
     : undefined;
-  const expansionKey = `${composerFocus}/${selection?.hunkId === hunk.id ? anchorKey(selection) : ""}`;
+  const jump = useGuideJump([hunk.id]);
+  const expansionKey = `${composerFocus}/${selection?.hunkId === hunk.id ? anchorKey(selection) : ""}/${jump?.sequence ?? 0}`;
   const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const collapsed = collapsedAt === expansionKey;
   const indexAtOffset = useCallback(

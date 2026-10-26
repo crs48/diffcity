@@ -14,6 +14,7 @@ import type {
   NamingKind,
 } from "../lib/api";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
+import { namingTarget } from "../lib/guideIndex";
 
 const kinds: Record<NamingKind, string> = {
   database: "Database name",
@@ -113,6 +114,12 @@ export function NamingDecisions({
       {section.namingDecisions.map((decision) => (
         <article
           className="naming-decision"
+          data-guide-index-target={namingTarget(
+            section.id,
+            decision.anchor.path,
+            decision.name,
+          )}
+          tabIndex={-1}
           key={`${decision.anchor.path}/${decision.name}`}
         >
           <div className="naming-kind">{t(kinds[decision.kind])}</div>

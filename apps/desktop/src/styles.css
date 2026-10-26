@@ -4269,3 +4269,285 @@
     margin-top: 10px;
   }
 }
+
+@layer components {
+  #review-guide-index:empty {
+    display: none;
+  }
+  #review-guide-index {
+    flex: 0 0 64px;
+    min-height: 0;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .guide-index {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    padding: 10px 3px;
+  }
+  .guide-index .icon-button {
+    flex: 0 0 30px;
+    width: 30px;
+    min-height: 30px;
+    color: var(--muted);
+  }
+  .guide-index-track {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    min-height: 30px;
+  }
+  .guide-index-viewport {
+    position: absolute;
+    inset: 0 0 auto;
+    background: color-mix(in srgb, var(--blue) 7%, transparent);
+    border-left: 2px solid var(--blue);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .guide-index-marker {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .guide-index-marker.sections {
+    left: 0;
+  }
+  .guide-index-marker.activity {
+    right: 0;
+  }
+  .guide-index-marker[data-hovered],
+  .guide-index-marker[aria-expanded="true"] {
+    background: var(--selected);
+  }
+  .guide-index-marker[aria-current="location"] {
+    background: var(--surface);
+    box-shadow: var(--shadow-soft);
+    color: var(--text);
+    font-weight: 700;
+  }
+  .guide-index-number {
+    font:
+      11px ui-monospace,
+      SFMono-Regular,
+      monospace;
+  }
+  .guide-index-marker[aria-current="location"] .guide-index-number {
+    font-weight: 700;
+  }
+  .guide-index-count {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    font-size: 8px;
+    line-height: 11px;
+    padding: 0 2px;
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--muted);
+  }
+  .guide-index .index-conversation,
+  .guide-index-type:has(.lucide-sparkles),
+  .guide-index-legend.index-conversation,
+  .guide-index-filters .index-conversation {
+    color: var(--purple);
+  }
+  .guide-index .index-naming,
+  .guide-index-preview.index-naming .guide-index-type,
+  .guide-index-legend.index-naming,
+  .guide-index-filters .index-naming {
+    color: var(--amber);
+  }
+  .guide-index .index-note,
+  .guide-index-preview.index-note .guide-index-type,
+  .guide-index-legend.index-note,
+  .guide-index-filters .index-note {
+    color: var(--blue);
+  }
+  .guide-index .index-finding,
+  .guide-index-preview.index-finding .guide-index-type,
+  .guide-index-legend.index-finding,
+  .guide-index-filters .index-finding {
+    color: var(--red);
+  }
+  .guide-index .index-comment,
+  .guide-index-preview.index-comment .guide-index-type,
+  .guide-index-legend.index-comment,
+  .guide-index-filters .index-comment {
+    color: var(--green);
+  }
+  .guide-index-popover,
+  .guide-index-tooltip {
+    z-index: 60;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+  .guide-index-tooltip {
+    width: min(310px, calc(100vw - 40px));
+    max-height: calc(100dvh - 40px);
+    overflow: auto;
+    padding: 14px;
+    font-size: 12px;
+  }
+  .guide-index-tooltip > .guide-index-preview + .guide-index-preview {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .guide-index-tooltip > p {
+    margin: 10px 0 0;
+  }
+  .guide-index-legend {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .guide-index-popover {
+    width: min(380px, calc(100vw - 40px));
+    max-height: min(640px, calc(100dvh - 40px));
+    overflow: hidden;
+  }
+  .guide-index-popover [role="dialog"] {
+    display: flex;
+    flex-direction: column;
+    max-height: inherit;
+    padding: 14px;
+    outline: none;
+  }
+  .guide-index-popover header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+  .guide-index-popover h2 {
+    font-size: 14px;
+    margin: 0;
+  }
+  .guide-index-search {
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--subtle);
+    color: var(--muted);
+  }
+  .guide-index-search input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .guide-index-search:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .guide-index-filters {
+    display: flex;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    gap: 4px;
+    padding: 12px 0;
+  }
+  .guide-index-filters button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 7px;
+    border-radius: 6px;
+    font-size: 11px;
+    border: 1px solid transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .guide-index-filters button[aria-pressed="true"] {
+    color: var(--text);
+    background: var(--subtle);
+    border-color: var(--control-border);
+  }
+  .guide-index-results {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 3px;
+    margin: 0 -3px;
+  }
+  .guide-index-results [role="listitem"] + [role="listitem"] {
+    border-top: 1px solid var(--border);
+  }
+  .guide-index-results button {
+    display: block;
+    width: 100%;
+    padding: 12px 8px;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .guide-index-results button[data-hovered] {
+    background: var(--subtle);
+  }
+  .guide-index-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+  .guide-index-preview strong {
+    font-size: 13px;
+    line-height: 1.45;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .guide-index-type {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .guide-index-preview p {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+    margin: 0;
+  }
+  .guide-index-preview small {
+    font:
+      10px/1.5 ui-monospace,
+      SFMono-Regular,
+      monospace;
+    color: var(--muted);
+  }
+  @media (forced-colors: active) {
+    .guide-index-viewport {
+      border: 1px solid Highlight;
+    }
+    .guide-index-marker[aria-current="location"] {
+      outline: 1px solid Highlight;
+    }
+  }
+}

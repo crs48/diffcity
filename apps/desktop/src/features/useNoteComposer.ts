@@ -42,6 +42,7 @@ export function useNoteComposer(
     snapshotId: string,
     anchor: Anchor | null,
     editing?: Note,
+    focusComposer = true,
   ) => {
     await flush();
     if (
@@ -49,14 +50,14 @@ export function useNoteComposer(
       current.current?.note.snapshotId === snapshotId &&
       sameAnchor(current.current.note.anchor, anchor)
     ) {
-      setFocus((n) => n + 1);
+      setFocus((n) => (focusComposer ? n + 1 : 0));
       return;
     }
     const note = editing ?? newNote(snapshotId, anchor, "");
     current.current = { note, savedBody: editing ? note.body : null };
     setDraft(note);
     setSaved(!!editing);
-    setFocus((n) => n + 1);
+    setFocus((n) => (focusComposer ? n + 1 : 0));
   };
   const change = (body: string) => {
     if (!current.current) return;

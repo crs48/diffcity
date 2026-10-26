@@ -1,5 +1,10 @@
 import { useCallback, useLayoutEffect, useRef, type RefObject } from "react";
-import { followScrollTarget } from "../lib/scrollTarget";
+import { followScrollOffset, followScrollTarget } from "../lib/scrollTarget";
+
+export type GuideScrollLocation = () => {
+  element: HTMLElement;
+  inset?: number;
+} | null;
 
 /** One review viewport owns scrolling; chapter visibility never steals keyboard focus. */
 export function useGuideScroll(
@@ -12,7 +17,9 @@ export function useGuideScroll(
   const latest = useRef({ activeId, onActive });
   latest.current = { activeId, onActive };
   const observed = useRef(activeId);
-  const move = useRef<(id: string, focus: boolean) => void>(() => {});
+  const move = useRef<
+    (id: string, focus: boolean, location?: GuideScrollLocation) => void
+  >(() => {});
   useLayoutEffect(() => {
     const element = root.current;
     const viewport = element?.closest<HTMLElement>("[data-review-scroll]");
@@ -42,18 +49,35 @@ export function useGuideScroll(
           );
       }
     };
-    move.current = (id, focus) => {
+    move.current = (id, focus, location) => {
       const chapter = chapters.find((c) => c.dataset.guideSection === id);
       if (!chapter) return;
       stopJump();
       observed.current = id;
-      settling = chapter !== chapters[0];
-      if (settling)
+      settling = !!location || chapter !== chapters[0];
+      if (location) {
+        let focused = false;
+        stopJump = followScrollOffset(
+          viewport,
+          () => {
+            const target = location();
+            if (target && focus && !focused) {
+              target.element.focus({ preventScroll: true });
+              focused = true;
+            }
+            return (target?.element ?? chapter).getBoundingClientRect().top;
+          },
+          () => location()?.inset ?? topInset(),
+          () => {
+            settling = false;
+          },
+        );
+      } else if (settling)
         stopJump = followScrollTarget(viewport, chapter, topInset, () => {
           settling = false;
         });
       else viewport.scrollTo({ top: 0, behavior: "instant" });
-      if (focus)
+      if (focus && !location)
         chapter
           .querySelector<HTMLElement>("h2")
           ?.focus({ preventScroll: true });
@@ -115,8 +139,8 @@ export function useGuideScroll(
     if (activeId && activeId !== observed.current)
       move.current(activeId, false);
   }, [activeId]);
-  return useCallback((id: string) => {
-    move.current(id, true);
+  return useCallback((id: string, location?: GuideScrollLocation) => {
+    move.current(id, true, location);
     latest.current.onActive(id);
   }, []);
 }
