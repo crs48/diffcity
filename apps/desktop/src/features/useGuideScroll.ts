@@ -3,6 +3,7 @@ import { followScrollOffset, followScrollTarget } from "../lib/scrollTarget";
 
 export type GuideScrollLocation = () => {
   element: HTMLElement;
+  focusElement?: HTMLElement | null;
   inset?: number;
 } | null;
 
@@ -56,14 +57,17 @@ export function useGuideScroll(
       observed.current = id;
       settling = !!location || chapter !== chapters[0];
       if (location) {
-        let focused = false;
+        let focused: HTMLElement | null = null;
         stopJump = followScrollOffset(
           viewport,
           () => {
             const target = location();
-            if (target && focus && !focused) {
-              target.element.focus({ preventScroll: true });
-              focused = true;
+            const focusElement = target?.focusElement ?? target?.element;
+            if (focusElement && focus && focused !== focusElement) {
+              focusElement.focus({
+                preventScroll: true,
+              });
+              focused = focusElement;
             }
             return (target?.element ?? chapter).getBoundingClientRect().top;
           },

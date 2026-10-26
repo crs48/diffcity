@@ -9,8 +9,8 @@ import {
 import { FileNavigationContext } from "./fileNavigation";
 import { observeReviewScroll } from "../lib/reviewViewport";
 import { mapYAtLine } from "../lib/minimap";
+import { guideIndexTargets } from "./guideIndexTargets";
 import {
-  noteTarget,
   packIndex,
   type GuideIndexEntry,
   type IndexGroup,
@@ -96,21 +96,7 @@ export function useGuideIndexLayout(
             ];
           }),
       );
-      const targets = new Map(
-        [
-          ...element.querySelectorAll<HTMLElement>("[data-guide-index-target]"),
-        ].map((el) => [el.dataset.guideIndexTarget!, el]),
-      );
-      for (const slot of element.querySelectorAll<HTMLElement>(
-        ".guide-margin [data-note-id]",
-      )) {
-        const section = slot.closest<HTMLElement>("[data-guide-section]");
-        const id = noteTarget(
-          section?.dataset.guideSection ?? "",
-          slot.dataset.noteId!,
-        );
-        if (!slot.hidden && !targets.has(id)) targets.set(id, slot);
-      }
+      const targets = guideIndexTargets(element);
       const sources = new Map(
         [...(registry?.sources ?? [])]
           .filter((s) => s.element.isConnected)
@@ -128,7 +114,7 @@ export function useGuideIndexLayout(
             ? source.lines.findIndex(
                 (l) =>
                   (entry.anchor!.side === "LEFT" ? l.old : l.new) ===
-                  entry.anchor!.line,
+                  (entry.anchor!.startLine ?? entry.anchor!.line),
               )
             : -1;
         const y = target
@@ -152,24 +138,33 @@ export function useGuideIndexLayout(
     resize.observe(element);
     resize.observe(viewport);
     resize.observe(track.current);
-    // Only structural changes can reveal a destination. Ignore streaming text,
-    // inline styles, and virtualization measurements that do not change layout.
+    // Margin passages settle asynchronously and can redistribute space without
+    // resizing the chapter. Watch their geometry, but ignore sticky content,
+    // connectors and row highlights updated during ordinary scrolling.
     const destinationSelector =
       "[data-guide-index-target], [data-guide-section], [data-note-id]";
     const mutation = new MutationObserver((records) => {
       if (
         records.some((record) =>
-          [...record.addedNodes, ...record.removedNodes].some(
-            (node) =>
-              node instanceof Element &&
-              (node.matches(destinationSelector) ||
-                node.querySelector(destinationSelector)),
-          ),
+          record.type === "attributes"
+            ? record.target instanceof Element &&
+              record.target.matches(".guide-margin > .code-note-slot")
+            : [...record.addedNodes, ...record.removedNodes].some(
+                (node) =>
+                  node instanceof Element &&
+                  (node.matches(destinationSelector) ||
+                    node.querySelector(destinationSelector)),
+              ),
         )
       )
         schedule();
     });
-    mutation.observe(element, { childList: true, subtree: true });
+    mutation.observe(element, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style", "hidden"],
+    });
     const unsubscribe = registry?.subscribe(schedule);
     const stopScroll = observeReviewScroll(viewport, updateIndicator);
     measure();

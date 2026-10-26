@@ -3,6 +3,17 @@ import { expect, it } from "vitest";
 import { newNote } from "./review";
 import { buildGuideIndex, packIndex, threadTarget } from "./guideIndex";
 
+it("centers isolated markers on exact positions instead of rounding to a rail slot", () => {
+  const entries = buildGuideIndex(indexedWorkspace()).filter(
+    (e) => e.kind === "note" || e.kind === "naming",
+  );
+  const groups = packIndex(
+    entries.map((entry, index) => ({ entry, position: index ? 0.734 : 0.263 })),
+    1000,
+  );
+  expect(groups.map((g) => g.top + 14)).toEqual([263, 734]);
+});
+
 it("marks only fully code-reviewed sections, not partial, acknowledged, deferred or empty sections", () => {
   const w = indexedWorkspace();
   const first = w.guide.sections[0];

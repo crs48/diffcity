@@ -197,30 +197,38 @@ export type IndexGroup = {
   items: GuideIndexEntry[];
 };
 
-/** Pack content markers and chapter dots independently, preserving every destination. */
+/** Center markers on their document positions. Group only overlapping hit areas,
+ * rather than snapping every destination to a fixed grid above its location. */
 export function packIndex(
   entries: PositionedEntry[],
   height: number,
 ): IndexGroup[] {
-  const slots = Math.max(1, Math.floor(height / 30));
-  const groups = new Map<string, IndexGroup>();
-  for (const { entry, position } of entries) {
+  const lanes: Record<IndexGroup["lane"], IndexGroup[]> = {
+    sections: [],
+    activity: [],
+  };
+  for (const { entry, position } of [...entries].sort(
+    (a, b) => a.position - b.position,
+  )) {
     const lane =
       entry.kind === "section" || entry.kind === "overview"
         ? "sections"
         : "activity";
-    const slot = Math.min(slots - 1, Math.max(0, Math.floor(position * slots)));
-    const id = `${lane}-${slot}`;
-    const group = groups.get(id) ?? {
-      id,
-      lane,
-      top: slot * (height / slots),
-      items: [],
-    };
-    group.items.push(entry);
-    groups.set(id, group);
+    const top = Math.max(0, Math.min(height - 28, position * height - 14));
+    const group = lanes[lane].at(-1);
+    if (group && top - group.top < 30) {
+      group.top += (top - group.top) / (group.items.length + 1);
+      group.items.push(entry);
+    } else {
+      lanes[lane].push({
+        id: `${lane}-${entry.id}`,
+        lane,
+        top,
+        items: [entry],
+      });
+    }
   }
-  return [...groups.values()].sort(
+  return [...lanes.sections, ...lanes.activity].sort(
     (a, b) => a.top - b.top || a.lane.localeCompare(b.lane),
   );
 }

@@ -47,6 +47,7 @@ import { NamingDecisions, NamingOverview } from "./GuideNaming";
 import { GuideIndex } from "./GuideIndex";
 import { GuideJumpContext, useGuideJump, type GuideJump } from "./guideJump";
 import { GUIDE_OVERVIEW, findingTarget } from "../lib/guideIndex";
+import { guideIndexTargets } from "./guideIndexTargets";
 
 const OVERVIEW = GUIDE_OVERVIEW;
 
@@ -132,17 +133,17 @@ export function GuideFlow(props: Props) {
       return;
     }
     navigate(entry.sectionId, () => {
-      const target = [
-        ...(root.current?.querySelectorAll<HTMLElement>(
-          "[data-guide-index-target]",
-        ) ?? []),
-      ].find((el) => el.dataset.guideIndexTarget === entry.target);
+      const target =
+        root.current && guideIndexTargets(root.current).get(entry.target);
       if (!target) return null;
       const fileHeader = target
         .closest(".diff-file-group")
         ?.querySelector<HTMLElement>(".file-bar");
       return {
         element: target,
+        focusElement: target.matches(".code-note-slot")
+          ? target.querySelector<HTMLElement>("h3")
+          : target,
         inset: 16 + (fileHeader?.getBoundingClientRect().height ?? 0),
       };
     });
@@ -410,6 +411,7 @@ function GuideChapter({
   const { t } = useTranslation();
   const conversation = useConversation();
   const jump = useGuideJump(s.hunkIds);
+  const chapter = useRef<HTMLElement>(null);
   const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const [contextOpen, setContextOpen] = useState(true);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -425,7 +427,16 @@ function GuideChapter({
     }));
   };
   useLayoutEffect(() => {
-    if (jump?.entry.kind === "note") setNotesOpen(true);
+    if (jump?.entry.kind !== "note") return;
+    // Let margin geometry settle after reopening a collapsed chapter or file.
+    // Small screens have no margin notes, so reveal the full detail there.
+    const frame = requestAnimationFrame(() => {
+      const target =
+        chapter.current &&
+        guideIndexTargets(chapter.current).get(jump.entry.target);
+      if (!target?.matches(".code-note-slot")) setNotesOpen(true);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [jump]);
   const selected =
     selection && s.hunkIds.includes(selection.hunkId) ? selection : null;
@@ -472,6 +483,7 @@ function GuideChapter({
     });
   return (
     <section
+      ref={chapter}
       className="guide-chapter"
       data-guide-section={s.id}
       aria-labelledby={titleId}

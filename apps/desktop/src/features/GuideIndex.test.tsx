@@ -32,6 +32,7 @@ beforeEach(() => {
     removeEventListener() {},
   }));
   Element.prototype.scrollTo = vi.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
       return {
@@ -196,6 +197,48 @@ it("jumps to exact names, findings and full code notes without sending messages"
   expect(screen.getByText("Validate the existing row count.")).toBeTruthy();
   expect(ask).not.toHaveBeenCalled();
   expect(onSelect).not.toHaveBeenCalled();
+});
+
+it("jumps to margin notes beside their code on wide layouts, including after collapse", async () => {
+  const style = document.createElement("style");
+  style.textContent =
+    ".guide-chapter { display: grid; grid-template-columns: 300px 700px; }";
+  document.head.append(style);
+  try {
+    render(<Example />);
+    const slot = document.querySelector<HTMLElement>(
+      '.guide-margin [data-note-id="backfill"]',
+    )!;
+    await waitFor(() => expect(slot.hidden).toBe(false));
+    await jumpTo("Backfill existing invitations");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(slot.querySelector("h3")),
+    );
+    const chapter = slot.closest<HTMLElement>("[data-guide-section]")!;
+    expect(
+      chapter.querySelector<HTMLDetailsElement>(".chapter-code-notes")?.open,
+    ).toBe(false);
+    await userEvent
+      .setup()
+      .click(within(slot).getByRole("button", { name: "Read deeper" }));
+    await jumpTo("Backfill existing invitations");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(slot.querySelector("h3")),
+    );
+    await userEvent
+      .setup()
+      .click(within(chapter).getByRole("button", { name: "Collapse changes" }));
+    await waitFor(() => expect(slot.hidden).toBe(true));
+    await jumpTo("Backfill existing invitations");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(slot.querySelector("h3")),
+    );
+    expect(
+      chapter.querySelector<HTMLDetailsElement>(".chapter-code-notes")?.open,
+    ).toBe(true);
+  } finally {
+    style.remove();
+  }
 });
 
 it("reopens a collapsed conversation, file, and chapter when navigating back to its thread", async () => {
