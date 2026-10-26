@@ -189,7 +189,7 @@ export type IndexGroup = {
   items: GuideIndexEntry[];
 };
 
-/** Keep every destination reachable while limiting DOM markers to two lanes. */
+/** Pack content markers and chapter dots independently, preserving every destination. */
 export function packIndex(
   entries: PositionedEntry[],
   height: number,

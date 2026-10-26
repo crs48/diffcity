@@ -643,5 +643,6 @@
   "New code is available": "Hay código nuevo disponible",
   "Review activity needs attention": "La actividad de revisión requiere atención",
   "Guide generation in progress": "Generación de guía en curso",
-  "Guide generation and enrichment": "Generación y ampliación de guías"
+  "Guide generation and enrichment": "Generación y ampliación de guías",
+  "Section {{number}}: {{title}}": "Sección {{number}}: {{title}}"
 }

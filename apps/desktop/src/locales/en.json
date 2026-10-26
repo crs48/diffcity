@@ -643,5 +643,6 @@
   "New code is available": "New code is available",
   "Review activity needs attention": "Review activity needs attention",
   "Guide generation in progress": "Guide generation in progress",
-  "Guide generation and enrichment": "Guide generation and enrichment"
+  "Guide generation and enrichment": "Guide generation and enrichment",
+  "Section {{number}}: {{title}}": "Section {{number}}: {{title}}"
 }

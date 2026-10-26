@@ -10,6 +10,7 @@ import {
 } from "react-aria-components";
 import {
   BookOpen,
+  CircleDot,
   Flag,
   Github,
   Highlighter,
@@ -35,7 +36,7 @@ import { useGuideIndexLayout } from "./useGuideIndexLayout";
 
 const kinds = {
   overview: { label: "Overview", Icon: BookOpen },
-  section: { label: "Section", Icon: BookOpen },
+  section: { label: "Section", Icon: CircleDot },
   conversation: { label: "AI conversation", Icon: Sparkles },
   comment: { label: "Review comment", Icon: Github },
   naming: { label: "Name to confirm", Icon: Tag },
@@ -215,7 +216,12 @@ function IndexMarker({
           count: items.length,
           title: first.title,
         })
-      : `${t(kinds[first.kind].label)}: ${first.title}`;
+      : first.kind === "section"
+        ? t("Section {{number}}: {{title}}", {
+            number: first.sectionNumber,
+            title: first.title,
+          })
+        : `${t(kinds[first.kind].label)}: ${first.title}`;
   return (
     <>
       <TooltipTrigger delay={220} isDisabled={open}>
@@ -232,12 +238,14 @@ function IndexMarker({
           onFocus={onFocus}
           onPress={() => (items.length > 1 ? setOpen(true) : onJump(first))}
         >
-          {mixed ? (
+          {group.lane === "sections" ? (
+            <span className="guide-index-chapter-dot" aria-hidden />
+          ) : mixed ? (
             <Layers size={15} aria-hidden />
           ) : (
             <EntryIcon entry={first} />
           )}
-          {items.length > 1 && (
+          {items.length > 1 && group.lane === "activity" && (
             <span className="guide-index-count">
               {items.length > 99 ? "99+" : items.length}
             </span>

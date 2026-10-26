@@ -875,3 +875,13 @@ Validation:
 - [x] All 199 frontend tests pass. Regression coverage checks navigation docked beside the tabs, keyboard opening and focus restoration, background job controls, ready results and discovering a new revision without switching away from the current code. TypeScript, ESLint and formatting pass.
 - [x] Browser checks exercise section jumps, saved guide switching, mock generation, PR chat and activity popovers. The two rows remain exactly 88 pixels tall with no toolbar overflow from 420 to 1500 pixels. Settled light/dark WCAG A/AA checks report no violations, including the activity popover. Full-app screenshots are retained locally under `output/playwright/compact-header-*.png`.
 - [x] Built and installed the signed ARM app; all 17 bundled executables match the verified build. Native WebKit confirms the two-row layout, section jumps, saved-guide/activity popovers and Escape focus restoration. The prior app bundle is retained locally for rollback.
+
+## A single-column guide index — October 26, 2026
+
+The index rail is 36 pixels wide, down from 64. Content markers share one vertical column. Chapter navigation uses small dots hanging just beyond the rail's right edge, with a filled blue dot for the current chapter. Chapter numbers and titles appear in hover/focus previews and accessible labels instead of forming a second visible column. Each dot retains a 24-by-24-pixel target within the guide's empty left margin, separate from adjacent content-marker targets. Dense groups, the searchable index, viewport indicator and keyboard navigation remain available.
+
+Validation:
+
+- [x] All 199 frontend tests, TypeScript and ESLint pass. The existing clustering/navigation coverage remains unchanged because destinations and packing behavior are preserved.
+- [x] Browser geometry verifies the 36-pixel rail, aligned activity markers, outboard chapter dots and non-overlapping targets. Mouse and keyboard jumps reach the intended sections; hover previews retain chapter numbers and titles. Narrow-window checks and light/dark WCAG A/AA audits, including minimum target sizes, pass. Full-app screenshots are retained locally under `output/playwright/slim-index-*.png`.
+- [ ] Build, install and verify the native ARM update.

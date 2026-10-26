@@ -4227,7 +4227,10 @@
     display: none;
   }
   #review-guide-index {
-    flex: 0 0 64px;
+    position: relative;
+    z-index: 6;
+    flex: 0 0 36px;
+    min-width: 0;
     min-height: 0;
     border-right: 1px solid var(--border);
     background: var(--bg);
@@ -4242,7 +4245,8 @@
   }
   .guide-index .icon-button {
     flex: 0 0 30px;
-    width: 30px;
+    min-width: 28px;
+    width: 28px;
     min-height: 30px;
     color: var(--muted);
   }
@@ -4273,11 +4277,35 @@
     color: var(--muted);
     cursor: pointer;
   }
-  .guide-index-marker.sections {
+  .guide-index-marker.activity {
     left: 0;
   }
-  .guide-index-marker.activity {
-    right: 0;
+  /* Chapter dots hang outside the content column; their hit areas never
+     overlap activity buttons and stay within the guide's left padding. */
+  .guide-index-marker.sections {
+    left: calc(100% + 2px);
+    width: 24px;
+    height: 24px;
+    margin-top: 2px;
+    border-radius: 50%;
+  }
+  .guide-index-marker.sections::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 12px;
+    height: 1px;
+    background: var(--border);
+    pointer-events: none;
+  }
+  .guide-index-chapter-dot {
+    position: relative;
+    width: 7px;
+    height: 7px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    background: var(--bg);
+    pointer-events: none;
   }
   .guide-index-marker[data-hovered],
   .guide-index-marker[aria-expanded="true"] {
@@ -4288,6 +4316,21 @@
     box-shadow: var(--shadow-soft);
     color: var(--text);
     font-weight: 700;
+  }
+  .guide-index-marker.sections[aria-current="location"] {
+    background: transparent;
+    box-shadow: none;
+    color: var(--blue);
+  }
+  .guide-index-marker.sections[aria-current="location"]
+    .guide-index-chapter-dot {
+    background: currentColor;
+    box-shadow: 0 0 0 3px var(--bg);
+  }
+  .guide-index-marker.sections[data-hovered],
+  .guide-index-marker.sections[aria-expanded="true"] {
+    color: var(--blue);
+    background: var(--selected);
   }
   .guide-index-number {
     font:
