@@ -884,4 +884,4 @@ Validation:
 
 - [x] All 199 frontend tests, TypeScript and ESLint pass. The existing clustering/navigation coverage remains unchanged because destinations and packing behavior are preserved.
 - [x] Browser geometry verifies the 36-pixel rail, aligned activity markers, outboard chapter dots and non-overlapping targets. Mouse and keyboard jumps reach the intended sections; hover previews retain chapter numbers and titles. Narrow-window checks and light/dark WCAG A/AA audits, including minimum target sizes, pass. Full-app screenshots are retained locally under `output/playwright/slim-index-*.png`.
-- [ ] Build, install and verify the native ARM update.
+- [x] Built and installed the signed ARM update; all 17 bundled executables match the build. Native WebKit verifies the single-column rail on a sample PR and a chapter-dot jump to section 2 with heading focus. The previous bundle remains available locally for rollback.
