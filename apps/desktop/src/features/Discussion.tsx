@@ -4,6 +4,7 @@ import { Button, Tooltip, TooltipTrigger } from "react-aria-components";
 import { Reply, Sparkles, X } from "lucide-react";
 import { lineRange, sameAnchor } from "../lib/selection";
 import { threadTitle } from "../lib/threadTitle";
+import { commentsForAnchor } from "../lib/commentContext";
 import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
@@ -24,7 +25,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
   const anchor = c.chat.draft?.anchor;
   const title = threadTitle(
     c.workspace.notes.filter((n) => sameAnchor(n.anchor, anchor ?? null)),
-    [],
+    anchor ? commentsForAnchor(c.workspace.comments, anchor) : [],
     anchor,
   );
   return (

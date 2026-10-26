@@ -5,6 +5,7 @@ pub mod codex;
 mod commands;
 mod context;
 pub mod contracts;
+mod discussion_context;
 pub mod domain;
 pub mod fixtures;
 pub mod github;

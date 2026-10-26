@@ -596,6 +596,7 @@ impl GitHub {
             for v in self.pages(&path).await? {
                 result.push(RemoteComment {
                     id: v["id"].to_string(),
+                    in_reply_to_id: v["in_reply_to_id"].as_u64().map(|id| id.to_string()),
                     author: string(&v["user"], "login"),
                     body: string(&v, "body"),
                     path: v["path"].as_str().map(str::to_string),
@@ -615,6 +616,7 @@ impl GitHub {
             }
             result.push(RemoteComment {
                 id: format!("review-{}", review["id"]),
+                in_reply_to_id: None,
                 author: string(&review["user"], "login"),
                 body: string(&review, "body"),
                 path: None,

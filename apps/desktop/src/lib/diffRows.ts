@@ -1,5 +1,6 @@
 import type { Anchor, Hunk, Note, RemoteComment } from "./api";
 import { rangeAnchor, sameAnchor } from "./selection";
+import { commentsForAnchor } from "./commentContext";
 
 export type InlineThread = {
   anchor: Anchor;
@@ -42,14 +43,7 @@ export function diffRows(
     thread: {
       anchor,
       notes: notes.filter((n) => sameAnchor(n.anchor, anchor)),
-      remote: anchor.textSelection
-        ? []
-        : remote.filter(
-            (c) =>
-              c.line === anchor.line &&
-              c.side === anchor.side &&
-              anchor.startLine === anchor.line,
-          ),
+      remote: commentsForAnchor(comments, anchor),
     },
   });
   const code = splitCodeRows(hunk, split);

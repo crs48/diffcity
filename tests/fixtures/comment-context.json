@@ -1,0 +1,9 @@
+[
+  {"id":"reply","inReplyToId":"root","author":"reviewer","body":"Please cover authentication failures as well as a successful response.","path":null,"line":null,"side":null,"commit":"old-head","url":"https://github.com/example/app/pull/1#discussion_r2","createdAt":"2026-10-26T12:01:00Z"},
+  {"id":"root","author":"review-bot[bot]","body":"[Consider · logic] Add portal-domain API smoke coverage\n\nNo post-deploy smoke or synthetic check invokes these routes. A routing, authentication, or response-contract regression has no deployment-level signal.","path":"src/routes.ts","line":164,"side":"RIGHT","commit":"old-head","url":"https://github.com/example/app/pull/1#discussion_r1","createdAt":"2026-10-26T12:00:00Z"},
+  {"id":"nested-reply","inReplyToId":"reply","author":"author","body":"Agreed: the smoke test should check the deployed API, not only a unit-test mock.","path":null,"line":null,"side":null,"commit":"old-head","url":"https://github.com/example/app/pull/1#discussion_r3","createdAt":"2026-10-26T12:02:00Z"},
+  {"id":"other-line","author":"reviewer","body":"UNRELATED LINE COMMENT","path":"src/routes.ts","line":165,"side":"RIGHT","commit":"head","url":"","createdAt":"2026-10-26T12:03:00Z"},
+  {"id":"other-side","author":"reviewer","body":"UNRELATED OLD SIDE COMMENT","path":"src/routes.ts","line":164,"side":"LEFT","commit":"head","url":"","createdAt":"2026-10-26T12:04:00Z"},
+  {"id":"other-file","author":"reviewer","body":"UNRELATED FILE COMMENT","path":"src/other.ts","line":164,"side":"RIGHT","commit":"head","url":"","createdAt":"2026-10-26T12:05:00Z"},
+  {"id":"issue","author":"author","body":"PR-wide release discussion","path":null,"line":null,"side":null,"commit":null,"url":"","createdAt":"2026-10-26T12:06:00Z"}
+]

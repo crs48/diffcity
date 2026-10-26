@@ -582,6 +582,9 @@ pub struct ReviewProgress {
 #[serde(rename_all = "camelCase")]
 pub struct RemoteComment {
     pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub in_reply_to_id: Option<String>,
     pub author: String,
     pub body: String,
     pub path: Option<String>,

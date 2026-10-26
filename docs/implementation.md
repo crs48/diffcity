@@ -826,3 +826,15 @@ Validation:
 - [x] Browser checks confirm question/reply interleaving, queue completion, inline-to-PR-chat navigation and tooltip visibility on keyboard focus. Light/dark WCAG A/AA audits report no violations; the compact composer fits a 1050-pixel window without horizontal overflow. Whole-app screenshots are retained locally under `output/playwright/style-*.png`.
 - [x] The production ARM bundle builds and passes architecture/signature checks.
 - [x] Installed and opened the verified ARM bundle after macOS was unlocked. Native WebKit confirms the lighter inbox and guide surfaces, retained conversations, compact composer, model/access metadata and accessible note/send controls. The installed executable matches the build; the previous app bundle is retained locally for rollback.
+
+## GitHub discussion context for AI questions — October 26, 2026
+
+Every AI turn includes the saved GitHub discussion attached to its code anchor: original comments, replies, authors, links and revision metadata. Previously those comments were displayed but omitted from the agent prompt. Both providers now interpret an ambiguous question such as “what’s this?” in a comment thread as referring to that discussion. Comments remain untrusted evidence, and a commenter's claim is distinct from a verified code fact.
+
+GitHub reply IDs preserve the whole conversation even when a reply lacks current line metadata. Inline rendering and prompt selection share the same rules; continuing in PR chat retains the anchor and discussion title. PR-wide questions receive the PR's saved comments, while unrelated inline conversations and character selections stay separate. Normal comment bodies are included in full; exceptional histories are bounded to 96,000 body characters / 200 comments, with explicit truncation and omission metadata. No extra GitHub request is needed for each AI question, and older caches remain compatible.
+
+Validation:
+
+- [x] Regression tests capture the actual Claude and Codex protocols over two turns, including newly synced replies. Selection tests cover full bodies, authors, parent chains, stale locations, cycles, legacy caches, scope isolation and explicit bounds.
+- [x] All 187 frontend and 126 Rust tests pass; TypeScript, ESLint, Clippy and formatting pass. A concurrent compile caused seven UI timeouts; the final two-worker run passed without changing timeouts. Live Claude and Codex smoke tests answer “what's this?” using the original finding and both replies. Synthetic conversations and responses are saved locally under `.local/comment-context-*`; no GitHub comments were posted.
+- [ ] Build, install and verify the ARM app.
