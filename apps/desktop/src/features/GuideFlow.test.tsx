@@ -106,37 +106,53 @@ const mount = (initial?: ReviewWorkspace) => {
     .querySelectorAll<HTMLElement>("[data-guide-section]")
     .forEach((el, i) => (el.dataset.testChapter = String(i)));
 };
-it("docks navigation outside the code viewport and jumps without covering the destination", async () => {
-  const user = userEvent.setup();
-  render(
-    <div className="review-document">
-      <div id="review-guide-navigation" />
-      <Example />
-    </div>,
-  );
-  document
-    .querySelectorAll<HTMLElement>("[data-guide-section]")
-    .forEach((element, index) => {
-      element.dataset.testChapter = String(index);
+it.each(["document", "toolbar"])(
+  "docks navigation in the %s and jumps without covering the destination",
+  async (placement) => {
+    const user = userEvent.setup();
+    render(
+      placement === "toolbar" ? (
+        <div className="review-tabs">
+          <div className="workspace-tabs">
+            <div id="review-guide-navigation" />
+          </div>
+          <div className="review-document">
+            <Example />
+          </div>
+        </div>
+      ) : (
+        <div className="review-document">
+          <div id="review-guide-navigation" />
+          <Example />
+        </div>
+      ),
+    );
+    document
+      .querySelectorAll<HTMLElement>("[data-guide-section]")
+      .forEach((element, index) => {
+        element.dataset.testChapter = String(index);
+      });
+    const viewport = document.querySelector<HTMLElement>(
+      "[data-review-scroll]",
+    )!;
+    const navigation = screen.getByRole("navigation", {
+      name: "Guide navigation",
     });
-  const viewport = document.querySelector<HTMLElement>("[data-review-scroll]")!;
-  const navigation = screen.getByRole("navigation", {
-    name: "Guide navigation",
-  });
-  expect(viewport.contains(navigation)).toBe(false);
-  await user.click(screen.getByRole("button", { name: "Next section" }));
-  expect(viewport.scrollTop).toBe(984);
-  expect(document.activeElement?.textContent).toBe(
-    fixture.guide.sections[0].title,
-  );
-  fireEvent.wheel(viewport);
-  viewport.scrollTop = 2050;
-  fireEvent.scroll(viewport);
-  await screen.findByRole("button", {
-    name: "Review outline, 2 of 5 sections",
-  });
-  expect(viewport.scrollTop).toBe(2050);
-});
+    expect(viewport.contains(navigation)).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Next section" }));
+    expect(viewport.scrollTop).toBe(984);
+    expect(document.activeElement?.textContent).toBe(
+      fixture.guide.sections[0].title,
+    );
+    fireEvent.wheel(viewport);
+    viewport.scrollTop = 2050;
+    fireEvent.scroll(viewport);
+    await screen.findByRole("button", {
+      name: "Review outline, 2 of 5 sections",
+    });
+    expect(viewport.scrollTop).toBe(2050);
+  },
+);
 
 it("keeps every chapter mounted while jumping and preserves independent reviewed/collapsed state", async () => {
   const user = userEvent.setup();

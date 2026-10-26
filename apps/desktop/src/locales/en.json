@@ -635,5 +635,13 @@
   "Browse guide index ({{count}} locations)": "Browse guide index ({{count}} locations)",
   "Browse guide index": "Browse guide index",
   "Guide index key": "Guide index key",
-  "Hover to preview. Click to jump. Use arrow keys to move between markers.": "Hover to preview. Click to jump. Use arrow keys to move between markers."
+  "Hover to preview. Click to jump. Use arrow keys to move between markers.": "Hover to preview. Click to jump. Use arrow keys to move between markers.",
+  "Saved guides": "Saved guides",
+  "Review activity": "Review activity",
+  "Close {{panel}}": "Close {{panel}}",
+  "Review sync needs attention": "Review sync needs attention",
+  "New code is available": "New code is available",
+  "Review activity needs attention": "Review activity needs attention",
+  "Guide generation in progress": "Guide generation in progress",
+  "Guide generation and enrichment": "Guide generation and enrichment"
 }

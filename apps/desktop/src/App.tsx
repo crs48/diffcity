@@ -9,7 +9,15 @@ import { useTranslation } from "react-i18next";
 import i18n from "./i18n";
 import { useReviewPrefetch } from "./features/useReviewPrefetch";
 import { usePullHistory } from "./features/usePullHistory";
-import { Button, Tabs, TabList, Tab, TabPanel } from "react-aria-components";
+import {
+  Button,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanel,
+  Tooltip,
+  TooltipTrigger,
+} from "react-aria-components";
 import { PinToggle } from "./ui/PinToggle";
 import { ThemeSwitcher } from "./ui/ThemeSwitcher";
 import {
@@ -33,6 +41,7 @@ import {
   GitPullRequest,
   Github,
   LoaderCircle,
+  Library,
   MessageSquare,
   PanelLeftClose,
   Plus,
@@ -59,6 +68,7 @@ import {
 import { newNote, parsePullUrl } from "./lib/review";
 import { GuideView } from "./features/Guide";
 import { ReviewScope } from "./features/ReviewScope";
+import { ReviewActivity, ReviewPopover } from "./features/ReviewToolbar";
 import { ReviewHeader } from "./features/ReviewHeader";
 import { Discussion } from "./features/Discussion";
 import { ConversationContext } from "./features/conversation";
@@ -1130,29 +1140,6 @@ export default function App() {
         </aside>
       )}
       <main className="workspace" id="review-workspace" tabIndex={-1}>
-        {pull?.repository === SAMPLE_REPO && (
-          <div className="sample-workspace-banner">
-            <span>
-              {t(
-                "Local sample · shared invitation code, fictional PR metadata",
-              )}
-            </span>
-            {pull.state === "open" &&
-              !sameLogin(pull.author, login) &&
-              !pull.draft && (
-                <Button
-                  className="secondary"
-                  onPress={() => simulateReview(pull)}
-                >
-                  {t(
-                    requestedFrom(pull, login)
-                      ? "Simulate submitted review"
-                      : "Simulate review request",
-                  )}
-                </Button>
-              )}
-          </div>
-        )}
         <header className="workspace-topbar" data-tauri-drag-region>
           <Button
             className="icon-button"
@@ -1162,12 +1149,20 @@ export default function App() {
           >
             <PanelLeftClose size={17} />
           </Button>
-          <div className="breadcrumb">
+          <div
+            className="breadcrumb"
+            title={
+              pull
+                ? `${pull.repository} #${pull.number} · ${pull.title}`
+                : undefined
+            }
+          >
             {pull ? (
               <>
                 <span>{pull.repository}</span>
                 <ChevronRight size={13} />
                 <strong>#{pull.number}</strong>
+                <span className="compact-pr-title">{pull.title}</span>
                 {pull.state !== "open" ? (
                   <span className="badge">
                     {pull.state === "merged" ? t("Merged") : t("Closed")}
@@ -1180,16 +1175,37 @@ export default function App() {
               <span>{t("Your review workspace")} </span>
             )}
           </div>
-          <div className="spacer" />
           {!loading &&
             reviewSyncing &&
             data?.github.connected &&
             pull &&
             !isSampleRepo(pull.repository) && (
-              <span className="review-sync-status" role="status">
-                {t("Updating review in the background…")}
+              <span
+                className="review-sync-status"
+                role="status"
+                title={t("Updating review in the background…")}
+              >
+                <LoaderCircle size={14} className="spin" aria-hidden />
+                <span className="sr-only">
+                  {t("Updating review in the background…")}
+                </span>
               </span>
             )}
+          {workspace && (
+            <TooltipTrigger delay={300}>
+              <Button
+                className="icon-button new-guide-button"
+                aria-label={t("New guide")}
+                isDisabled={loading || guideChanging || !data}
+                onPress={() => setDialog("new-guide")}
+              >
+                <Sparkles size={17} aria-hidden />
+              </Button>
+              <Tooltip className="rail-tooltip" placement="bottom">
+                {t("New guide")}
+              </Tooltip>
+            </TooltipTrigger>
+          )}
           <ThemeSwitcher
             value={data?.settings.theme || "system"}
             disabled={!data}
@@ -1230,6 +1246,7 @@ export default function App() {
               )}
               <Button
                 className="secondary finish-button"
+                aria-label={t("Finish review")}
                 onPress={async () => {
                   try {
                     await flush();
@@ -1240,7 +1257,7 @@ export default function App() {
                 }}
               >
                 <Check size={14} />
-                {t("Finish review")}{" "}
+                <span>{t("Finish review")}</span>
               </Button>
             </>
           )}
@@ -1269,17 +1286,20 @@ export default function App() {
             selectedKey={mode}
             onSelectionChange={(key) => setMode(key as typeof mode)}
           >
-            <ReviewHeader
-              key={`${workspace.snapshot.id}/${mode}`}
-              workspace={workspace}
-              viewport={reviewScroll}
-              disabled={loading || guideChanging || !data}
-              onAnalyze={() => setDialog("new-guide")}
-            />
             <div className="workspace-tabs">
               <TabList aria-label={t("Review views")}>
                 {(["guide", "files", "overview"] as const).map((tab) => (
-                  <Tab id={tab} key={tab}>
+                  <Tab
+                    id={tab}
+                    key={tab}
+                    aria-label={t(
+                      tab === "guide"
+                        ? "Guide"
+                        : tab === "files"
+                          ? "Files"
+                          : "Overview",
+                    )}
+                  >
                     {tab === "guide" ? (
                       <BookOpen size={14} />
                     ) : tab === "files" ? (
@@ -1287,14 +1307,34 @@ export default function App() {
                     ) : (
                       <CircleDot size={14} />
                     )}{" "}
-                    {tab === "guide"
-                      ? t("Guide")
-                      : tab === "files"
-                        ? t("Files")
-                        : t("Overview")}
+                    <span>
+                      {tab === "guide"
+                        ? t("Guide")
+                        : tab === "files"
+                          ? t("Files")
+                          : t("Overview")}
+                    </span>
                   </Tab>
                 ))}
               </TabList>
+              <div id="review-guide-navigation" />
+              <div className="review-toolbar-spacer" />
+              {mode === "guide" && (
+                <ReviewPopover
+                  label={t("Saved guides")}
+                  detail={workspace.guide.model || t("Initial walkthrough")}
+                  icon={<Library size={16} aria-hidden />}
+                  attention={!!pendingGuide}
+                >
+                  <GuideSwitcher
+                    key={workspace.snapshot.id}
+                    guide={workspace.guide}
+                    pendingId={pendingGuide?.id}
+                    disabled={loading || guideChanging}
+                    onSelect={selectGuide}
+                  />
+                </ReviewPopover>
+              )}
               <RepositoryContextButton
                 key={pull.repository}
                 repository={pull.repository}
@@ -1302,161 +1342,182 @@ export default function App() {
                 version={localCodeVersion}
                 onOpen={() => setDialog("local-code")}
               />
-              <Button
-                ref={chatToggle}
-                className="text-button"
-                aria-expanded={discussion}
-                aria-controls={discussion ? "pr-chat" : undefined}
-                onPress={async () => {
-                  try {
-                    if (discussion) {
-                      await chat.flush();
-                      setDiscussion(false);
-                    } else if (chat.draft?.snapshotId === workspace.snapshot.id)
-                      setDiscussion(true);
-                    else await openChat(null);
-                  } catch (e) {
-                    onError(e);
-                  }
-                }}
-              >
-                <MessageSquare size={14} />
-                {t("PR chat")} <span>{workspace.notes.length}</span>
-              </Button>
-            </div>
-            {ai.runs
-              .filter((run) => run.prompt && isActiveRun(run))
-              .map((run) => (
-                <div
-                  className="run-banner"
-                  key={`approval-${run.id}`}
-                  role="status"
-                >
-                  <span>
-                    {t("Agent needs your response")} · {run.prompt!.title}
-                  </span>
-                  <Button
-                    className="secondary"
-                    onPress={async () => {
-                      try {
-                        const review =
-                          workspace.snapshot.id === run.snapshotId
-                            ? workspace
-                            : await saved(run.snapshotId);
-                        if (!review) return;
-                        await chat.start(
-                          run.snapshotId,
-                          run.question?.anchor ?? null,
-                        );
+              <TooltipTrigger delay={300}>
+                <Button
+                  ref={chatToggle}
+                  className="icon-button review-chat-toggle"
+                  aria-label={t("PR chat")}
+                  aria-expanded={discussion}
+                  aria-controls={discussion ? "pr-chat" : undefined}
+                  onPress={async () => {
+                    try {
+                      if (discussion) {
+                        await chat.flush();
+                        setDiscussion(false);
+                      } else if (
+                        chat.draft?.snapshotId === workspace.snapshot.id
+                      )
                         setDiscussion(true);
-                      } catch (e) {
-                        onError(e);
-                      }
-                    }}
-                  >
-                    {t("View request")}
-                  </Button>
-                </div>
-              ))}
-            {mode === "guide" && (
-              <GuideSwitcher
-                key={workspace.snapshot.id}
-                guide={workspace.guide}
-                pendingId={pendingGuide?.id}
-                disabled={loading || guideChanging}
-                onSelect={selectGuide}
-              />
-            )}
-            {mode === "guide" && (
-              <GuideEnrichment
+                      else await openChat(null);
+                    } catch (e) {
+                      onError(e);
+                    }
+                  }}
+                >
+                  <MessageSquare size={14} />
+                  <span className="review-chat-label">{t("PR chat")}</span>
+                  {workspace.notes.length > 0 && (
+                    <span className="review-chat-count">
+                      {workspace.notes.length}
+                    </span>
+                  )}
+                </Button>
+                <Tooltip className="rail-tooltip" placement="bottom">
+                  {t("PR chat")}
+                </Tooltip>
+              </TooltipTrigger>
+              <ReviewActivity
                 guide={workspace.guide}
                 runs={ai.runs}
-                onStart={(tier) =>
-                  void enrich(workspace.guide, tier).catch(onError)
-                }
-                onCancel={(id) => void ai.cancel(id)}
-                onDismissRun={ai.dismiss}
-                onDismiss={(dismissed) =>
-                  void dismissEnrichment(workspace.guide, dismissed).catch(
-                    onError,
-                  )
-                }
-              />
-            )}
-            {ai.runs
-              .filter(
-                (run) =>
-                  run.snapshotId === workspace.snapshot.id &&
-                  (run.kind === "guide" ||
-                    (run.kind === "enrichment" &&
-                      run.guideId !== workspace.guide.id)),
-              )
-              .map((run) => (
-                <div className="run-banner" key={run.id} role="status">
-                  {isActiveRun(run) && (
-                    <LoaderCircle size={14} className="spin" />
-                  )}
-                  <span>
-                    {run.preference.model} · {t(run.text)}
-                  </span>
-                  <Button
-                    className="text-button"
-                    isDisabled={run.phase === "cancelling"}
-                    onPress={() =>
-                      isActiveRun(run)
-                        ? void ai.cancel(run.id)
-                        : ai.dismiss(run.id)
-                    }
-                  >
-                    {t(isActiveRun(run) ? "Cancel" : "Dismiss")}
-                  </Button>
-                </div>
-              ))}
-            {pendingGuides
-              .filter((g) => g.snapshotId === workspace.snapshot.id)
-              .map((guide) => (
-                <div className="update-banner" key={guide.id}>
-                  <Sparkles size={15} />
-                  <span>
-                    {guide.model} · {t("Your guided review is ready.")}
-                  </span>
-                  <Button
-                    isDisabled={guideChanging}
-                    onPress={() => {
-                      if (guide.id)
-                        void selectGuide(guide.id)
-                          .then(() =>
-                            setPendingGuides((guides) =>
-                              guides.filter((g) => g.id !== guide.id),
-                            ),
-                          )
-                          .catch(onError);
-                    }}
-                  >
-                    {t("Open updated guide")} <ArrowRight size={13} />
-                  </Button>
-                </div>
-              ))}
-            {newRevision && (
-              <div className="update-banner">
-                <GitPullRequest size={15} />
-                <span>
-                  {t(
-                    "New code is available. Your current review is preserved.",
-                  )}{" "}
-                </span>
-                <Button
-                  onPress={() => void open(pull.repository, pull.number, true)}
-                >
-                  {t("Load new revision")} <ArrowRight size={13} />
-                </Button>
-              </div>
-            )}
-            {workspace.syncError && (
-              <div className="sync-warning">
-                {t("Showing saved content ·")} {workspace.syncError}
-              </div>
-            )}
+                pending={!!pendingGuide}
+                newRevision={!!newRevision}
+                syncError={workspace.syncError}
+              >
+                {(closeActivity) => (
+                  <>
+                    {ai.runs
+                      .filter((run) => run.prompt && isActiveRun(run))
+                      .map((run) => (
+                        <div
+                          className="run-banner"
+                          key={`approval-${run.id}`}
+                          role="status"
+                        >
+                          <span>
+                            {t("Agent needs your response")} ·{" "}
+                            {run.prompt!.title}
+                          </span>
+                          <Button
+                            className="secondary"
+                            onPress={async () => {
+                              closeActivity();
+                              try {
+                                const review =
+                                  workspace.snapshot.id === run.snapshotId
+                                    ? workspace
+                                    : await saved(run.snapshotId);
+                                if (!review) return;
+                                await chat.start(
+                                  run.snapshotId,
+                                  run.question?.anchor ?? null,
+                                );
+                                setDiscussion(true);
+                              } catch (e) {
+                                onError(e);
+                              }
+                            }}
+                          >
+                            {t("View request")}
+                          </Button>
+                        </div>
+                      ))}
+                    <GuideEnrichment
+                      guide={workspace.guide}
+                      runs={ai.runs}
+                      onStart={(tier) =>
+                        void enrich(workspace.guide, tier).catch(onError)
+                      }
+                      onCancel={(id) => void ai.cancel(id)}
+                      onDismissRun={ai.dismiss}
+                      onDismiss={(dismissed) =>
+                        void dismissEnrichment(
+                          workspace.guide,
+                          dismissed,
+                        ).catch(onError)
+                      }
+                    />
+                    {ai.runs
+                      .filter(
+                        (run) =>
+                          run.snapshotId === workspace.snapshot.id &&
+                          (run.kind === "guide" ||
+                            (run.kind === "enrichment" &&
+                              run.guideId !== workspace.guide.id)),
+                      )
+                      .map((run) => (
+                        <div className="run-banner" key={run.id} role="status">
+                          {isActiveRun(run) && (
+                            <LoaderCircle size={14} className="spin" />
+                          )}
+                          <span>
+                            {run.preference.model} · {t(run.text)}
+                          </span>
+                          <Button
+                            className="text-button"
+                            isDisabled={run.phase === "cancelling"}
+                            onPress={() =>
+                              isActiveRun(run)
+                                ? void ai.cancel(run.id)
+                                : ai.dismiss(run.id)
+                            }
+                          >
+                            {t(isActiveRun(run) ? "Cancel" : "Dismiss")}
+                          </Button>
+                        </div>
+                      ))}
+                    {pendingGuides
+                      .filter((g) => g.snapshotId === workspace.snapshot.id)
+                      .map((guide) => (
+                        <div className="update-banner" key={guide.id}>
+                          <Sparkles size={15} />
+                          <span>
+                            {guide.model} · {t("Your guided review is ready.")}
+                          </span>
+                          <Button
+                            isDisabled={guideChanging}
+                            onPress={() => {
+                              closeActivity();
+                              if (guide.id)
+                                void selectGuide(guide.id)
+                                  .then(() =>
+                                    setPendingGuides((guides) =>
+                                      guides.filter((g) => g.id !== guide.id),
+                                    ),
+                                  )
+                                  .catch(onError);
+                            }}
+                          >
+                            {t("Open updated guide")} <ArrowRight size={13} />
+                          </Button>
+                        </div>
+                      ))}
+                    {newRevision && (
+                      <div className="update-banner">
+                        <GitPullRequest size={15} />
+                        <span>
+                          {t(
+                            "New code is available. Your current review is preserved.",
+                          )}{" "}
+                        </span>
+                        <Button
+                          onPress={() => {
+                            closeActivity();
+                            void open(pull.repository, pull.number, true);
+                          }}
+                        >
+                          {t("Load new revision")} <ArrowRight size={13} />
+                        </Button>
+                      </div>
+                    )}
+                    {workspace.syncError && (
+                      <div className="sync-warning">
+                        {t("Showing saved content ·")} {workspace.syncError}
+                      </div>
+                    )}
+                  </>
+                )}
+              </ReviewActivity>
+            </div>
             <ConversationContext.Provider
               value={{
                 workspace,
@@ -1488,7 +1549,6 @@ export default function App() {
             >
               <div className="review-body" data-chat-open={discussion}>
                 <div className="review-document">
-                  <div id="review-guide-navigation" />
                   <div className="review-canvas">
                     <div id="review-guide-index" />
                     <div
@@ -1497,6 +1557,31 @@ export default function App() {
                       data-review-scroll
                     >
                       <TabPanel key={mode} id={mode} className="review-panel">
+                        <ReviewHeader workspace={workspace} />
+                        {pull?.repository === SAMPLE_REPO && (
+                          <div className="sample-workspace-banner">
+                            <span>
+                              {t(
+                                "Local sample · shared invitation code, fictional PR metadata",
+                              )}
+                            </span>
+                            {pull.state === "open" &&
+                              !sameLogin(pull.author, login) &&
+                              !pull.draft && (
+                                <Button
+                                  className="secondary"
+                                  onPress={() => simulateReview(pull)}
+                                >
+                                  {t(
+                                    requestedFrom(pull, login)
+                                      ? "Simulate submitted review"
+                                      : "Simulate review request",
+                                  )}
+                                </Button>
+                              )}
+                          </div>
+                        )}
+
                         {pull?.state !== "open" && (
                           <div className="history-status">
                             {t(

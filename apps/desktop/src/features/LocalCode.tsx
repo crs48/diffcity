@@ -55,12 +55,11 @@ export function RepositoryContextButton({
   return (
     <TooltipTrigger delay={300}>
       <Button
-        className={`text-button repository-context-button ${context?.path ? "connected" : ""}`}
+        className={`icon-button repository-context-button ${context?.path ? "connected" : ""}`}
         onPress={onOpen}
         aria-label={label}
       >
         <FolderGit2 size={14} aria-hidden />
-        {context?.path ? t("Local code") : t("PR context only")}
       </Button>
       <Tooltip className="rail-tooltip" placement="bottom">
         <strong>{label}</strong>

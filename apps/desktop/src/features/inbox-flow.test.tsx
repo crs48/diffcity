@@ -330,9 +330,7 @@ it("generates provider guides in the background using the latest revision and re
     name: /Claude · Guide up to date/,
   });
   expect(current.className).toContain("guide-current");
-  expect(current.getAttribute("aria-label")).toContain(
-    "claude-fable-5 · High",
-  );
+  expect(current.getAttribute("aria-label")).toContain("claude-fable-5 · High");
   expect(
     screen.getByRole("heading", { name: "The review I am reading" }),
   ).toBeTruthy();
@@ -955,9 +953,14 @@ it("opens cached reviews immediately while GitHub is slow and ignores late updat
   const newerSecond = cached({ ...second, head: "changed-head" });
   newerSecond.snapshot.id = "newer-second";
   await act(async () => finishSecond(newerSecond));
+  await screen.findByText("New code is available");
+  const activity = screen.getByRole("button", { name: "Review activity" });
+  expect(activity.querySelector(".review-tool-dot")).toBeTruthy();
+  await user.click(activity);
   expect(
     await screen.findByRole("button", { name: /Load new revision/ }),
   ).toBeTruthy();
+  await user.keyboard("{Escape}");
   // The current code remains pinned until that explicit action.
   expect(screen.getByRole("heading", { name: second.title })).toBeTruthy();
 });

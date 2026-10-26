@@ -71,9 +71,10 @@ export function GuideFlow(props: Props) {
   );
   useLayoutEffect(() => {
     setNavigationHost(
-      root.current
-        ?.closest(".review-document")
-        ?.querySelector<HTMLElement>("#review-guide-navigation") ?? null,
+      (
+        root.current?.closest(".review-tabs") ??
+        root.current?.closest(".review-document")
+      )?.querySelector<HTMLElement>("#review-guide-navigation") ?? null,
     );
   }, []);
   const sections = w.guide.sections;
@@ -171,7 +172,8 @@ export function GuideFlow(props: Props) {
               t("Overview")
             ) : (
               <>
-                {t("of")} {sections.length} {t("sections")}
+                {t("of")} {sections.length}{" "}
+                <span className="section-count-label">{t("sections")}</span>
               </>
             )}
           </span>

@@ -707,11 +707,11 @@ Validation includes temporary repositories with mismatched folder names, duplica
 
 Both inline and PR chat composers include a persistent access selector. The default is **Ask before actions**. Each submitted message captures its access mode, including queued messages; changing the selector affects subsequent submissions. Background guide generation and enrichment continue to use the restricted review policy.
 
-| Mode | Local tools | Integrations | Interaction |
-| --- | --- | --- | --- |
-| Limited access | Read/search the linked checkout | Disabled | No action approvals; unavailable actions are denied |
-| Ask before actions | Read/search; request commands and edits | Inherit the provider configuration | Approve or decline commands, edits, and integration calls, including MCP reads |
-| Full access | Native unrestricted execution | Inherit the provider configuration | No routine confirmations; explicit provider restrictions and required forms still apply |
+| Mode               | Local tools                             | Integrations                       | Interaction                                                                             |
+| ------------------ | --------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
+| Limited access     | Read/search the linked checkout         | Disabled                           | No action approvals; unavailable actions are denied                                     |
+| Ask before actions | Read/search; request commands and edits | Inherit the provider configuration | Approve or decline commands, edits, and integration calls, including MCP reads          |
+| Full access        | Native unrestricted execution           | Inherit the provider configuration | No routine confirmations; explicit provider restrictions and required forms still apply |
 
 Connected chats run in the matched checkout, retain the native agent's system/project instructions and local login, and load that provider's configured MCP servers. They can investigate linked issues and perform actions requested in chat. Diff City does not copy integrations from this desktop chat, reuse another conversation, or configure missing credentials. A Linear integration must already be configured and authenticated for the selected Claude Code or Codex runtime. Without a checkout, the agent receives PR context and can still use configured integrations, but cannot claim to have explored unavailable local source.
 
@@ -863,3 +863,15 @@ Validation:
 - [x] Browser checks visit all 13 destinations in a mixed guide, including names, findings, complete code notes, inline conversations, GitHub comments and PR chat. No AI requests are issued. Light/dark WCAG A/AA audits pass after settling theme transitions; the filter contrast was corrected. The rail fits a 1050-pixel window without page overflow.
 - [x] A 20,000-line, 20-section guide reopens a collapsed final chapter and reaches its line-950 conversation. Five distant scroll positions show no blank visible chunks; only 1,552–1,744 code rows and 38 map markers are mounted during those checks. Full-app screenshots are retained locally under `output/playwright/guide-index-*.png`.
 - [x] Built and installed the signed ARM app. All 17 bundled executables match the verified build. Native WebKit verifies index search and navigation to an existing saved conversation, with focus on the thread. The prior app bundle is retained locally for rollback.
+
+## Two compact review headers — October 26, 2026
+
+The review workspace keeps two permanent rows totaling 88 CSS pixels. The first holds the repository/PR identity, a truncated title, New guide and review actions. The second combines Guide / Files / Overview with the section outline and previous/next jumps. The full PR summary and sample notice are part of the scrolling document. Removing the scroll-dependent header resize also avoids changing the viewport height while reading.
+
+Saved guides, generation/enrichment controls and update notices now live in small toolbar popovers. Activity shows a spinner while working and a dot for responses, available revisions, ready guides, failures or further-enrichment choices; status changes remain announced to assistive technology. New guide stays directly accessible through a tooltip-labeled sparkle button. Local code and PR chat use compact controls; a zero comment count is omitted. Narrow layouts retain the same two rows with accessible icon labels. Transient loading/errors remain visible when they occur.
+
+Validation:
+
+- [x] All 199 frontend tests pass. Regression coverage checks navigation docked beside the tabs, keyboard opening and focus restoration, background job controls, ready results and discovering a new revision without switching away from the current code. TypeScript, ESLint and formatting pass.
+- [x] Browser checks exercise section jumps, saved guide switching, mock generation, PR chat and activity popovers. The two rows remain exactly 88 pixels tall with no toolbar overflow from 420 to 1500 pixels. Settled light/dark WCAG A/AA checks report no violations, including the activity popover. Full-app screenshots are retained locally under `output/playwright/compact-header-*.png`.
+- [ ] Build, install and verify the signed ARM app.

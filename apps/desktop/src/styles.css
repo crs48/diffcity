@@ -3574,54 +3574,6 @@
 }
 
 @layer components {
-  .pr-heading[data-compact="true"] {
-    min-height: 48px;
-    padding: 8px 24px;
-    gap: 16px;
-    flex-wrap: nowrap;
-  }
-  .pr-heading[data-compact="true"] > div {
-    flex-basis: 0;
-  }
-  .pr-heading[data-compact="true"] .eyebrow,
-  .pr-heading[data-compact="true"] .pr-meta {
-    display: none;
-  }
-  .pr-heading[data-compact="true"] h1 {
-    font-size: 14px;
-    line-height: 20px;
-    letter-spacing: -0.2px;
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .pr-heading[data-compact="true"] .analyze-button {
-    min-height: 32px;
-    padding: 4px 10px;
-    flex-shrink: 0;
-  }
-  @media (max-width: 1000px) {
-    .pr-heading[data-compact="true"] {
-      padding: 8px 16px;
-      gap: 10px;
-    }
-  }
-  @media (max-width: 600px) {
-    .pr-heading[data-compact="true"] .analyze-button > span {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-  }
-}
-
-@layer components {
   .comment-markdown {
     min-width: 0;
     max-width: 100%;
@@ -4550,4 +4502,258 @@
       outline: 1px solid Highlight;
     }
   }
+}
+
+/* Two permanent strips; PR metadata and notices live in the document/popovers. */
+@layer components {
+  .workspace {
+    container-name: review-workspace;
+    container-type: inline-size;
+  }
+  .workspace-topbar {
+    height: 46px;
+    min-height: 46px;
+    padding: 6px 14px;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .workspace-topbar > button,
+  .workspace-tabs > button {
+    flex-shrink: 0;
+  }
+  .breadcrumb {
+    flex: 1;
+    min-width: 0;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  .breadcrumb > span:first-child {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .breadcrumb > strong,
+  .breadcrumb > svg,
+  .breadcrumb > .badge {
+    flex-shrink: 0;
+  }
+  .breadcrumb .compact-pr-title {
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    margin-inline-start: 6px;
+  }
+  .workspace-topbar .new-guide-button {
+    color: var(--green);
+  }
+  .workspace-topbar .finish-button {
+    min-height: 32px;
+    padding: 4px 9px;
+  }
+  .workspace-tabs {
+    height: 42px;
+    min-height: 42px;
+    padding: 4px 14px;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .workspace-tabs [role="tablist"] {
+    flex: 0 0 auto;
+    gap: 2px;
+  }
+  .workspace-tabs [role="tab"] {
+    height: 32px;
+    padding: 0 9px;
+    border: 0;
+    border-radius: 7px;
+  }
+  .workspace-tabs [role="tab"][data-selected] {
+    background: var(--subtle);
+  }
+  .workspace-tabs [role="tab"]:hover {
+    background: var(--subtle);
+  }
+  .review-toolbar-spacer {
+    flex: 1;
+    min-width: 0;
+  }
+  .workspace-tabs #review-guide-navigation:empty {
+    display: none;
+  }
+  .workspace-tabs .guide-navigation.docked {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 0 0 8px;
+    margin-left: 4px;
+    gap: 2px;
+    border: 0;
+    border-left: 1px solid var(--border);
+    background: transparent;
+  }
+  .workspace-tabs .guide-current-title {
+    display: none;
+  }
+  .workspace-tabs .outline-toggle {
+    padding: 0 5px;
+    white-space: nowrap;
+    gap: 5px;
+  }
+  .workspace-tabs .step-number {
+    border: 0;
+    background: transparent;
+    width: auto;
+    min-width: 16px;
+  }
+  .review-chat-toggle {
+    gap: 6px;
+    padding-inline: 7px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .review-chat-toggle[aria-expanded="true"] {
+    background: var(--subtle);
+    color: var(--text);
+  }
+  .review-chat-count {
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .review-tool {
+    position: relative;
+  }
+  .review-tool-dot {
+    position: absolute;
+    top: 4px;
+    right: 3px;
+    width: 6px;
+    height: 6px;
+    background: var(--amber);
+    border-radius: 50%;
+    outline: 2px solid var(--bg);
+  }
+  .review-tools-popover {
+    width: min(420px, calc(100vw - 24px));
+    max-height: min(600px, var(--available-height));
+    overflow: auto;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-soft);
+    z-index: 60;
+  }
+  .review-tools-popover [role="dialog"] {
+    outline: none;
+  }
+  .review-tools-popover header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 6px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .review-activity-summary {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 0 6px;
+    margin: 0 0 12px;
+  }
+  .review-tools-popover
+    :is(.run-banner, .update-banner, .sync-warning, .guide-enrichment) {
+    padding: 12px 6px;
+    border: 0;
+    border-top: 1px solid var(--border);
+    background: transparent;
+    flex-wrap: wrap;
+  }
+  .review-tools-popover .enrichment-summary {
+    flex-wrap: wrap;
+  }
+  .review-tools-popover .enrichment-actions {
+    margin: 8px 0 0;
+    flex-basis: 100%;
+  }
+  .review-scroll .pr-heading {
+    padding: 22px 24px 18px;
+  }
+  @container review-workspace (max-width: 800px) {
+    .review-chat-label {
+      display: none;
+    }
+    .breadcrumb > span:first-child {
+      max-width: 120px;
+    }
+    .workspace-tabs [role="tab"] {
+      padding-inline: 7px;
+    }
+    .workspace-tabs .outline-toggle .section-count-label {
+      display: none;
+    }
+  }
+  @container review-workspace (max-width: 650px) {
+    .workspace-tabs [role="tab"] > span {
+      display: none;
+    }
+    .workspace-tabs [role="tab"] {
+      width: 32px;
+      justify-content: center;
+      padding: 0;
+    }
+    .workspace-topbar,
+    .workspace-tabs {
+      padding-inline: 8px;
+      gap: 3px;
+    }
+    .breadcrumb > span:first-child,
+    .breadcrumb > svg {
+      display: none;
+    }
+  }
+  @container review-workspace (max-width: 450px) {
+    .workspace-tabs {
+      padding-inline: 4px;
+      gap: 1px;
+    }
+    .review-chat-toggle {
+      padding-inline: 0;
+    }
+    .finish-button > span,
+    .breadcrumb > .badge,
+    .review-chat-count {
+      display: none;
+    }
+    .workspace-tabs .guide-navigation.docked {
+      padding-left: 3px;
+      margin-left: 0;
+    }
+    .workspace-tabs .outline-toggle > span:not(.step-number) {
+      display: none;
+    }
+    .workspace-topbar .finish-button {
+      padding-inline: 8px;
+    }
+  }
+}
+.review-tools-popover .guide-switcher {
+  padding: 6px;
+  border: 0;
+  flex-wrap: wrap;
+}
+.review-tools-popover .guide-switcher label {
+  flex: 1;
+  width: 0;
+}
+.review-tools-popover .guide-switcher select {
+  width: 100%;
+  border: 1px solid var(--border);
+  padding: 8px;
+  color: var(--text);
+}
+.review-tools-popover .guide-count {
+  display: block;
+  width: 100%;
+  padding-left: 22px;
 }

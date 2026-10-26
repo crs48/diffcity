@@ -635,5 +635,13 @@
   "Browse guide index ({{count}} locations)": "Explorar índice de la guía ({{count}} ubicaciones)",
   "Browse guide index": "Explorar índice de la guía",
   "Guide index key": "Leyenda del índice de la guía",
-  "Hover to preview. Click to jump. Use arrow keys to move between markers.": "Pasa el cursor para previsualizar. Haz clic para ir. Usa las flechas para moverte entre marcadores."
+  "Hover to preview. Click to jump. Use arrow keys to move between markers.": "Pasa el cursor para previsualizar. Haz clic para ir. Usa las flechas para moverte entre marcadores.",
+  "Saved guides": "Guías guardadas",
+  "Review activity": "Actividad de revisión",
+  "Close {{panel}}": "Cerrar {{panel}}",
+  "Review sync needs attention": "La sincronización de la revisión requiere atención",
+  "New code is available": "Hay código nuevo disponible",
+  "Review activity needs attention": "La actividad de revisión requiere atención",
+  "Guide generation in progress": "Generación de guía en curso",
+  "Guide generation and enrichment": "Generación y ampliación de guías"
 }

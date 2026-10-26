@@ -28,9 +28,9 @@ export function useGuideScroll(
       ...element.querySelectorAll<HTMLElement>("[data-guide-section]"),
     ];
     const nav = docked
-      ? element
-          .closest(".review-document")
-          ?.querySelector<HTMLElement>(".guide-navigation")
+      ? (
+          element.closest(".review-tabs") ?? element.closest(".review-document")
+        )?.querySelector<HTMLElement>(".guide-navigation")
       : element.querySelector<HTMLElement>(".guide-navigation");
     let frame = 0;
     let settling = false;
