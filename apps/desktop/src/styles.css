@@ -3518,7 +3518,7 @@
     .guide-chapter {
       grid-template-columns: minmax(0, 1fr);
       gap: 20px;
-      padding: 24px 16px 36px;
+      padding: 24px 16px 36px 24px;
     }
     .guide-annotation {
       position: static;
@@ -3563,7 +3563,7 @@
       margin: 0 8px;
     }
     .guide-completion {
-      padding: 24px 16px;
+      padding: 24px 16px 24px 24px;
     }
   }
   @container (max-width: 480px) {

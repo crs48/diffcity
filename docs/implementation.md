@@ -878,7 +878,7 @@ Validation:
 
 ## A single-column guide index — October 26, 2026
 
-The index rail is 36 pixels wide, down from 64. Content markers share one vertical column. Chapter navigation uses small dots hanging just beyond the rail's right edge, with a filled blue dot for the current chapter. Chapter numbers and titles appear in hover/focus previews and accessible labels instead of forming a second visible column. Each dot retains a 24-by-24-pixel target within the guide's empty left margin, separate from adjacent content-marker targets. Dense groups, the searchable index, viewport indicator and keyboard navigation remain available.
+The index rail is 36 pixels wide, down from 64. Content markers share one vertical column. Chapter navigation uses small dots hanging just beyond the rail's right edge, with a filled blue dot for the current chapter. Chapter numbers and titles appear in hover/focus previews and accessible labels instead of forming a second visible column. Each dot retains a 24-by-24-pixel target within the guide's empty left margin, separate from adjacent content-marker targets. Narrow layouts preserve 24 pixels of left padding so the targets stay clear of the text and code controls. Dense groups, the searchable index, viewport indicator and keyboard navigation remain available.
 
 Validation:
 
