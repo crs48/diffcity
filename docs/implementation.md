@@ -895,5 +895,5 @@ Thread exports include PR identity, description and revisions; the selected text
 Validation:
 
 - [x] All 211 frontend and 126 Rust tests pass, along with TypeScript, ESLint, Clippy and formatting. Regression coverage checks conversation scope, comment context, response ordering, Markdown preservation, selected text, drafts, incomplete responses, clipboard failures and native/browser routing.
-- [x] Browser checks verify actual clipboard contents for a response, an inline conversation and the entire PR chat, including keyboard activation and success feedback. Light-mode WCAG A/AA checks pass. Whole-app screenshots are retained locally under `output/playwright/copy-chat-*.png`.
+- [x] Browser checks verify actual clipboard contents for a response, an inline conversation and the entire PR chat, including keyboard activation and success feedback. Light/dark WCAG A/AA checks pass. Whole-app screenshots are retained locally under `output/playwright/copy-chat-*.png`.
 - [ ] Install the ARM build and verify native clipboard actions.
