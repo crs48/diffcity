@@ -10,6 +10,7 @@ import {
 } from "react-aria-components";
 import {
   BookOpen,
+  Check,
   CircleDot,
   Flag,
   Github,
@@ -77,6 +78,12 @@ function EntryPreview({
         {entry.chat ? ` · ${t("PR chat")}` : ""}
       </span>
       <strong>{entry.title || t(kinds[entry.kind].label)}</strong>
+      {entry.reviewed && (
+        <span className="guide-index-reviewed-label">
+          <Check size={13} aria-hidden />
+          {t("Code reviewed")}
+        </span>
+      )}
       {!compact && entry.body && <p>{indexExcerpt(entry.body)}</p>}
       {entry.anchor && (
         <small>
@@ -229,7 +236,11 @@ function IndexMarker({
           ref={trigger}
           className={`guide-index-marker ${group.lane} index-${mixed ? "mixed" : first.kind}`}
           style={{ top: group.top }}
-          aria-label={label}
+          aria-label={
+            items.length === 1 && first.reviewed
+              ? `${label} · ${t("Code reviewed")}`
+              : label
+          }
           aria-current={active ? "location" : undefined}
           aria-haspopup={items.length > 1 ? "dialog" : undefined}
           aria-expanded={items.length > 1 ? open : undefined}
@@ -301,12 +312,18 @@ export function GuideIndex({
   onJump: (entry: GuideIndexEntry) => void;
 }) {
   const { t } = useTranslation();
-  const { snapshot, guide, notes, comments } = w;
+  const { snapshot, guide, notes, comments, progress } = w;
   const entries = useMemo(
-    () => buildGuideIndex({ snapshot, guide, notes, comments }),
-    [snapshot, guide, notes, comments],
+    () => buildGuideIndex({ snapshot, guide, notes, comments, progress }),
+    [snapshot, guide, notes, comments, progress],
   );
-  const { host, groups, track, indicator } = useGuideIndexLayout(root, entries);
+  const { host, groups, sectionRanges, track, indicator } = useGuideIndexLayout(
+    root,
+    entries,
+  );
+  const reviewed = new Set(
+    entries.filter((entry) => entry.reviewed).map((entry) => entry.sectionId),
+  );
   const [focused, setFocused] = useState("");
   const tabStop = groups.some((g) => g.id === focused)
     ? focused
@@ -372,6 +389,17 @@ export function GuideIndex({
           buttons[next]?.focus();
         }}
       >
+        {sectionRanges
+          .filter((range) => reviewed.has(range.id))
+          .map((range) => (
+            <div
+              key={range.id}
+              className="guide-index-reviewed-section"
+              data-reviewed-section={range.id}
+              style={{ top: range.top, height: Math.max(1, range.height - 2) }}
+              aria-hidden
+            />
+          ))}
         <div className="guide-index-viewport" ref={indicator} aria-hidden />
         {groups.map((group) => (
           <IndexMarker
@@ -397,6 +425,10 @@ export function GuideIndex({
         </Button>
         <Tooltip placement="right bottom" className="guide-index-tooltip">
           <strong>{t("Guide index key")}</strong>
+          <p className="guide-index-legend">
+            <span className="guide-index-reviewed-swatch" aria-hidden />
+            {t("Reviewed section")}
+          </p>
           {categories.map((kind) => {
             const Icon = kinds[kind].Icon;
             return (

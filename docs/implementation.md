@@ -897,3 +897,13 @@ Validation:
 - [x] All 211 frontend and 126 Rust tests pass, along with TypeScript, ESLint, Clippy and formatting. Regression coverage checks conversation scope, comment context, response ordering, Markdown preservation, selected text, drafts, incomplete responses, clipboard failures and native/browser routing.
 - [x] Browser checks verify actual clipboard contents for a response, an inline conversation and the entire PR chat, including keyboard activation and success feedback. Light/dark WCAG A/AA checks pass. Whole-app screenshots are retained locally under `output/playwright/copy-chat-*.png`.
 - [ ] Install the ARM build and verify native clipboard actions.
+
+## Reviewed sections in the guide rail — October 26, 2026
+
+A soft green block fills each fully reviewed chapter's portion of the rail. Its position and height follow the chapter's actual document bounds, so it stays aligned when code or conversations expand and collapse. The viewport indicator and navigation markers remain above it and keep their existing interactions. Partial reviews, acknowledged summaries, deferred sections and sections without reviewable hunks stay unfilled. The preview announces “Code reviewed” with a checkmark, and the rail key explains the green blocks.
+
+Validation:
+
+- [x] All 213 frontend tests, TypeScript and ESLint pass. Regression tests cover partial/full review status, immediate updates after marking code reviewed, and accessible preview status.
+- [x] Browser geometry matches chapter bounds; both light and dark WCAG A/AA checks pass. Whole-app screenshots are retained locally under `output/playwright/reviewed-rail-*.png`.
+- [x] Built and installed the signed ARM app; all 17 bundled executables match the verified build. The previous app remains available in the local backup directory.

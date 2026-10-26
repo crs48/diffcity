@@ -3,6 +3,29 @@ import { expect, it } from "vitest";
 import { newNote } from "./review";
 import { buildGuideIndex, packIndex, threadTarget } from "./guideIndex";
 
+it("marks only fully code-reviewed sections, not partial, acknowledged, deferred or empty sections", () => {
+  const w = indexedWorkspace();
+  const first = w.guide.sections[0];
+  first.hunkIds = ["first", "second"];
+  w.guide.sections[1].hunkIds = [];
+  w.progress = {
+    ...w.progress,
+    reviewed: ["first"],
+    acknowledged: ["second"],
+    deferred: ["second"],
+  };
+  expect(buildGuideIndex(w).find((e) => e.id === first.id)?.reviewed).toBe(
+    false,
+  );
+  w.progress.reviewed.push("second");
+  const entries = buildGuideIndex(w);
+  expect(entries.filter((e) => e.reviewed).map((e) => e.id)).toEqual([
+    first.id,
+  ]);
+  w.progress.reviewed = [];
+  expect(buildGuideIndex(w).some((e) => e.reviewed)).toBe(false);
+});
+
 it("indexes every destination once and keeps replies together without depending on feed order", () => {
   const w = indexedWorkspace();
   const entries = buildGuideIndex(w);

@@ -650,5 +650,6 @@
   "Copy thread with context": "Copiar conversación con contexto",
   "Copy PR chat with context": "Copiar chat del PR con contexto",
   "Copied": "Copiado",
-  "Could not copy. Try again.": "No se pudo copiar. Vuelve a intentarlo."
+  "Could not copy. Try again.": "No se pudo copiar. Vuelve a intentarlo.",
+  "Reviewed section": "Sección revisada"
 }

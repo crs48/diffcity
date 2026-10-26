@@ -26,6 +26,9 @@ export function useGuideIndexLayout(
   const registry = useContext(FileNavigationContext);
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [groups, setGroups] = useState<IndexGroup[]>([]);
+  const [sectionRanges, setSectionRanges] = useState<
+    { id: string; top: number; height: number }[]
+  >([]);
   useEffect(() => {
     setHost(
       root.current
@@ -68,6 +71,30 @@ export function useGuideIndexLayout(
         [...element.querySelectorAll<HTMLElement>("[data-guide-section]")].map(
           (el) => [el.dataset.guideSection!, el],
         ),
+      );
+      setSectionRanges(
+        entries
+          .filter((entry) => entry.kind === "section")
+          .flatMap((entry) => {
+            const section = sections.get(entry.sectionId);
+            if (!section) return [];
+            const rect = section.getBoundingClientRect();
+            const start = Math.max(
+              0,
+              Math.min(1, (rect.top - bounds.top) / height),
+            );
+            const end = Math.max(
+              start,
+              Math.min(1, (rect.bottom - bounds.top) / height),
+            );
+            return [
+              {
+                id: entry.sectionId,
+                top: start * trackHeight,
+                height: (end - start) * trackHeight,
+              },
+            ];
+          }),
       );
       const targets = new Map(
         [
@@ -154,5 +181,5 @@ export function useGuideIndexLayout(
       stopScroll();
     };
   }, [root, entries, registry, host]);
-  return { host, groups, track, indicator };
+  return { host, groups, sectionRanges, track, indicator };
 }

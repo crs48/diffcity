@@ -650,5 +650,6 @@
   "Copy thread with context": "Copy thread with context",
   "Copy PR chat with context": "Copy PR chat with context",
   "Copied": "Copied",
-  "Could not copy. Try again.": "Could not copy. Try again."
+  "Could not copy. Try again.": "Could not copy. Try again.",
+  "Reviewed section": "Reviewed section"
 }

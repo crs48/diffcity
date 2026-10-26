@@ -23,6 +23,7 @@ export type GuideIndexEntry = {
   anchor?: Anchor;
   chat?: { local?: string; remote?: string };
   count?: number;
+  reviewed?: boolean;
 };
 export const namingTarget = (section: string, path: string, name: string) =>
   `naming:${section}:${path}:${name}`;
@@ -34,9 +35,13 @@ export const threadTarget = (anchor: Anchor) => `thread:${anchorKey(anchor)}`;
 
 /** One entry per place to visit, not one per streamed reply. */
 export function buildGuideIndex(
-  w: Pick<ReviewWorkspace, "snapshot" | "guide" | "notes" | "comments">,
+  w: Pick<
+    ReviewWorkspace,
+    "snapshot" | "guide" | "notes" | "comments" | "progress"
+  >,
 ): GuideIndexEntry[] {
   const sections = w.guide.sections;
+  const reviewed = new Set(w.progress.reviewed);
   const sectionFor = new Map(
     sections.flatMap((s, i) =>
       s.hunkIds.map(
@@ -64,6 +69,9 @@ export function buildGuideIndex(
       title: section.title,
       body: section.summary,
       target: section.id,
+      reviewed:
+        section.hunkIds.length > 0 &&
+        section.hunkIds.every((id) => reviewed.has(id)),
     });
     (section.namingDecisions ?? []).forEach((n) =>
       entries.push({

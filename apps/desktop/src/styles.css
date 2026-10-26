@@ -4270,6 +4270,28 @@
     border-radius: 4px;
     pointer-events: none;
   }
+  .guide-index-reviewed-section {
+    position: absolute;
+    inset: 0 0 auto;
+    border-radius: 4px;
+    background: var(--green-soft);
+    pointer-events: none;
+  }
+  .guide-index-reviewed-swatch {
+    width: 14px;
+    height: 12px;
+    flex-shrink: 0;
+    border: 1px solid var(--green);
+    border-radius: 3px;
+    background: var(--green-soft);
+  }
+  .guide-index-reviewed-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--green);
+    font-size: 11px;
+  }
   .guide-index-marker {
     position: absolute;
     display: flex;
@@ -4544,6 +4566,9 @@
     color: var(--muted);
   }
   @media (forced-colors: active) {
+    .guide-index-reviewed-section {
+      border: 1px dashed CanvasText;
+    }
     .guide-index-viewport {
       border: 1px solid Highlight;
     }

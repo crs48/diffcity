@@ -118,6 +118,29 @@ async function jumpTo(title: string) {
     .click(within(dialog).getByRole("button", { name: `Jump to ${title}` }));
 }
 
+it("fills the reviewed chapter's rail segment immediately and exposes its status in previews", async () => {
+  const w = indexedWorkspace();
+  w.progress.reviewed = [];
+  render(<Example initial={w} />);
+  const rail = screen.getByRole("navigation", { name: "Guide index" });
+  expect(rail.querySelectorAll("[data-reviewed-section]")).toHaveLength(0);
+  const chapter = screen.getByRole("region", {
+    name: w.guide.sections[0].title,
+  });
+  await userEvent
+    .setup()
+    .click(within(chapter).getByRole("button", { name: "Mark code reviewed" }));
+  await waitFor(() =>
+    expect(rail.querySelectorAll("[data-reviewed-section]")).toHaveLength(1),
+  );
+  expect(
+    rail.querySelector<HTMLElement>("[data-reviewed-section]")?.dataset
+      .reviewedSection,
+  ).toBe(w.guide.sections[0].id);
+  const dialog = await browse();
+  expect(within(dialog).getByText("Code reviewed")).toBeTruthy();
+});
+
 it("keeps the map outside the scrolling document and supports hover, keyboard and searchable categories", async () => {
   render(<Example />);
   const rail = screen.getByRole("navigation", { name: "Guide index" });
