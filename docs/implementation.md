@@ -837,4 +837,4 @@ Validation:
 
 - [x] Regression tests capture the actual Claude and Codex protocols over two turns, including newly synced replies. Selection tests cover full bodies, authors, parent chains, stale locations, cycles, legacy caches, scope isolation and explicit bounds.
 - [x] All 187 frontend and 126 Rust tests pass; TypeScript, ESLint, Clippy and formatting pass. A concurrent compile caused seven UI timeouts; the final two-worker run passed without changing timeouts. Live Claude and Codex smoke tests answer “what's this?” using the original finding and both replies. Synthetic conversations and responses are saved locally under `.local/comment-context-*`; no GitHub comments were posted.
-- [ ] Build, install and verify the ARM app.
+- [x] Built and installed the signed ARM app; all 17 bundled executables match the verified build. Native WebKit reopened the affected PR and rendered its GitHub smoke-coverage comment. The previous bundle is retained locally for rollback. GitHub CI and the site build pass.
