@@ -5,34 +5,45 @@ const screenshots = [
     id: "guide",
     label: "Follow the code",
     icon: "branch",
-    image: "guided-review-window",
-    title: "The explanation follows the code.",
+    image: "guide-code-notes",
+    title: "Important code, with the explanation beside it.",
     description:
-      "The schema backfill sample, with Claude’s risk summary beside the actual SQL diff.",
-    alt: "Diff City guided review of a schema backfill, with Claude’s explanation and attention level beside the SQL migration.",
-    pr: 9,
+      "Claude’s deeper code notes connect to the actual diff. The narrow index keeps chapters, conversations, and reviewed sections within reach.",
+    alt: "The full Diff City app showing a Claude Fable 5 guide to its mixed-edit sample PR, code notes beside the diff, and green reviewed sections in the guide rail.",
+    pr: 3,
   },
   {
     id: "overview",
-    label: "Start with the overview",
+    label: "See the overview",
     icon: "file",
-    image: "overview-window",
-    title: "Understand the change before reading the diff.",
+    image: "guide-overview",
+    title: "Get the story before the line-by-line review.",
     description:
-      "A real Claude Code overview of the invitation sample PR, connecting the intended behavior to what the code actually does.",
-    alt: "Diff City showing a Claude Fable 5.1 overview of its invitation sample pull request, explaining the changes and review priorities.",
-    pr: 1,
+      "A real Claude Fable 5 walkthrough of a 20-file sample PR: database migrations, access policies, API changes, localization, and more.",
+    alt: "The full Diff City app displaying a Mermaid overview, reading path, and personal-account inbox for sample PR 3 with Claude Fable 5.",
+    pr: 3,
   },
   {
     id: "conversation",
     label: "Ask in place",
     icon: "chat",
-    image: "inline-conversation-window",
-    title: "A question becomes an inline conversation.",
+    image: "inline-review",
+    title: "Keep your question attached to the code.",
     description:
-      "An actual AI reply about the selected migration lines. The conversation is private; preparing and publishing a GitHub draft are separate actions.",
-    alt: "An inline AI conversation in Diff City about the safety of a SQL migration, showing the line reference, the question, and Claude’s response.",
-    pr: 9,
+      "An actual inline conversation with Claude about the sample changes. AI questions stay private; feedback for the author starts as an unpublished GitHub draft.",
+    alt: "The full Diff City app showing an inline code conversation with a human question, Claude’s response, and local review controls.",
+    pr: 3,
+  },
+  {
+    id: "chat",
+    label: "Keep the context",
+    icon: "spark",
+    image: "pr-chat",
+    title: "Continue the discussion alongside your review.",
+    description:
+      "The same conversation is available in PR chat, with its code context beside the composer. Copy a response or the whole thread with its context whenever you need it.",
+    alt: "The full Diff City app with the independent PR chat open next to the guided diff, showing a contextual AI conversation and copy controls.",
+    pr: 3,
   },
 ];
 ---
@@ -103,8 +114,9 @@ const screenshots = [
 </div>
 <p class="capture-note">
   Full-window screenshots from the real macOS app using sample PRs in the Diff
-  City repo. Guides generated with Claude Code · Fable 5.1. Source repo
-  currently private.
+  City repo. Guide and replies generated with Claude Code · Fable 5. Other
+  account avatars are hidden for privacy. Sample code is intentionally flawed;
+  the source repo is currently private.
 </p>
 <script>
   const tabs = Array.from(

@@ -4,6 +4,31 @@ A desktop workspace for reviewing GitHub pull requests through AI-guided walkthr
 
 **Status:** working local macOS alpha. **Owner:** Christopher Smothers. **License:** [MIT](LICENSE). The repository remains private; [diff.city](https://diff.city) hosts the product website and will provide public downloads. See the [Astro website](apps/site/README.md) for local development and GitHub Pages setup.
 
+## See the review workflow
+
+These are full-window captures of the real macOS app reviewing [sample PR #3](https://github.com/crs48/diffcity/pull/3): 20 files and more than 16,000 changed lines covering migrations, access policies, API contracts, localization, and renames. The guide and replies were generated with **Claude Code · Fable 5 · High**. The sample deliberately contains review issues and is not intended to be merged. Other account avatars are hidden for privacy. The guide surfaces its coverage limits for oversized or omitted changes.
+
+**Follow the code.** Deeper code notes sit beside the diff, and the narrow guide index links to review locations and shows green blocks for reviewed chapters.
+
+![Full Diff City window showing the guided diff, code notes, and reviewed sections](apps/site/public/screenshots/guide-code-notes.webp)
+
+<details>
+<summary>See the overview, inline conversation, and PR chat</summary>
+
+**Start with the overview.** Understand the change and its review priorities before scrolling into the code.
+
+![Full Diff City window displaying the Claude-generated PR overview and chapter outline](apps/site/public/screenshots/guide-overview.webp)
+
+**Ask in place.** Questions and answers stay anchored to their code. Private notes and unpublished GitHub drafts have separate actions.
+
+![Full Diff City window displaying an inline question and Claude response](apps/site/public/screenshots/inline-review.webp)
+
+**Keep the context.** Continue the same conversation in PR chat, or copy a response or the entire thread with its context.
+
+![Full Diff City window with contextual PR chat beside the guide](apps/site/public/screenshots/pr-chat.webp)
+
+</details>
+
 ## Run locally
 
 Install Node.js 24, pnpm 10.11.1, Rust (the repository pins its toolchain), and Xcode command-line tools. Connect GitHub with `gh auth login`. Use a current OpenAI Codex CLI with a supported app-server and an existing Codex login. For Claude, install a current Claude Code CLI and sign in with `claude auth login`; the integration has been verified with Claude Code 2.1.304.
@@ -38,7 +63,7 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 6. GitHub drafts remain **local and unpublished**, including drafts prepared by AI. **Finish review** shows coverage and the exact selected drafts. Publish a comment, approval, or change request as supported by GitHub; your own PR only permits a comment.
 7. New code appears as an update banner. Loading it preserves review marks only for uniquely matching unchanged hunks. Earlier notes stay attached to their original code and can be reopened with **Open previous revision**.
 
-**Ask about selected text:** Select a variable, function, or code fragment and click the floating **Ask AI** button (or press **Alt+Enter**). Diffcity immediately asks your default AI model to explain that exact text and its role in the surrounding code. Continue the conversation inline or in PR chat. These threads are labeled **AI only** and cannot be prepared or published as GitHub comments. Text selection works in captured surrounding context and the “Since your last review” diff. Select up to 200 consecutive lines / 16,000 characters in one file and one side; use split view to select from a particular version when old and new lines are interleaved.
+**Ask about selected text:** Select a variable, function, or code fragment to open a focused question field beside it. Type a question and press **Enter**, or leave it blank for an explanation of the selected code. **Alt+Enter** also opens the question action. Continue the conversation inline or in PR chat. These threads are labeled **AI only** and cannot be prepared or published as GitHub comments. Text selection works in captured surrounding context and the “Since your last review” diff. Select up to 200 consecutive lines / 16,000 characters in one file and one side; use split view to select from a particular version when old and new lines are interleaved.
 
 **Informative guides:** The guide opens with the change's purpose and before/after behavior. Each chapter has a short sticky takeaway and a full Markdown walkthrough, shown above its code, explaining the flow across files, important design choices, and test evidence or gaps. **Why it matters** and **What to verify** make the review concerns concrete. You can collapse explanations independently of code. Provisional groups are clearly labeled; use **New guide** to regenerate older brief guides. The prompt follows the intent-first approach in [Diffity's guide instructions](https://github.com/nilbuild/diffity/blob/ce9de40e94707f1983d1995c9c63679ffa9c670c/src-tauri/prompts/guide.md), adapted for risk-first PR review and validated hunk coverage.
 
@@ -48,7 +73,7 @@ If Connections reports a network timeout while `gh api user` succeeds, inspect a
 
 **Discussion headers:** Each inline discussion keeps its title, line range, collapse button, and chat shortcut beneath the sticky file header until that discussion leaves the viewport. Collapsing a long discussion keeps its header in view. The first AI reply supplies a short title based on the opening exchange, saved separately from the message and mirrored in PR chat. Follow-ups keep that title. Older conversations show an opening-message preview until their next AI reply supplies a title; generic text-selection prompts show the selected code instead.
 
-**More room for code:** Scrolling compacts the PR title and guide action into a 48px header. Author, checks, and diff totals return when you scroll to the top. History and previous-revision details scroll with the document, while review tabs, navigation, and active update/error controls remain available.
+**More room for code:** Two compact header rows keep the PR identity, review modes, chapter navigation, and actions available. Full summaries scroll with the document; saved guides and background activity open in small popovers. The guide index links to chapters, code notes, naming decisions, findings, and conversations. Fully reviewed chapters appear as soft green blocks in the rail.
 
 **Stay oriented inside long files:** File titles stick at the top of the code viewport until their file scrolls away. Collapse a file from its header at any point; consecutive hunks share one header without changing the guide's reading order. A small canvas minimap overlays the right side of the editor for the active file when it is taller than the viewport. It keeps the code's width and wrapping unchanged; horizontal scrolling has extra space to move covered text clear of the map. Click or drag to navigate, or focus it and use arrows, Page Up/Down, Home, and End. Its viewport marker tracks wrapped rows, expanded context, and inline discussions. The map represents displayed code and diff colors, not unloaded portions of the source file; it disappears for short files.
 
@@ -76,6 +101,8 @@ As you scroll, code notes replace the section summary in the left margin, connec
 
 Use the appearance menu in the toolbar to choose **Light**, **Dark**, or **System**. The interface uses neutral black, white, and gray surfaces with GitHub Primer accents: green for open PRs and additions, red for deletions and closed PRs, purple for merges, blue for focus and information, and amber for attention. The app and website share the [brand palette](packages/brand/README.md), including light/dark theme values and accessible primary buttons. Appearance saves immediately without reconnecting accounts.
 
+For screen sharing or screenshots, **Display settings → Hide other account avatars** keeps only the selected account (or your personal account in All accounts) in the rail. Filter the inbox separately to control which repositories and PRs are visible.
+
 Tailwind CSS supplies the styling foundation, and React Aria supplies buttons, tabs, menus, and dialog behavior. Keyboard users can skip to the review, switch tabs with arrow keys, navigate the guide outline, and dismiss dialogs with Escape. Outline jumps focus the destination heading; ordinary scrolling preserves keyboard focus. Explanations stack above code in narrow windows. **Read full context** opens longer explanations and review questions in the document. Focus returns to dialog openers. Code and discussions flow in one review scrollbar. Large reviews load code near the viewport; **Render all code** keeps every expanded line available to assistive technology. Offscreen blocks also have named keyboard load controls. Native Select All from code temporarily renders the full document, while ordinary text selections remain mounted as you scroll. Use **Collapse changes**, individual diff controls, or inline discussion controls to compact a section. **Show 25 lines above/below** reveals unchanged context from the captured revision; repeat to see more, or use **Collapse context**. Extra context is read-only and stops at adjacent changes. Added and removed lines also have textual labels. See [accessibility checks and remaining work](docs/accessibility.md).
 
 ## Data and integrations
@@ -83,7 +110,7 @@ Tailwind CSS supplies the styling foundation, and React Aria supplies buttons, t
 - Tauri 2, React/TypeScript, Rust, and SQLite. No diffcity server or account is required.
 - The Rust backend reads the existing GitHub CLI credential into memory; the credential is not sent to the webview, SQLite, or Codex.
 - Codex runs through its local app-server using the existing login. Starting analysis sends the PR description and bounded diff context to the selected model/provider. Asking a question sends the exact selected lines, nearby diff context (up to five rows before/after, plus opposite-side rows inside the range), guide summary, question, and recent private discussion within the same thread and PR revision (up to 24 messages, 2,000 characters each). PR chat includes bounded supporting diff context, prioritizing high-attention changes. These conversations are reconstructed from saved messages on each request; earlier revisions remain separate. Oversized selections are rejected before inference. Source code is not guaranteed to remain on the device during model inference.
-- Codex and Claude have no shell, edit, browser, GitHub publication, or MCP-tool access from this review workflow. Claude uses a fresh ephemeral SDK session in an isolated directory with customization hooks disabled, an empty tool set (except structured guide output), and no MCP servers. Authentication stays with each provider’s CLI. The app checks the actual model and rejects silent substitution or malformed guides, preserving existing saved runs. Findings are suggestions; only you mark code reviewed and choose publication.
+- Use **Local code** to find or link the repository checkout. Agent access depends on the selected access mode and the provider’s local configuration; linked code and available tools let the agent investigate beyond the captured diff. Review permissions in the chat before authorizing actions. Authentication stays with each provider’s CLI. The app checks the actual model and rejects silent substitution or malformed guides, preserving existing saved runs. Findings are suggestions; only you mark code reviewed and choose publication of Diff City’s GitHub drafts.
 - SQLite holds snapshots, guides, notes, settings, review progress, and publication state in `~/Library/Application Support/city.diff.desktop/`. WebKit local storage holds the last opened PR, unfinished review summaries, and the full-code rendering preference. **Connections** shows the resolved database directory. `DIFFCITY_DATA_DIR` overrides the database directory for isolated testing.
 - Active PR metadata, comments, reviews, and checks refresh every 30 seconds while the app is visible; the inbox refreshes every 90 seconds, and organization/repo discovery refreshes every 15 minutes. **Refresh repos and accounts** refreshes both on demand. Open PR metadata loads in small paginated batches, with visible progress and saved results retained on failures. GitHub reads use conditional REST requests, pagination, serialization, and rate-limit backoff. Model reviews start on demand; new guides then run the bounded Priority pass described above.
 - To remove local content, quit the app and remove its application-support directory and the WebKit storage for `city.diff.desktop`. GitHub comments already published remain on GitHub. There is no telemetry or diagnostic upload in this alpha.

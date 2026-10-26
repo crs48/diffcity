@@ -309,7 +309,7 @@
     scroll-margin-top: 105px;
   }
   .preview-tabs {
-    @apply flex items-center justify-center;
+    @apply flex flex-wrap items-center justify-center;
     gap: 4px;
     margin: 0 auto 22px;
   }

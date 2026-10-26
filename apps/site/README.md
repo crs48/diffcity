@@ -40,12 +40,23 @@ In repository **Settings → Pages**, the build source must be **GitHub Actions*
 - `src/config.ts`: repository and validated optional download URL.
 - `public/`: domain, favicon, social image, robots file, and sitemap.
 
-Run `pnpm --filter @diffcity/site format` to format this package. Verify the built page at desktop and phone widths, all three workflow tabs, keyboard navigation, and both themes before deploying visual changes.
+Run `pnpm --filter @diffcity/site format` to format this package. Verify the built page at desktop and phone widths, all four workflow tabs, keyboard navigation, and both themes before deploying visual changes.
 
 ## Refreshing screenshots
 
 Generate a guide inside the installed Diff City app using a sample PR from this repository. Capture the real overview, guided diff, or inline conversation through the native app. Keep the PR and model attribution accurate, and inspect each capture before publishing. Use the full app window without cropping or zooming in. Select a Diff City sample PR and check that no credentials or unrelated repository content are visible.
 
-The current gallery uses PR #1 (invitation review, Claude Fable 5.1) and PR #9 (schema backfill guide, Claude Fable 5.1; inline reply, Claude Fable 5). The sample PRs deliberately contain test-only code. The guides and private conversation remain saved in the local app.
+The current gallery was captured on October 26, 2026 from sample PR #3: 20 files and 16,868 changed lines, including migrations, access policies, localization, API contracts, and edited renames. The actual **Claude Code · Fable 5 · High** run produced nine sections. The priority pass and the optional further pass supplied code notes; the first two chapters are marked reviewed. The inline conversation, PR-wide conversation, and an unpublished GitHub draft remain saved in the local app. Nothing was posted to GitHub for these captures.
+
+The guide explicitly reports its coverage limits: ten oversized or omitted hunks remain unassessed, and three files have only binary/metadata changes. Screenshots show the generated output as-is; they do not represent an exhaustive review or an endorsement of the intentionally flawed fixture code.
+
+| Asset              | Native app scene                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `guide-code-notes` | Edited rename with two red/green changes, a connected code note, and reviewed sections in the rail           |
+| `guide-overview`   | Generated Mermaid overview, reading path, and personal-account inbox                                         |
+| `inline-review`    | Line-anchored question, Claude response, and file minimap                                                    |
+| `pr-chat`          | The same conversation in the sidebar, local GitHub draft, copy controls, and code context above the composer |
+
+Before capture, select the personal account and the `diffcity` repository, then enable **Display settings → Hide other account avatars**. This removes unrelated avatars from the actual UI while keeping the selected account visible. The preference alone does not hide inbox content, so keep the repository filter applied. Inspect every full-size image before publishing.
 
 Images in `public/screenshots/` are complete 2880 × 1880 native window screenshots, encoded as WebP without cropping, zooming, redrawing, or changing the app content. Responsive variants scale the whole image proportionally. Keep full-resolution versions for the “View full size” links and generate 1440px and 960px variants for responsive loading. Set the matching source dimensions in `ReviewPreview.astro` to avoid layout shifts.
