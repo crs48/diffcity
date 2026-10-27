@@ -652,5 +652,13 @@
   "Could not copy. Try again.": "No se pudo copiar. Vuelve a intentarlo.",
   "Reviewed section": "Sección revisada",
   "Hide other account avatars": "Ocultar los avatares de otras cuentas",
-  "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share.": "Mantén solo la cuenta seleccionada en la barra lateral, o tu cuenta personal al ver todas las cuentas. Para capturas de pantalla, filtra también la bandeja al repositorio que quieras compartir."
+  "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share.": "Mantén solo la cuenta seleccionada en la barra lateral, o tu cuenta personal al ver todas las cuentas. Para capturas de pantalla, filtra también la bandeja al repositorio que quieras compartir.",
+  "Guide notifications": "Notificaciones de guías",
+  "Guide ready": "Guía lista",
+  "Guide ready for {{pull}}: {{model}}. Choose View guide to open it.": "Guía lista para {{pull}}: {{model}}. Elige Ver guía para abrirla.",
+  "Dismiss guide notification": "Descartar notificación de guía",
+  "View guide": "Ver guía",
+  "Opening guide…": "Abriendo guía…",
+  "{{count}} more guides ready_one": "{{count}} guía más lista",
+  "{{count}} more guides ready_other": "{{count}} guías más listas"
 }

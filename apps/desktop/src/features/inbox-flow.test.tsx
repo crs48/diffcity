@@ -302,6 +302,7 @@ it("generates provider guides in the background using the latest revision and re
   codex.focus();
   await user.keyboard("{Enter}");
   await card.findByRole("button", { name: /Codex · Guide unavailable/ });
+  expect(screen.queryByRole("button", { name: "View guide" })).toBeNull();
   expect(analyze).toHaveBeenLastCalledWith(
     "fresh-snapshot",
     expect.any(String),
@@ -317,11 +318,13 @@ it("generates provider guides in the background using the latest revision and re
   inventory = [
     { ...metadata, head: "latest-head", snapshotId: "fresh-snapshot" },
   ];
+  const focusBeforeCompletion = document.activeElement;
   await act(async () =>
     finish({
       ...workspace.guide,
       id: "new-guide",
       source: "claude",
+      model: "claude-fable-5",
       snapshotId: "fresh-snapshot",
       sections: [],
     }),
@@ -334,6 +337,12 @@ it("generates provider guides in the background using the latest revision and re
   expect(
     screen.getByRole("heading", { name: "The review I am reading" }),
   ).toBeTruthy();
+  const notice = within(
+    screen.getByRole("region", { name: "Guide notifications" }),
+  );
+  expect(notice.getByRole("heading", { name: "Guide ready" })).toBeTruthy();
+  expect(notice.getByText("Claude · claude-fable-5")).toBeTruthy();
+  expect(document.activeElement).toBe(focusBeforeCompletion);
 
   analyze.mockResolvedValueOnce({ ...workspace.guide, sections: [] });
   await user.click(
@@ -341,6 +350,163 @@ it("generates provider guides in the background using the latest revision and re
   );
   await waitFor(() => expect(analyze).toHaveBeenCalledTimes(3));
   await card.findByRole("button", { name: /Codex · No guide yet/ });
+
+  const selected = {
+    ...fresh,
+    guide: {
+      ...fresh.guide,
+      id: "new-guide",
+      snapshotId: "fresh-snapshot",
+      model: "claude-fable-5",
+      summary: "The completed guide overview",
+    },
+  };
+  const select = vi
+    .spyOn(api, "selectGuide")
+    .mockRejectedValueOnce(new Error("Could not load saved guide"))
+    .mockResolvedValue(selected);
+  await user.click(notice.getByRole("button", { name: "View guide" }));
+  expect(await notice.findByRole("alert")).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "The review I am reading" }),
+  ).toBeTruthy();
+  await user.click(notice.getByRole("button", { name: "View guide" }));
+  expect(select).toHaveBeenLastCalledWith("fresh-snapshot", "new-guide");
+  await screen.findByRole("heading", { name: "Background guide target" });
+  expect(screen.queryByRole("button", { name: "View guide" })).toBeNull();
+  expect(screen.getByText("The completed guide overview")).toBeTruthy();
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      document.getElementById("review-workspace"),
+    ),
+  );
+});
+
+it.each(["view", "dismiss"])(
+  "lets the reader %s a completed guide while looking at files",
+  async (action) => {
+    const user = userEvent.setup();
+    const pull = {
+      ...workspace.snapshot.pull,
+      repository: "owner/repo",
+      title: "Current review",
+    };
+    livePulls = [pull];
+    const review = {
+      ...structuredClone(workspace),
+      snapshot: { ...workspace.snapshot, pull },
+    };
+    const guide = {
+      ...review.guide,
+      id: "completed-guide",
+      model: "claude-fable-5",
+      summary: "New guide overview",
+    };
+    vi.spyOn(api, "open").mockResolvedValue(review);
+    vi.spyOn(api, "sync").mockResolvedValue(review);
+    vi.spyOn(api, "analyze").mockResolvedValue(guide);
+    const select = vi
+      .spyOn(api, "selectGuide")
+      .mockResolvedValue({ ...review, guide });
+    render(<App />);
+    const target = await screen.findByRole("button", {
+      name: /Current review/,
+    });
+    await user.click(target);
+    await screen.findByRole("heading", { name: "Current review" });
+    await user.click(screen.getByRole("tab", { name: "Files" }));
+    await user.click(
+      within(target.parentElement!).getByRole("button", {
+        name: /Claude · No guide yet/,
+      }),
+    );
+    await screen.findByRole("button", { name: "View guide" });
+    expect(
+      screen.getByRole("tab", { name: "Files" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    await user.click(
+      screen.getByRole("button", {
+        name: action === "view" ? "View guide" : "Dismiss guide notification",
+      }),
+    );
+    if (action === "view") {
+      await screen.findByText("New guide overview");
+      expect(select).toHaveBeenCalledWith(review.snapshot.id, guide.id);
+      expect(
+        screen
+          .getByRole("tab", { name: "Guide" })
+          .getAttribute("aria-selected"),
+      ).toBe("true");
+    } else {
+      expect(select).not.toHaveBeenCalled();
+      expect(
+        screen
+          .getByRole("tab", { name: "Files" })
+          .getAttribute("aria-selected"),
+      ).toBe("true");
+      // Dismissing the toast does not discard the saved guide's existing activity action.
+      await user.click(screen.getByRole("button", { name: /Review activity/ }));
+      expect(
+        screen.getByRole("button", { name: /Open updated guide/ }),
+      ).toBeTruthy();
+    }
+    expect(screen.queryByRole("button", { name: "View guide" })).toBeNull();
+  },
+);
+
+it("does not jump back when a different PR is opened while a ready guide is loading", async () => {
+  const user = userEvent.setup();
+  const pull = {
+    ...workspace.snapshot.pull,
+    repository: "owner/repo",
+    number: 1,
+    title: "Ready guide PR",
+  };
+  const other = { ...pull, number: 2, title: "Later navigation wins" };
+  livePulls = [pull, other];
+  const ready = {
+    ...structuredClone(workspace),
+    snapshot: { ...workspace.snapshot, id: "ready-revision", pull },
+  };
+  vi.spyOn(api, "sync").mockResolvedValue(ready);
+  const guide = {
+    ...ready.guide,
+    id: "ready-guide",
+    snapshotId: ready.snapshot.id,
+    sections: [],
+  };
+  vi.spyOn(api, "analyze").mockResolvedValue(guide);
+  let finish!: (value: ReviewWorkspace) => void;
+  const select = vi.spyOn(api, "selectGuide").mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  vi.spyOn(api, "open").mockResolvedValue({
+    ...ready,
+    snapshot: { ...ready.snapshot, id: "other-revision", pull: other },
+  });
+  render(<App />);
+  const target = await screen.findByRole("button", { name: /Ready guide PR/ });
+  await user.click(
+    within(target.parentElement!).getByRole("button", {
+      name: /Claude · No guide yet/,
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: "View guide" }));
+  await waitFor(() =>
+    expect(select).toHaveBeenCalledWith("ready-revision", "ready-guide"),
+  );
+  await user.click(
+    screen.getByRole("button", { name: /Later navigation wins/ }),
+  );
+  await screen.findByRole("heading", { name: "Later navigation wins" });
+  await act(async () => finish({ ...ready, guide }));
+  expect(
+    screen.getByRole("heading", { name: "Later navigation wins" }),
+  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "View guide" })).toBeTruthy();
 });
 it("moves a sample review down and back up without publishing or changing real inbox data", async () => {
   const user = userEvent.setup();
