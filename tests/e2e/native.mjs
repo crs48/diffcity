@@ -5,6 +5,15 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import assert from "node:assert/strict";
 
+const pullUrl = process.env.DIFFCITY_TEST_PR_URL;
+const pullMatch = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/([1-9]\d*)$/.exec(pullUrl || "");
+if (!pullMatch) {
+  throw new Error(
+    "Set DIFFCITY_TEST_PR_URL to a disposable synthetic GitHub PR containing the live-review fixture. Historical PR numbers are not valid defaults.",
+  );
+}
+const pullNumber = pullMatch[1];
+
 const root = resolve(import.meta.dirname, "../..");
 const binary =
   process.env.DIFFCITY_TEST_BINARY ||
@@ -149,12 +158,13 @@ try {
     await click("Open a PR by URL");
     await input(
       '[aria-label="GitHub pull request URL"]',
-      "https://github.com/crs48/diffcity/pull/1",
+      pullUrl,
     );
     await click("Open");
     await until(() =>
       script(
-        'return document.querySelector(".breadcrumb strong")?.textContent === "#1" && !document.querySelector(".loading-banner")',
+        'return document.querySelector(".breadcrumb strong")?.textContent === arguments[0] && !document.querySelector(".loading-banner")',
+        [`#${pullNumber}`],
       ),
     );
     await click("Review with Codex");
@@ -287,7 +297,7 @@ try {
       resolve(artifacts, "await-update.json"),
       JSON.stringify({
         dataDirectory,
-        pr: "https://github.com/crs48/diffcity/pull/1",
+        pr: pullUrl,
       }),
     );
     console.log("READY: push the synthetic PR update now");

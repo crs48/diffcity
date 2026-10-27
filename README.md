@@ -10,7 +10,7 @@ Apple silicon (M1 or newer), macOS 14+. Download the DMG from Releases and drag 
 
 ## See the review workflow
 
-These are full-window captures of the real macOS app reviewing [sample PR #3](https://github.com/crs48/diffcity/pull/3): 20 files and more than 16,000 changed lines covering migrations, access policies, API contracts, localization, and renames. The guide and replies were generated with **Claude Code · Fable 5 · High**. The sample deliberately contains review issues and is not intended to be merged. Other account avatars are hidden for privacy. The guide surfaces its coverage limits for oversized or omitted changes.
+These are full-window captures of the real macOS app reviewing [mixed-edit sample](https://github.com/crs48/diffcity/compare/fixtures/2026-10/baseline...fixtures/2026-10/mixed): 20 files and more than 16,000 changed lines covering migrations, access policies, API contracts, localization, and renames. The guide and replies were generated with **Claude Code · Fable 5 · High**. The sample deliberately contains review issues and is not intended to be merged. Other account avatars are hidden for privacy. The guide surfaces its coverage limits for oversized or omitted changes.
 
 **Follow the code.** Deeper code notes sit beside the diff, and the narrow guide index links to review locations and shows green blocks for reviewed chapters.
 
@@ -136,7 +136,7 @@ The native end-to-end harness uses the actual packaged WKWebView and actual loca
 
 ```sh
 pnpm --filter @diffcity/desktop tauri build --debug --features e2e --target aarch64-apple-darwin --bundles app
-node tests/e2e/native.mjs
+DIFFCITY_TEST_PR_URL=https://github.com/YOUR_ACCOUNT/YOUR_TEST_REPO/pull/NUMBER node tests/e2e/native.mjs
 ```
 
 For a connection check that does not invoke a model or publish feedback:
@@ -153,7 +153,7 @@ cargo run -p diffcity --example directory-smoke -- ACCOUNT_OR_ORGANIZATION
 
 This read-only check stores metadata in the ignored `.local/directory-smoke/` directory. Omit the account argument to check your personal account's history.
 
-The harness currently targets the synthetic draft PR in this repository. It consumes Codex model usage. GitHub publication is off by default and requires `DIFFCITY_TEST_PUBLISH=yes` after the operator explicitly authorizes posting the labeled test review. The `e2e` feature adds a local WebDriver server and must never be used for distributed builds. Normal `pnpm desktop:build` excludes it.
+Choose a disposable synthetic PR containing `tests/fixtures/live-review/db/migrations/042_invitation_expiry.sql`; the harness requires `DIFFCITY_TEST_PR_URL` and has no default PR number. Historical development PRs are preserved in a separate private archive. The harness consumes Codex model usage. GitHub publication is off by default and requires `DIFFCITY_TEST_PUBLISH=yes` after the operator explicitly authorizes posting the labeled test review to the chosen PR. The `e2e` feature adds a local WebDriver server and must never be used for distributed builds. Normal `pnpm desktop:build` excludes it.
 
 See [implementation and validation notes](docs/implementation.md) for supported versions, evidence, and remaining release work. The original [product plan](docs/plans/initial-product/README.md) and [guided review specification](docs/plans/initial-product/guided-review.md) remain the longer-term roadmap.
 

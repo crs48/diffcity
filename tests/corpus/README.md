@@ -1,16 +1,16 @@
 # GitHub review corpus
 
-These PRs exercise Diffcity against its own private GitHub repository. Synthetic branches are deliberately unsuitable for merging. They remain separate from the real implementation branch.
+These historical PRs exercised Diff City during private development. They are preserved in the private development archive; their old numbers must not be used as targets in the new public repository. The sanitized fixture branches and local generators are available publicly. Synthetic branches are deliberately unsuitable for merging. Use **Sample inbox** for an account-free demo, or generate your own test branches and PRs for live GitHub checks.
 
 | PR | State | Files | Added | Deleted | Focus |
 | --- | --- | ---: | ---: | ---: | --- |
-| [#2: application changes](https://github.com/crs48/diffcity/pull/2) | Open | evolving | evolving | evolving | Real PR history, localization, migrations, and verification tooling |
-| [#3: mixed edits](https://github.com/crs48/diffcity/pull/3) | Draft | 20 | 8,580 | 8,288 | Access policies, SQL, API contracts, locales, whole-file removal, renames, binary, mode, line endings, generated content |
-| [#4: unsafe migration](https://github.com/crs48/diffcity/pull/4) | Draft | 3 | 6 | 1 | Actual migration manifest and storage changes with deliberate data-loss and upgrade defects |
-| [#5: locale contract changes](https://github.com/crs48/diffcity/pull/5) | Draft | 4 | 2,009 | 3 | Actual Spanish key/placeholder regressions and 2,000 new French/Arabic entries |
-| [#6: abandoned proposal](https://github.com/crs48/diffcity/pull/6) | Closed, unmerged | 2 | 90 | 4 | Real README changes and archived experiment for historical review |
+| [#2: application changes](https://github.com/crs48/diffcity-private-history/pull/2) | Merged | evolving | evolving | evolving | Real PR history, localization, migrations, and verification tooling |
+| [#3: mixed edits](https://github.com/crs48/diffcity-private-history/pull/3) | Draft | 20 | 8,580 | 8,288 | Access policies, SQL, API contracts, locales, whole-file removal, renames, binary, mode, line endings, generated content |
+| [#4: unsafe migration](https://github.com/crs48/diffcity-private-history/pull/4) | Draft | 3 | 6 | 1 | Actual migration manifest and storage changes with deliberate data-loss and upgrade defects |
+| [#5: locale contract changes](https://github.com/crs48/diffcity-private-history/pull/5) | Draft | 4 | 2,009 | 3 | Actual Spanish key/placeholder regressions and 2,000 new French/Arabic entries |
+| [#6: abandoned proposal](https://github.com/crs48/diffcity-private-history/pull/6) | Closed, unmerged | 2 | 90 | 4 | Real README changes and archived experiment for historical review |
 
-The original small [PR #1](https://github.com/crs48/diffcity/pull/1) remains available with its earlier explicitly approved GitHub review.
+The original small [PR #1](https://github.com/crs48/diffcity-private-history/pull/1) remains available with its earlier explicitly approved GitHub review.
 
 ## Generate another local corpus
 
@@ -62,15 +62,15 @@ Nine additional PRs exercise the owner's list in GitHub. All are authored by `cr
 
 | PR | State | Scenario |
 | --- | --- | --- |
-| [#7](https://github.com/crs48/diffcity/pull/7) | Open, ready | Keyboard navigation |
-| [#8](https://github.com/crs48/diffcity/pull/8) | Open, ready | Notification batching |
-| [#9](https://github.com/crs48/diffcity/pull/9) | Open, ready | Schema backfill |
-| [#10](https://github.com/crs48/diffcity/pull/10) | Open, ready | API pagination |
-| [#11](https://github.com/crs48/diffcity/pull/11) | Draft | Compact layout |
-| [#12](https://github.com/crs48/diffcity/pull/12) | Draft | French catalog |
-| [#13](https://github.com/crs48/diffcity/pull/13) | Draft | Incremental cache |
-| [#14](https://github.com/crs48/diffcity/pull/14) | Closed, unmerged | Abandoned grouping experiment |
-| [#15](https://github.com/crs48/diffcity/pull/15) | Closed, unmerged | Abandoned notifications draft |
+| [#7](https://github.com/crs48/diffcity-private-history/pull/7) | Open, ready | Keyboard navigation |
+| [#8](https://github.com/crs48/diffcity-private-history/pull/8) | Open, ready | Notification batching |
+| [#9](https://github.com/crs48/diffcity-private-history/pull/9) | Open, ready | Schema backfill |
+| [#10](https://github.com/crs48/diffcity-private-history/pull/10) | Open, ready | API pagination |
+| [#11](https://github.com/crs48/diffcity-private-history/pull/11) | Draft | Compact layout |
+| [#12](https://github.com/crs48/diffcity-private-history/pull/12) | Draft | French catalog |
+| [#13](https://github.com/crs48/diffcity-private-history/pull/13) | Draft | Incremental cache |
+| [#14](https://github.com/crs48/diffcity-private-history/pull/14) | Closed, unmerged | Abandoned grouping experiment |
+| [#15](https://github.com/crs48/diffcity-private-history/pull/15) | Closed, unmerged | Abandoned notifications draft |
 
 Reproduce their local branches with `python3 tests/corpus/create_inbox.py --base HEAD --prefix fixtures/new-inbox-session`. Creation uses a temporary index and an atomic ref transaction; it never overwrites branches, switches the checkout, pushes, opens PRs, or merges anything.
 
