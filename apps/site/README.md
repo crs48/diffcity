@@ -1,6 +1,6 @@
 # Diff City website
 
-A static, one-page Astro + Tailwind CSS site for [diff.city](https://diff.city). The page uses local fonts, a keyboard-accessible gallery of real app screenshots, light/dark themes, and no analytics, cookies, or backend. Theme preference is saved in local storage. The screenshots are captured from the installed macOS app reviewing sample PRs in `crs48/diffcity`, with actual Claude Code guides and responses. The screenshots show the entire app window at its normal zoom, including the navigation rail and window controls, while reviewing the Diff City test corpus.
+A static, one-page Astro + Tailwind CSS site for [diff.city](https://diff.city). The page uses local fonts, a keyboard-accessible gallery of real app screenshots and a full-window recording, light/dark themes, and no analytics, cookies, or backend. Theme preference is saved in local storage. The screenshots are captured from the installed macOS app reviewing sample PRs in `crs48/diffcity`, with actual Claude Code guides and responses. The screenshots show the entire app window at its normal zoom, including the navigation rail and window controls, while reviewing the Diff City test corpus.
 
 ## Local development
 
@@ -34,7 +34,7 @@ In repository **Settings → Pages**, the build source must be **GitHub Actions*
 ## Editing
 
 - `src/pages/index.astro`: page content, metadata, theme toggle.
-- `src/components/ReviewPreview.astro`: keyboard-accessible screenshot tabs, captions, and source PR links.
+- `src/components/ReviewPreview.astro`: keyboard-accessible media tabs, captions, playback controls, and source PR links.
 - `src/styles/global.css`: Tailwind entry point, neutral surfaces, responsive styles.
 - `../../packages/brand/palette.css`: shared GitHub PR colors for both themes; see the [palette reference](../../packages/brand/README.md).
 - `src/config.ts`: repository and validated optional download URL.
@@ -60,3 +60,17 @@ The guide explicitly reports its coverage limits: ten oversized or omitted hunks
 Before capture, select the personal account and the `diffcity` repository, then enable **Display settings → Hide other account avatars**. This removes unrelated avatars from the actual UI while keeping the selected account visible. The preference alone does not hide inbox content, so keep the repository filter applied. Inspect every full-size image before publishing.
 
 Images in `public/screenshots/` are complete 2880 × 1880 native window screenshots, encoded as WebP without cropping, zooming, redrawing, or changing the app content. Responsive variants scale the whole image proportionally. Keep full-resolution versions for the “View full size” links and generate 1440px and 960px variants for responsive loading. Set the matching source dimensions in `ReviewPreview.astro` to avoid layout shifts.
+
+## Workflow recording
+
+The **Ask in place** tab and the root README include an 18-second, full-window recording from October 27, 2026. It uses public [demo PR #18](https://github.com/crs48/diffcity/pull/18), comparing the same mixed-edit fixture branches as the still gallery. A fresh **Claude Code · Fable 5 · High** guide was generated for this PR and its priority pass completed. The recording shows a real, separate inline conversation with Claude Fable 5; no responses were authored or inserted for the recording.
+
+The sequence selects `api/openapi.yaml` lines 6–8, opens the **+** composer, asks “What should we check before shipping this delete endpoint? Keep it to three review points,” scrolls through Claude’s answer, and opens **Continue in PR chat**. Claude discusses ownership checks, error responses, and deletion semantics, and identifies the code as an intentionally flawed fixture. This is an example of the workflow, not a verified security assessment. No review comments were published to GitHub.
+
+Capture privacy: only the `crs48` account is visible; the repo filter is `diffcity`, the PR list is collapsed, and **Hide other account avatars** is enabled. Every recorded frame was inspected before publishing. The source frames are native 2880 × 1880 window captures at normal zoom. Encoding scales the entire window to 1440 × 940 without cropping, obscuring, or redrawing UI. Pauses and AI waiting time are shortened; scrolling and typing are condensed.
+
+- `public/demos/inline-conversation.gif`: looping README demonstration, approximately 3.2 MB.
+- `public/demos/inline-conversation.mp4`: the same sequence with H.264 playback, approximately 380 KB.
+- `public/demos/inline-conversation.webp`: a full-window poster showing the answer.
+
+The website uses native video controls, `playsinline`, and `preload="none"`, with no autoplay. Switching gallery tabs pauses the hidden video. The caption describes the silent sequence, and GIF/video download links provide alternatives. Keep the existing still gallery for visitors who prefer a static view. Verify playback, pause-on-tab-change, keyboard navigation, mobile layout, and both themes after changing the media component.
