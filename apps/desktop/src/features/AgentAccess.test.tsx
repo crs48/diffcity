@@ -44,7 +44,7 @@ const prompt: AgentPrompt = {
 
 it("offers keyboard-accessible modes and persists the explicit choice", async () => {
   const { result } = renderHook(useAgentAccess);
-  expect(result.current.access).toBe("ask");
+  expect(result.current.access).toBe("limited");
   const change = vi.fn((access) => result.current.change(access));
   render(<AgentAccessSelector value="ask" onChange={change} />);
   const user = userEvent.setup();
@@ -58,6 +58,19 @@ it("offers keyboard-accessible modes and persists the explicit choice", async ()
   expect(second.result.current.access).toBe("full");
   act(() => result.current.change("limited"));
   expect(localStorage.getItem("diffcity.agent-access")).toBe("limited");
+});
+
+it("defaults to Limited when saved access is invalid or storage is unavailable", () => {
+  localStorage.setItem("diffcity.agent-access", "unknown-mode");
+  expect(renderHook(useAgentAccess).result.current.access).toBe("limited");
+  const read = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    throw new Error("Storage unavailable");
+  });
+  try {
+    expect(renderHook(useAgentAccess).result.current.access).toBe("limited");
+  } finally {
+    read.mockRestore();
+  }
 });
 
 it("shows the actual action, requires a click, and sends a scoped one-time decision", async () => {

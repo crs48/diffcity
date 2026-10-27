@@ -16,6 +16,11 @@ full = '--permission-mode' in sys.argv and sys.argv[sys.argv.index('--permission
 if provider == 'claude':
     assert '--safe-mode' not in sys.argv and '--strict-mcp-config' not in sys.argv
     assert '--permission-prompt-tool=stdio' in sys.argv
+    assert sys.argv[sys.argv.index('--setting-sources') + 1] == 'user'
+    settings = json.loads(sys.argv[sys.argv.index('--settings') + 1])
+    assert settings['disableAllHooks'] is True
+    if not full:
+        assert settings['sandbox']['autoAllowBashIfSandboxed'] is False
     init = receive()
     assert 'appendSystemPrompt' in init['request'] and 'systemPrompt' not in init['request']
     send({'type':'control_response','response':{'subtype':'success','request_id':'initialize','response':{'models':[{'value':'claude-fable-5','supportedEffortLevels':['high']}]}}})
