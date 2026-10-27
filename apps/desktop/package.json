@@ -16,7 +16,7 @@
     "@tauri-apps/api": "2.12.4",
     "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
     "highlight.js": "11.11.1",
-    "i18next": "^26.5.3",
+    "i18next": "^26.5.10",
     "lucide-react": "^0.577.0",
     "mermaid": "12.2.0",
     "react": "19.3.1",
