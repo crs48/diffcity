@@ -1,5 +1,9 @@
 # 07 — Private alpha, distribution, and public MIT release
 
+## Launch decision · October 27, 2026
+
+The owner approved a public unsigned alpha. The original repository is archived privately; the public repository contains sanitized history. This explicitly replaces the original signed/private-alpha rollout below. Developer ID signing, notarization, automatic updates, clean-machine acceptance and the broader research gates remain follow-up work; see [release operations](../../releasing.md) and the [security exploration](../../explorations/0001_[_]_SECURITY_BOUNDARIES_AND_PUBLIC_LAUNCH_READINESS.md).
+
 ## Objective and dependencies
 
 Make the completed review loop dependable enough for daily use, then prepare a clean public release under the owner's personal account. Depends on steps 01–06. Public visibility is a later owner-selected milestone, not an automatic side effect of completing this plan.
@@ -48,10 +52,10 @@ Add contribution instructions, development setup, architecture overview, issue t
 - [x] Verify the shipped Tauri build has no test-driver or backend-debug access enabled.
 - [ ] Test the update channel and previous-version recovery.
 - [x] Add repeatable source-build and contributor instructions.
-- [ ] Audit exact dependency licenses and third-party attribution.
-- [ ] Inspect public-release history and all shipped assets.
+- [x] Audit exact dependency licenses and third-party attribution.
+- [x] Inspect public-release history and all shipped assets.
 - [ ] Prepare diff.city downloads and docs after hosting/DNS is selected.
-- [ ] Make the repository public when the owner chooses to publish.
+- [x] Make the repository public when the owner chooses to publish.
 - [ ] Verify public source access, downloads, docs, and install instructions.
 
 ## Validation and exit criteria

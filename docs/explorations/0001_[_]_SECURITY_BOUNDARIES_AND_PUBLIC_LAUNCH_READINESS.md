@@ -14,7 +14,7 @@ The most important findings concern **agent startup, filesystem confidentiality,
 2. **Confirmed boundary limitation:** the bundled Codex read-only sandbox could read a synthetic file outside its working directory while denying a write inside that directory. Read-only is not repository-only. This test used the runtime's command API and the same sandbox-policy shape; it did not attempt model-driven exfiltration.
 3. **Confirmed:** new UI sessions defaulted to Ask although the security documentation promised Limited. The companion fix defaults new/invalid/unavailable preferences to Limited, preserving deliberate existing choices. Full access remains a global persistent preference, which should become repository/session scoped.
 4. **Confirmed dependency finding:** the lockfile included Tokio 1.54.0, affected by a memory-safety advisory. The companion fix updates it to 1.54.1. A fresh Rust audit reports zero vulnerability findings, with two warnings in Linux-only dependencies. JavaScript auditing reported no known advisories at investigation time.
-5. **Remaining launch work:** publish a deliberately labeled unsigned alpha, complete history/privacy cleanup, verify downloadable artifacts, and configure the public repository's reporting and protection features. A successful build or clean advisory scan does not establish a secure agent boundary.
+5. **Remaining launch work:** finish the unsigned-alpha download and site checks. Sanitized history is now public in a fresh repository; the original repository and its retained PR refs remain in a private archive. Public reporting, branch/tag protection, secret scanning and dependency checks are enabled. A successful build or clean advisory scan does not establish a secure agent boundary.
 
 **Recommendation:** ship a transparently limited alpha only after the concrete startup/default/dependency fixes and publication checks. Prioritize a backend-owned, repository-scoped access policy next. Do not advertise Limited as a confidentiality sandbox or as safe for arbitrary hostile repositories on an account containing secrets.
 
@@ -172,13 +172,15 @@ The release workflow pins its actions, builds from a version tag reachable from 
 
 At investigation time, main had no legacy branch protection or ruleset, Actions allowed arbitrary actions, repository-wide action SHA pinning was off, and the ordinary CI/site workflows still used mutable action tags. The companion patch pins the ordinary workflow actions and adds weekly/PR dependency and redacted secret checks, reused as a release prerequisite, plus Dependabot configuration. No dedicated release environment existed. Private vulnerability reporting could not be verified through the API while the repository remained private; a link in SECURITY.md is not evidence that the form is enabled.
 
-**Next steps:** pin remaining actions, protect main and release tags, use least-privilege job tokens, and enable public secret scanning/push protection and private reporting where available. Add dependency/security CI. For signed releases later, isolate signing credentials from PR jobs and use a protected release environment. Generate a machine-readable SBOM and provenance attestations; consider immutable releases. Never make `pull_request_target` execute untrusted PR code with write credentials.
+**Implemented for the public alpha:** workflow SHA pinning is enforced; main requires a PR and passing desktop/dependency/secret checks; released version tags cannot be force-updated or deleted; job tokens default to read-only; secret scanning, push protection, private reporting and weekly dependency/security CI are enabled. For signed releases later, isolate signing credentials from PR jobs and use a protected release environment. Generate a machine-readable SBOM and provenance attestations; consider immutable releases. Never make `pull_request_target` execute untrusted PR code with write credentials.
 
 ### S11 · Privacy publication gate · History and hosted artifacts
 
 Current screenshot privacy settings do not sanitize earlier Git blobs, PR diffs, Pages artifacts, workflow logs, caches, or another person's clone. Historical references were identified during release preparation, and the user explicitly requested their removal before publication.
 
-Back up privately, sanitize all intended refs, scan both text and binary/screenshot history, then inspect GitHub's retained refs/cached views before changing visibility. Avoid including removed identifiers in the cleanup report itself. If server-side retention prevents verification, keep the existing repository private and obtain approval for a clean public repository plus a private archive rather than claiming a force-push erased everything.
+The authorized cleanup preserved a private backup, sanitized all intended branches, removed the identified historical screenshot blobs and private identifiers, and scanned the result. Because GitHub retains original PR refs and cached commits, the original repository stayed private and was archived; a separate public repository received only sanitized branches. Anonymous API checks verified that the archive and identified removed objects were unavailable through the public repository. Historical PR numbers are not reused as live-test defaults.
+
+For future cleanups: back up privately, sanitize all intended refs, scan both text and binary/screenshot history, then inspect GitHub's retained refs/cached views before changing visibility. Avoid including removed identifiers in the cleanup report itself. If server-side retention prevents verification, keep the existing repository private and obtain approval for a clean public repository plus a private archive rather than claiming a force-push erased everything.
 
 ## Options and tradeoffs
 
@@ -246,14 +248,14 @@ The runtime is an independently updated dependency. Record provider executable p
 
 ### Launch and follow-up work
 
-- [ ] Finish authorized history/privacy cleanup, including retained GitHub refs or a clean-repository alternative.
+- [x] Finish authorized history/privacy cleanup, including retained GitHub refs or a clean-repository alternative.
 - [ ] Verify unsigned-alpha label, installation instructions and public download bytes.
-- [ ] Enable and verify private vulnerability reporting after publication.
+- [x] Enable and verify private vulnerability reporting after publication.
 - [x] Pin all workflow actions to verified commit SHAs.
-- [ ] Protect main and release tags in GitHub.
+- [x] Protect main and release tags in GitHub.
 - [x] Add weekly/PR advisory and redacted history-secret checks, reuse them before release builds, and configure weekly Dependabot updates.
 - [x] Verify the new security workflow in GitHub PR CI: dependency and history-secret checks passed.
-- [ ] Reverify security checks in the final public repository after history migration.
+- [x] Reverify security checks in the final public repository after history migration.
 - [ ] Create repository/session grants enforced in Rust, with config-change invalidation.
 - [ ] Make downgrades cancel or re-authorize queued/running elevated work.
 - [ ] Add a real confined-read path with no generic execution tool.

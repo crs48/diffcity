@@ -77,15 +77,25 @@ jobs:
           node --test scripts/*.test.mjs
       - name: Collect dependency licenses
         run: node scripts/third-party-notices.mjs
-      - name: Build the app and disk image
+      - name: Build unsigned alpha app and disk image
+        if: steps.release.outputs.signing == 'ad-hoc'
+        run: >-
+          env -u APPLE_CERTIFICATE -u APPLE_CERTIFICATE_PASSWORD
+          -u APPLE_ID -u APPLE_PASSWORD -u APPLE_TEAM_ID
+          APPLE_SIGNING_IDENTITY=-
+          pnpm --filter @diffcity/desktop tauri build
+          --target aarch64-apple-darwin --bundles app,dmg
+          --config ../../.local/release/tauri.conf.json
+      - name: Build signed app and disk image
+        if: steps.release.outputs.signing == 'developer-id'
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
-          APPLE_CERTIFICATE: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_CERTIFICATE || '' }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
-          APPLE_SIGNING_IDENTITY: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_SIGNING_IDENTITY || '-' }}
-          APPLE_ID: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_TEAM_ID || '' }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
           args: --target aarch64-apple-darwin --bundles app,dmg --config ../../.local/release/tauri.conf.json

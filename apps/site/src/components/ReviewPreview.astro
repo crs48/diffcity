@@ -10,7 +10,6 @@ const screenshots = [
     description:
       "Claude’s deeper code notes connect to the actual diff. The narrow index keeps chapters, conversations, and reviewed sections within reach.",
     alt: "The full Diff City app showing a Claude Fable 5 guide to its mixed-edit sample PR, code notes beside the diff, and green reviewed sections in the guide rail.",
-    pr: 3,
   },
   {
     id: "overview",
@@ -21,7 +20,6 @@ const screenshots = [
     description:
       "A real Claude Fable 5 walkthrough of a 20-file sample PR: database migrations, access policies, API changes, localization, and more.",
     alt: "The full Diff City app displaying a Mermaid overview, reading path, and personal-account inbox for sample PR 3 with Claude Fable 5.",
-    pr: 3,
   },
   {
     id: "conversation",
@@ -32,7 +30,6 @@ const screenshots = [
     description:
       "An actual inline conversation with Claude about the sample changes. AI questions stay private; feedback for the author starts as an unpublished GitHub draft.",
     alt: "The full Diff City app showing an inline code conversation with a human question, Claude’s response, and local review controls.",
-    pr: 3,
   },
   {
     id: "chat",
@@ -43,7 +40,6 @@ const screenshots = [
     description:
       "The same conversation is available in PR chat, with its code context beside the composer. Copy a response or the whole thread with its context whenever you need it.",
     alt: "The full Diff City app with the independent PR chat open next to the guided diff, showing a contextual AI conversation and copy controls.",
-    pr: 3,
   },
 ];
 ---
@@ -103,8 +99,8 @@ const screenshots = [
             <strong>{shot.title}</strong>
             <p>{shot.description}</p>
           </div>
-          <a href={`https://github.com/crs48/diffcity/pull/${shot.pr}`}>
-            Sample PR #{shot.pr}
+          <a href="https://github.com/crs48/diffcity/compare/fixtures/2026-10/baseline...fixtures/2026-10/mixed">
+            Explore the sample
             <Icon name="arrow" size={14} />
           </a>
         </figcaption>
