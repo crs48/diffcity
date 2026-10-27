@@ -16,7 +16,7 @@ fn ids(s: &Snapshot) -> HashSet<String> {
         .collect()
 }
 fn proposal(hunks: Vec<String>, attention: &str) -> Proposal {
-    serde_json::from_value(json!({"summary":"Test review","limitations":[],"sections":[{"title":"Related change","summary":"Inspect the changed behavior.","attention":attention,"category":"Documentation","reason":"Grounded in the supplied diff.","hunkIds":hunks,"questions":[],"findings":[]}]})).unwrap()
+    serde_json::from_value(json!({"summary":"Test review","limitations":[],"sections":[{"title":"Related change","summary":"Inspect the changed behavior.","explanation":"The changed path now handles the scenario described in this fixture.","attention":attention,"category":"Documentation","reason":"Grounded in the supplied diff.","hunkIds":hunks,"questions":[],"findings":[]}]})).unwrap()
 }
 #[test]
 fn migration_and_authorization_precede_routine_content() {
@@ -68,7 +68,14 @@ fn omitted_hunks_remain_visible_and_unassessed() {
     )
     .unwrap();
     assert_eq!(g.sections.iter().flat_map(|s| &s.hunk_ids).count(), 7);
-    assert_eq!(g.sections.iter().filter(|s| !s.assessed).count(), 6);
+    assert_eq!(
+        g.sections
+            .iter()
+            .filter(|s| !s.assessed)
+            .map(|s| s.hunk_ids.len())
+            .sum::<usize>(),
+        6
+    );
     assert!(
         g.sections
             .iter()
@@ -111,6 +118,22 @@ fn unknown_hunk_ids_are_rejected() {
         .is_err()
     );
 }
+
+#[test]
+fn new_guides_require_explanations_but_old_saved_guides_still_load() {
+    let s = snapshot();
+    let mut p = proposal(vec![s.files[0].hunks[0].id.clone()], "high");
+    p.sections[0].explanation = "  ".into();
+    assert!(domain::validate_guide(&s, p, "test", &ids(&s)).is_err());
+    let (_, guide) = fixtures::sample().unwrap();
+    let mut saved = serde_json::to_value(guide).unwrap();
+    for section in saved["sections"].as_array_mut().unwrap() {
+        section.as_object_mut().unwrap().remove("explanation");
+    }
+    let restored: Guide = serde_json::from_value(saved).unwrap();
+    assert!(restored.sections.iter().all(|s| s.explanation.is_empty()));
+    assert!(!restored.sections[0].summary.is_empty());
+}
 #[test]
 fn auth_change_in_documentation_is_not_hidden_by_filename() {
     let mut s = snapshot();
@@ -145,6 +168,7 @@ fn source_anchors_reject_wrong_side_and_out_of_diff_ranges() {
     let s = snapshot();
     let h = &s.files[0].hunks[0];
     let mut a = Anchor {
+        text_selection: None,
         hunk_id: h.id.clone(),
         path: h.path.clone(),
         side: Side::RIGHT,
@@ -184,6 +208,8 @@ fn changed_content_loses_progress_but_unchanged_code_keeps_it() {
 fn private_notes_never_enter_publication_payload() {
     let s = snapshot();
     let mut n = Note {
+        thread_title: None,
+        model: None,
         id: "private".into(),
         snapshot_id: s.id.clone(),
         anchor: None,
@@ -227,9 +253,12 @@ fn multiline_deletion_uses_left_source_coordinates() {
         .remove(0);
     s.files[0].hunks = vec![h.clone()];
     let n = Note {
+        thread_title: None,
+        model: None,
         id: "draft".into(),
         snapshot_id: s.id.clone(),
         anchor: Some(Anchor {
+            text_selection: None,
             hunk_id: h.id,
             path: "old.ts".into(),
             side: Side::LEFT,
@@ -303,6 +332,8 @@ fn earlier_revision_notes_can_be_reopened_without_changing_latest() {
     service.store.put("latest", &key, &second.id).unwrap();
     let note = service
         .save_note(Note {
+            thread_title: None,
+            model: None,
             id: String::new(),
             snapshot_id: first.id.clone(),
             anchor: None,
@@ -324,4 +355,23 @@ fn earlier_revision_notes_can_be_reopened_without_changing_latest() {
         service.store.get::<String>("latest", &key).unwrap(),
         Some(second.id)
     );
+}
+
+#[test]
+fn historical_prs_distinguish_closed_from_merged_and_block_publication() {
+    use diffcity_lib::github;
+    let closed = serde_json::json!({"number":3,"state":"closed","merged_at":null});
+    let merged =
+        serde_json::json!({"number":4,"state":"closed","merged_at":"2026-10-20T12:00:00Z"});
+    assert_eq!(github::parse_pull("owner/repo", &closed).state, "closed");
+    assert_eq!(github::parse_pull("owner/repo", &merged).state, "merged");
+    let (mut snapshot, _) = diffcity_lib::fixtures::sample().unwrap();
+    snapshot.pull.state = "merged".into();
+    let request = diffcity_lib::contracts::PublishRequest {
+        snapshot_id: snapshot.id.clone(),
+        note_ids: vec![],
+        body: "private historical note".into(),
+        event: "COMMENT".into(),
+    };
+    assert!(github::payload(&snapshot, &request, &[], "reviewer").is_err());
 }

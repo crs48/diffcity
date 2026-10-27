@@ -41,3 +41,72 @@ it("retains an unsaved comment on failure and serializes saves without duplicate
   expect(persisted.get("saved-one")?.body).toBe("An updated question.");
   expect(result.current.draft?.body).toBe("");
 });
+
+it("keeps exact text context on follow-up drafts and distinguishes two words on the same line", async () => {
+  const anchor = {
+    hunkId: "h",
+    path: "a.ts",
+    side: "RIGHT" as const,
+    startLine: 1,
+    line: 1,
+    textSelection: {
+      snapshotId: "snapshot",
+      startColumn: 2,
+      endColumn: 5,
+      text: "foo",
+    },
+  };
+  vi.spyOn(api, "note").mockImplementation(async (n) => ({
+    ...n,
+    id: n.id || "question",
+  }));
+  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  await act(() => result.current.start("snapshot", anchor));
+  act(() => result.current.change("Why is foo here?"));
+  const ask = vi.fn().mockResolvedValue(undefined);
+  await act(() => result.current.submit(ask));
+  expect(result.current.draft?.anchor).toEqual(anchor);
+  expect(result.current.draft?.githubDraft).toBe(false);
+  const second = {
+    ...anchor,
+    textSelection: {
+      ...anchor.textSelection,
+      startColumn: 7,
+      endColumn: 10,
+      text: "bar",
+    },
+  };
+  await act(() => result.current.start("snapshot", second));
+  expect(result.current.draft?.anchor).toEqual(second);
+});
+it("converts an autosaved private note to one unpublished draft without sending to AI", async () => {
+  const notes = new Map<string, Note>();
+  vi.spyOn(api, "note").mockImplementation(async (n) => {
+    const saved = { ...n, id: n.id || "one" };
+    notes.set(saved.id, saved);
+    return saved;
+  });
+  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  await act(() => result.current.start("s", null));
+  act(() => result.current.change("Please add a migration test."));
+  await act(() => result.current.flush());
+  await act(() => result.current.submit(undefined, true));
+  expect(notes.size).toBe(1);
+  expect(notes.get("one")).toMatchObject({
+    githubDraft: true,
+    publishedUrl: null,
+  });
+  expect(result.current.draft?.body).toBe("");
+});
+
+it("can reveal an existing conversation without stealing focus from its indexed message", async () => {
+  const save = vi.spyOn(api, "note").mockImplementation(async (n) => n);
+  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  await act(() => result.current.start("s", null));
+  expect(result.current.focus).toBeGreaterThan(0);
+  await act(() => result.current.start("s", null, undefined, false));
+  expect(result.current.focus).toBe(0);
+  expect(save).not.toHaveBeenCalled();
+  await act(() => result.current.start("s", null));
+  expect(result.current.focus).toBeGreaterThan(0);
+});

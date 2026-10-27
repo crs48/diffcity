@@ -1,38 +1,56 @@
+import { AgentApproval } from "./AgentAccess";
+import { isActiveRun, type AiRun } from "./useAiRuns";
+import { useTranslation } from "react-i18next";
+import "../i18n";
 import { Button } from "react-aria-components";
-import { Github, MessageSquare, Sparkles } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import {
+  Github,
+  ListOrdered,
+  MessageSquare,
+  Reply,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
+import { CommentMarkdown } from "../ui/CommentMarkdown";
 import type { Note, RemoteComment } from "../lib/api";
-import { lineRange } from "../lib/selection";
+import { lineRange, sameAnchor } from "../lib/selection";
 import type { Conversation } from "./conversation";
+import { SelectionQuote } from "./SelectionQuote";
+import { visibleReply } from "../lib/threadTitle";
+import { orderReviewMessages } from "./orderReviewMessages";
+import { IconAction } from "../ui/IconAction";
+import { CopyAction } from "../ui/CopyAction";
 
 export function ReviewMessages({
   notes,
   remote = [],
   conversation: c,
   inline = false,
-  streaming = false,
 }: {
   notes: Note[];
   remote?: RemoteComment[];
   conversation: Conversation;
   inline?: boolean;
-  streaming?: boolean;
 }) {
-  const ordered = [
-    ...notes.map((note) => ({ kind: "local" as const, message: note })),
-    ...remote
-      .filter((r) => !notes.some((n) => n.publishedUrl === r.url))
-      .map((message) => ({ kind: "remote" as const, message })),
-  ].sort((a, b) => a.message.createdAt.localeCompare(b.message.createdAt));
+  const { t } = useTranslation();
+  const ordered = orderReviewMessages(notes, remote, c.runs);
   return (
     <>
       {ordered.map((entry) => {
+        if (entry.kind === "run")
+          return (
+            <RunReply
+              key={`run:${entry.run.id}`}
+              run={entry.run}
+              conversation={c}
+            />
+          );
         if (entry.kind === "local") {
           const n = entry.message;
           return (
             <article
-              className={`message ${n.role}`}
-              key={n.id}
+              className={`message ${n.role}${n.githubDraft || n.publishedUrl ? " github-comment" : ""}`}
+              key={`local:${n.id}`}
               data-note-id={n.id}
             >
               <div className="message-label">
@@ -41,70 +59,104 @@ export function ReviewMessages({
                 ) : (
                   <MessageSquare size={12} />
                 )}
-                {n.role === "assistant" ? "Codex" : "You"}
+                {n.role === "assistant"
+                  ? n.model
+                    ? `${n.model.provider === "claude" ? "Claude" : "Codex"} · ${n.model.model}`
+                    : "Codex"
+                  : t("You")}
                 {n.githubDraft && (
-                  <span className="draft-tag">GitHub draft</span>
+                  <span className="draft-tag">
+                    {t("GitHub draft · not published")}{" "}
+                  </span>
                 )}
-                {n.publishedUrl && <span className="draft-tag">Published</span>}
+                {n.publishedUrl && (
+                  <span className="draft-tag">{t("Published")} </span>
+                )}
               </div>
               {!inline && n.anchor && (
                 <Button
                   className="message-location text-button"
-                  onPress={() => c.openInline(n.anchor!)}
+                  onPress={() =>
+                    n.anchor?.textSelection
+                      ? c.openChat(n.anchor)
+                      : c.openInline(n.anchor!)
+                  }
                 >
                   {n.anchor.path} · {n.anchor.side === "LEFT" ? "Old" : "New"}{" "}
                   {lineRange(n.anchor)}
                 </Button>
               )}
               {!inline && !n.anchor && (
-                <span className="message-scope">PR discussion</span>
+                <span className="message-scope">{t("PR discussion")} </span>
               )}
-              <ReactMarkdown
-                components={{
-                  img: () => null,
-                  a: ({ children }) => <span>{children}</span>,
-                }}
-              >
-                {n.body}
-              </ReactMarkdown>
+              {!inline && n.anchor?.textSelection && n.role === "user" && (
+                <SelectionQuote anchor={n.anchor} />
+              )}
+              <CommentMarkdown body={n.body} />
               <div className="message-actions">
+                <CopyAction
+                  label={t(
+                    n.role === "assistant" ? "Copy response" : "Copy message",
+                  )}
+                  getText={() => visibleReply(n.body)}
+                />
+                {!inline && (
+                  <IconAction
+                    label={t("Continue conversation")}
+                    onPress={() => c.openChat(n.anchor)}
+                  >
+                    <Reply size={14} aria-hidden />
+                  </IconAction>
+                )}
                 {n.role === "user" && !n.githubDraft && (
-                  <Button
-                    className="text-button"
-                    isDisabled={c.busy}
+                  <IconAction
+                    label={t(
+                      n.anchor?.textSelection
+                        ? "Ask again about this selection"
+                        : "Ask AI about this comment",
+                    )}
+                    isDisabled={c.runs.some(
+                      (r) => r.question?.id === n.id && isActiveRun(r),
+                    )}
                     onPress={() => void c.ask(n).catch(c.onError)}
                   >
-                    <Sparkles size={12} /> Ask Codex about this comment
-                  </Button>
+                    <RotateCcw size={14} aria-hidden />
+                  </IconAction>
                 )}
                 {n.githubDraft && !n.publishedUrl && (
                   <Button
                     className="text-button"
                     onPress={() => void c.edit(n, inline).catch(c.onError)}
                   >
-                    Edit draft
+                    {t("Edit draft")}{" "}
                   </Button>
                 )}
-                {!n.githubDraft && !n.publishedUrl && (
-                  <Button
-                    className="text-button"
-                    isDisabled={c.workspace.notes.some(
-                      (other) =>
-                        other.parentId === n.id &&
-                        (other.githubDraft || !!other.publishedUrl),
-                    )}
-                    onPress={() => void c.prepare(n).catch(c.onError)}
-                  >
-                    <Github size={12} /> Prepare GitHub draft
-                  </Button>
-                )}
+                {!n.githubDraft &&
+                  !n.publishedUrl &&
+                  !n.anchor?.textSelection && (
+                    <IconAction
+                      label={t("Prepare GitHub draft")}
+                      isDisabled={c.workspace.notes.some(
+                        (other) =>
+                          other.parentId === n.id &&
+                          (other.githubDraft || !!other.publishedUrl),
+                      )}
+                      onPress={() => void c.prepare(n).catch(c.onError)}
+                    >
+                      <Github size={14} aria-hidden />
+                    </IconAction>
+                  )}
               </div>
             </article>
           );
         }
         const r = entry.message;
         return (
-          <article className="message remote" key={r.id}>
+          <article
+            className="message remote"
+            data-remote-comment-id={r.id}
+            key={`remote:${r.id}`}
+          >
             <div className="message-label">
               <Github size={12} />
               {r.author} · GitHub
@@ -115,33 +167,99 @@ export function ReviewMessages({
               </code>
             )}
             {r.commit && r.commit !== c.workspace.snapshot.pull.head && (
-              <span className="draft-tag">Earlier revision</span>
+              <span className="draft-tag">{t("Earlier revision")} </span>
             )}
-            <p>{r.body}</p>
+            <CommentMarkdown body={r.body} />
           </article>
         );
       })}
-      {streaming && (
-        <article
-          className="message assistant streaming"
-          aria-label="Codex response in progress"
-        >
-          <div className="message-label">
-            <Sparkles size={12} /> Codex{" "}
-            <span className="muted">Responding…</span>
-          </div>
-          {c.stream ? (
-            <p>{c.stream}</p>
-          ) : (
-            <p className="muted">Thinking about your comment…</p>
-          )}
-        </article>
-      )}
       <span className="sr-only" role="status">
-        {streaming
-          ? "Codex is responding."
-          : `${notes.filter((n) => n.role === "assistant").length} Codex replies in this conversation.`}
+        {t("{{count}} AI replies in this conversation.", {
+          count: notes.filter((n) => n.role === "assistant").length,
+        })}
       </span>
     </>
+  );
+}
+
+function RunReply({
+  run,
+  conversation: c,
+}: {
+  run: AiRun;
+  conversation: Conversation;
+}) {
+  const { t } = useTranslation();
+  if (run.phase === "waiting") {
+    const position =
+      c.runs
+        .filter(
+          (r) =>
+            r.phase === "waiting" &&
+            r.snapshotId === run.snapshotId &&
+            sameAnchor(
+              r.question?.anchor ?? null,
+              run.question?.anchor ?? null,
+            ),
+        )
+        .findIndex((r) => r.id === run.id) + 1;
+    return (
+      <article
+        className="message message-queued"
+        data-run-id={run.id}
+        aria-label={t("Queued AI question")}
+      >
+        <div className="message-label" role="status">
+          <ListOrdered size={14} /> {t("Queued · {{position}}", { position })}
+        </div>
+        <Button className="text-button" onPress={() => void c.cancel(run.id)}>
+          {t("Remove from queue")}
+        </Button>
+      </article>
+    );
+  }
+  return (
+    <article
+      className="message assistant streaming"
+      data-run-id={run.id}
+      aria-label={t(
+        isActiveRun(run) ? "AI response in progress" : "AI response stopped",
+      )}
+    >
+      <div className="message-label">
+        <Sparkles size={12} /> {run.preference.model}
+        <span className="muted" role="status">
+          {t(
+            run.phase === "cancelled" &&
+              run.text !== "Removed from queue · saved as a private note"
+              ? "Cancelled"
+              : run.text,
+          )}
+        </span>
+      </div>
+      {run.stream && (
+        <CommentMarkdown
+          body={visibleReply(run.stream)}
+          diagrams={!isActiveRun(run)}
+        />
+      )}
+      {run.prompt && c.respondAgent && (
+        <AgentApproval
+          key={run.prompt.id}
+          prompt={run.prompt}
+          runId={run.id}
+          onRespond={c.respondAgent}
+        />
+      )}
+      <Button
+        className="text-button"
+        isDisabled={run.phase === "cancelling"}
+        onPress={() =>
+          isActiveRun(run) ? void c.cancel(run.id) : c.dismiss(run.id)
+        }
+      >
+        {t(isActiveRun(run) ? "Cancel response" : "Dismiss")}
+      </Button>
+    </article>
   );
 }

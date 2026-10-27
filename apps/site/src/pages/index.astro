@@ -1,0 +1,424 @@
+---
+import "@fontsource-variable/inter";
+import "../styles/global.css";
+import Icon from "../components/Icon.astro";
+import Logo from "../components/Logo.astro";
+import ReviewPreview from "../components/ReviewPreview.astro";
+import { repository, downloadUrl } from "../config";
+const features = [
+  {
+    number: "01",
+    icon: "branch",
+    title: "Your next review, already waiting.",
+    description:
+      "Your PRs first. Requested reviews next. An inbox that stays in sync with GitHub, with pins for the repos and pull requests you keep coming back to.",
+    tags: ["Automatic repo discovery", "Live PR updates"],
+  },
+  {
+    number: "02",
+    icon: "spark",
+    title: "The important changes come first.",
+    description:
+      "Read a rich overview, then scroll through a guided walkthrough. Follow explanations beside the code, inspect deeper notes, and expand routine changes when you need them.",
+    tags: ["Code notes + naming decisions", "Markdown + Mermaid"],
+  },
+  {
+    number: "03",
+    icon: "chat",
+    title: "Think it through. Then send it.",
+    description:
+      "Ask about a line, a range, or a single variable. Run independent conversations with your AI. Keep notes private, or turn an answer into a draft for the PR author.",
+    tags: ["Concurrent conversations", "Explicit GitHub publishing"],
+  },
+];
+const details = [
+  [
+    "clock",
+    "Review the delta",
+    "See just the changes since your last review, or return to the full PR.",
+  ],
+  [
+    "file",
+    "Room for the code",
+    "Fast, virtualized diffs. Sticky file headers. A minimap for long files and a chapter rail that tracks what you’ve reviewed.",
+  ],
+  [
+    "spark",
+    "More than one perspective",
+    "Generate guides with Codex and Claude, then switch between them.",
+  ],
+  [
+    "check",
+    "Make it your workspace",
+    "Light and dark themes, accessible controls, and conversations you can copy with their code context.",
+  ],
+];
+const description =
+  "A desktop workspace for GitHub pull requests. Follow AI-guided walkthroughs, ask questions in the code, and review what changed with Codex and Claude.";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Diff City — See the story in every diff.</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href="https://diff.city/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://diff.city/" />
+    <meta
+      property="og:title"
+      content="Diff City — See the story in every diff."
+    />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="https://diff.city/social.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Diff City. See the story in every diff. A desktop home for GitHub reviews, with AI beside the code."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script is:inline>
+      try {
+        const saved = localStorage.getItem("diffcity-site-theme");
+        document.documentElement.dataset.theme =
+          saved === "light" || saved === "dark"
+            ? saved
+            : matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">
+      Skip to content
+    </a>
+    <header class="site-header">
+      <nav class="container nav" aria-label="Main navigation">
+        <a class="home-link" href="#" aria-label="Diff City home">
+          <Logo />
+        </a>
+        <div class="nav-links">
+          <a href="#workflow">Workflow</a>
+          <a href="#features">Features</a>
+          <a href={repository} class="github-link">
+            <Icon name="github" size={17} />
+            <span>GitHub</span>
+          </a>
+        </div>
+        <div class="nav-actions">
+          <button
+            id="theme-toggle"
+            class="theme-toggle"
+            type="button"
+            aria-label="Switch color theme"
+          >
+            <Icon name="sun" class="light-icon" size={18} />
+            <Icon name="moon" class="dark-icon" size={18} />
+          </button>
+          <a class="button button-primary button-small" href="#download">
+            Get Diff City <Icon name="arrow" size={15} />
+          </a>
+        </div>
+      </nav>
+    </header>
+    <main id="main">
+      <section class="hero container" aria-labelledby="hero-title">
+        <div class="eyebrow">
+          <span class="status-dot"></span> A new perspective on pull requests
+        </div>
+        <h1 id="hero-title">
+          See the story <br />
+          in every{" "}
+          <span class="hero-diff">
+            diff<span class="hero-period">.</span>
+          </span>
+        </h1>
+        <p class="hero-change">
+          <span class="change-before">
+            <b aria-hidden="true">−</b> Less piecing it together.
+          </span>
+          <span class="change-after">
+            <b aria-hidden="true">+</b> More understanding.
+          </span>
+        </p>
+        <p class="hero-description">
+          A desktop home for GitHub reviews, with AI beside the code.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#download">
+            <Icon name="down" size={19} />
+            {downloadUrl ? "Download for macOS" : "Get Diff City"}
+            <Icon name="arrow" size={17} />
+          </a>
+          <a class="text-link" href="#workflow">
+            Explore the workflow <Icon name="chevron" size={16} />
+          </a>
+        </div>
+        <p class="hero-note">
+          macOS · Apple silicon <span> / </span>{" "}
+          {downloadUrl
+            ? "Early alpha"
+            : "Private alpha. Public release on the way."}
+        </p>
+      </section>
+      <section
+        id="workflow"
+        class="container workflow"
+        aria-label="A look inside Diff City"
+      >
+        <h2 class="sr-only">Explore the review workflow</h2>
+        <ReviewPreview />
+      </section>
+      <section class="integration-line container" aria-label="Integrations">
+        <span>Your repos. Your models. Your review.</span>
+        <div>
+          <span>
+            <Icon name="github" size={18} /> GitHub
+          </span>
+          <i aria-hidden="true">/</i>
+          <span>
+            <Icon name="spark" size={18} /> Codex
+          </span>
+          <i aria-hidden="true">/</i>
+          <span>
+            <Icon name="spark" size={18} /> Claude Code
+          </span>
+        </div>
+      </section>
+      <section
+        id="features"
+        class="features container"
+        aria-labelledby="features-title"
+      >
+        <div class="section-intro">
+          <span class="eyebrow">From open PR to informed feedback</span>
+          <h2 id="features-title">
+            A review that reads <br />
+            like a conversation.
+          </h2>
+          <p>
+            For your own work, your teammate’s work,
+            <br class="desktop-break" /> and the changes that deserve a closer
+            look.
+          </p>
+        </div>
+        <div class="feature-grid">
+          {features.map((feature) => (
+            <article class="feature">
+              <div class="feature-top">
+                <span>{feature.number}</span>
+                <Icon name={feature.icon} size={25} />
+              </div>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
+              <ul>
+                {feature.tags.map((tag) => (
+                  <li>
+                    <Icon name="check" size={13} />
+                    {tag}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section class="details-section" aria-labelledby="details-title">
+        <div class="container details-layout">
+          <div>
+            <span class="eyebrow">Built for the second look</span>
+            <h2 id="details-title">
+              Stay in the flow. <br />
+              Keep the context.
+            </h2>
+            <p class="section-description">
+              The little things that make a big diff feel manageable.
+            </p>
+            <div class="mini-checkpoint" aria-hidden="true">
+              <span>
+                <Icon name="check" size={15} /> Last review
+              </span>
+              <i></i>
+              <span class="checkpoint-new">
+                <Icon name="plus" size={15} /> What changed
+              </span>
+            </div>
+          </div>
+          <div class="details-grid">
+            {details.map(([icon, title, body]) => (
+              <article>
+                <Icon name={icon} size={21} />
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section
+        id="download"
+        class="download-section container"
+        aria-labelledby="download-title"
+      >
+        <div class="download-copy">
+          <span class="eyebrow">
+            <span class="status-dot"></span>{" "}
+            {downloadUrl ? "Available for macOS" : "Currently in private alpha"}
+          </span>
+          <h2 id="download-title">
+            Your next review <br />
+            could feel different.
+          </h2>
+          <p>
+            Diff City is starting on Mac. Built with Tauri, designed around
+            GitHub, and headed for an MIT-licensed open-source release.
+          </p>
+          <a href={repository} class="text-link">
+            <Icon name="github" size={17} /> Follow the project on GitHub{" "}
+            <Icon name="arrow" size={16} />
+          </a>
+          <small>
+            The repository is private for now. It will live at crs48/diffcity.
+          </small>
+        </div>
+        <div class="download-card">
+          <div class="download-symbol">
+            <Logo large />
+          </div>
+          <div class="download-platform">
+            <h3>Diff City for Mac</h3>
+            <span>macOS 14+ · Apple silicon</span>
+          </div>
+          {downloadUrl ? (
+            <>
+              <a
+                class="button button-primary download-button"
+                href={downloadUrl}
+              >
+                <Icon name="down" size={18} /> Download for macOS
+              </a>
+              <p class="download-status">
+                Early alpha. See the release notes for installation details.
+              </p>
+            </>
+          ) : (
+            <>
+              <p class="download-availability">Public download coming soon.</p>
+              <p class="download-status">
+                We’re refining the review experience before the first public
+                build. The download will appear here when it’s ready.
+              </p>
+              <a class="button download-button" href={repository}>
+                <Icon name="github" size={17} /> Project on GitHub{" "}
+                <Icon name="arrow" size={16} />
+              </a>
+            </>
+          )}
+          <div class="download-requirements">
+            <Icon name="check" size={14} />
+            <p>
+              Bring your GitHub CLI login and a local Codex or Claude Code
+              login. No Diff City account required.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section class="faq container" aria-labelledby="faq-title">
+        <h2 id="faq-title">A few things to know.</h2>
+        <div>
+          <details>
+            <summary>
+              Does my code stay on my Mac?
+              <Icon name="plus" size={18} />
+            </summary>
+            <p>
+              Your review workspace, notes, and guides are stored locally. When
+              you ask AI or generate a guide, relevant code and context are sent
+              to your chosen provider through your local Codex or Claude Code
+              login. GitHub drafts stay private until you explicitly publish
+              them.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Can I use my existing AI subscription?
+              <Icon name="plus" size={18} />
+            </summary>
+            <p>
+              Diff City connects to the local Codex and Claude Code tools you’re
+              already signed into. Model availability, usage limits, and billing
+              follow that provider account. You can choose a default model and
+              generate separate guides with different models.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Is Diff City open source?
+              <Icon name="plus" size={18} />
+            </summary>
+            <p>
+              That’s the plan. The repository is currently private while the app
+              takes shape. The public release will be MIT licensed and available
+              at <a href={repository}>github.com/crs48/diffcity</a>.
+            </p>
+          </details>
+          <details>
+            <summary>
+              What platforms will it support?
+              <Icon name="plus" size={18} />
+            </summary>
+            <p>
+              The current alpha targets Apple silicon Macs running macOS 14 or
+              later. Windows, Linux, and Intel Mac downloads are not available
+              yet.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer container">
+      <a href="#" aria-label="Diff City home">
+        <Logo />
+      </a>
+      <span>Made by Christopher Smothers.</span>
+      <div>
+        <a href={repository}>
+          GitHub <Icon name="arrow" size={14} />
+        </a>
+        <a href="#download">
+          Get Diff City <Icon name="arrow" size={14} />
+        </a>
+      </div>
+    </footer>
+    <script>
+      const toggle = document.getElementById("theme-toggle");
+      const updateLabel = () =>
+        toggle?.setAttribute(
+          "aria-label",
+          document.documentElement.dataset.theme === "dark"
+            ? "Switch to light theme"
+            : "Switch to dark theme",
+        );
+      updateLabel();
+      toggle?.addEventListener("click", () => {
+        const theme =
+          document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme;
+        try {
+          localStorage.setItem("diffcity-site-theme", theme);
+        } catch {
+          /* Theme still works when storage is unavailable. */
+        }
+        updateLabel();
+      });
+    </script>
+  </body>
+</html>

@@ -65,9 +65,12 @@ async fn main() -> anyhow::Result<()> {
     );
     let hunk = &snapshot.files[0].hunks[0];
     let note = service.save_note(Note {
+        thread_title: None,
+        model: None,
         id: String::new(),
         snapshot_id: snapshot.id.clone(),
         anchor: Some(Anchor {
+            text_selection: None,
             hunk_id: hunk.id.clone(),
             path: hunk.path.clone(),
             side: Side::RIGHT,

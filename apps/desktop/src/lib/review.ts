@@ -6,14 +6,6 @@ import type {
   ReviewWorkspace,
 } from "./api";
 export const key = (p: PullRequest) => `${p.repository}#${p.number}`;
-export const bucket = (p: PullRequest, login: string) =>
-  p.author === login
-    ? "My pull requests"
-    : p.requested.includes(login)
-      ? "Review requested"
-      : p.assigned.includes(login)
-        ? "Assigned to me"
-        : "Other pull requests";
 export const labels = {
   high: "High attention",
   needsAssessment: "Needs assessment",

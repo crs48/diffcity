@@ -26,6 +26,8 @@ beforeEach(() => {
     codexPath: null,
     model: null,
     theme: "system",
+    locale: "en",
+    completedDays: 2,
   };
   vi.stubGlobal(
     "ResizeObserver",
@@ -43,6 +45,7 @@ beforeEach(() => {
     removeListener() {},
   }));
   Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.scrollTo = vi.fn();
   mockWindows("main");
   Object.assign(window, {
     __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener() {} },
@@ -66,7 +69,26 @@ beforeEach(() => {
             detail: "Offline fixture",
           },
           models: [],
+          modelPreference: {
+            provider: "codex",
+            model: "gpt-6-astra",
+            reasoningEffort: "xhigh",
+          },
           pulls: [],
+          pins: { repositories: [], pulls: [] },
+          directory: {
+            repositories: settings.repositories.map((fullName) => ({
+              id: fullName,
+              fullName,
+              private: true,
+              description: "",
+              updatedAt: null,
+              pushedAt: null,
+            })),
+            organizations: [],
+            syncError: null,
+          },
+          schemaVersion: 3,
           dataDirectory: "test-data",
         } satisfies Bootstrap;
       if (command === "sample_review") return structuredClone(workspace);
@@ -75,7 +97,7 @@ beforeEach(() => {
         return settings;
       }
       if (command === "save_progress") return payload!.progress;
-      if (command === "refresh_inbox") return [];
+      if (command === "refresh_inbox") return { pulls: [], syncError: null };
       throw new Error(`Unexpected command in accessibility test: ${command}`);
     },
     { shouldMockEvents: true },
@@ -138,7 +160,7 @@ describe("keyboard and assistive navigation", () => {
     expect(screen.getByRole("dialog", { name: "Test dialog" })).toBeTruthy();
   });
 
-  it("switches review tabs and guide steps with the keyboard", async () => {
+  it("switches review tabs and jumps between guide sections with the keyboard", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(
@@ -150,19 +172,25 @@ describe("keyboard and assistive navigation", () => {
     expect(
       screen.getByRole("tab", { name: "Files" }).getAttribute("aria-selected"),
     ).toBe("true");
-    expect(screen.getByRole("tabpanel", { name: "Files" })).toBeTruthy();
+    const filesPanel = screen.getByRole("tabpanel", { name: "Files" });
+    expect(
+      screen.getByRole("tab", { name: "Files" }).getAttribute("aria-controls"),
+    ).toBe(filesPanel.id);
     await user.keyboard("{Home}");
     expect(guide.getAttribute("aria-selected")).toBe("true");
+    expect(guide.getAttribute("aria-controls")).toBe(
+      screen.getByRole("tabpanel", { name: "Guide" }).id,
+    );
     await user.click(screen.getByRole("button", { name: /Review outline/ }));
     const menu = screen.getByRole("menu", { name: /Review outline/ });
-    expect(within(menu).getAllByRole("menuitem")).toHaveLength(5);
-    await user.keyboard("{Home}{ArrowDown}{Enter}");
+    expect(within(menu).getAllByRole("menuitem")).toHaveLength(6);
+    await user.keyboard("{Home}{ArrowDown}{ArrowDown}{Enter}");
     await waitFor(() =>
-      expect(
+      expect(document.activeElement).toBe(
         screen.getByRole("heading", {
           name: "Keep invitations inside their team",
         }),
-      ).toBeTruthy(),
+      ),
     );
     expect(screen.queryByRole("menu")).toBeNull();
   });
@@ -206,10 +234,15 @@ describe("keyboard and assistive navigation", () => {
         notes={[]}
         comments={[]}
         split={false}
-        readingMode
       />,
     );
-    expect(screen.getByText("added line 80")).toBeTruthy();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "CODE" &&
+          element.textContent === "added line 80",
+      ),
+    ).toBeTruthy();
     const lastLine = screen.getByRole("button", {
       name: `Select ${hunk.path} line 80`,
     });

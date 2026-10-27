@@ -31,7 +31,7 @@ Use three primary regions, with an optional discussion drawer. Avoid a permanent
                                A line selection opens the discussion drawer →
 ```
 
-Project rows show owner/name, pin state, and attention counts. Adding a project opens a searchable list of repositories available to the active credential. Repository URL entry and PR URL opening are supported. A project does not need a local clone to appear here.
+A compact account rail shows organization memberships and accessible repo owners. The repo selector filters all repositories available to the active credential, without an Add repos step. Direct PR URL opening is supported. A repo does not need a local clone to appear here.
 
 The All projects inbox and individual repository views share the same grouping rules:
 
@@ -49,7 +49,7 @@ Each PR row shows title, number, author, draft state, checks summary, review sta
 ## First-run flow
 
 1. Connect GitHub and display the account identity and repository access.
-2. Select a few repositories; do not subscribe to every accessible repository automatically.
+2. Automatically discover all accessible repos and their open PRs. Use account and repo filters to narrow the inbox.
 3. Detect a supported Codex runtime and offer its supported sign-in flow. Explain that analysis sends selected repository context to the configured Codex service.
 4. Open the first PR immediately. Codex setup can be completed later.
 

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-prefetch-pull"
+description = "Enables the prefetch_pull command without any pre-configured scope."
+commands.allow = ["prefetch_pull"]
+
+[[permission]]
+identifier = "deny-prefetch-pull"
+description = "Denies the prefetch_pull command without any pre-configured scope."
+commands.deny = ["prefetch_pull"]

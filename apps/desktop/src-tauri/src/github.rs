@@ -159,8 +159,12 @@ impl GitHub {
             .context("Could not reach GitHub. Your local drafts are safe.")?;
         let status = response.status();
         let headers = response.headers().clone();
-        session.next_request =
-            Instant::now() + Duration::from_millis(if method == Method::GET { 100 } else { 1000 });
+        session.next_request = Instant::now()
+            + Duration::from_millis(if method == Method::GET || path == "/graphql" {
+                100
+            } else {
+                1000
+            });
         if status == StatusCode::NOT_MODIFIED {
             return session
                 .etags
@@ -168,10 +172,12 @@ impl GitHub {
                 .map(|(_, v)| v.clone())
                 .ok_or_else(|| anyhow::anyhow!("GitHub cache unavailable; refresh again"));
         }
-        let value: Value = response
-            .json()
-            .await
-            .context("GitHub returned an unreadable response")?;
+        let value: Value = response.json().await.with_context(|| {
+            format!(
+                "GitHub returned an unreadable response (HTTP {})",
+                status.as_u16()
+            )
+        })?;
         if !status.is_success() {
             let message = value["message"].as_str().unwrap_or("Request failed");
             if status == StatusCode::TOO_MANY_REQUESTS
@@ -194,7 +200,7 @@ impl GitHub {
                     .etags
                     .insert(path.into(), (tag.into(), value.clone()));
             }
-        } else {
+        } else if path != "/graphql" {
             session.etags.clear();
         }
         Ok(value)
@@ -229,6 +235,8 @@ impl GitHub {
                 full_name: string(v, "full_name"),
                 private: v["private"].as_bool().unwrap_or(true),
                 description: string(v, "description"),
+                updated_at: v["updated_at"].as_str().map(str::to_owned),
+                pushed_at: v["pushed_at"].as_str().map(str::to_owned),
             })
             .collect())
     }
@@ -236,14 +244,82 @@ impl GitHub {
         if !domain::valid_repo(repo) {
             bail!("Use owner/repository, or a GitHub PR URL");
         }
-        Ok(self
+        let mut pulls: Vec<_> = self
             .pages(&format!(
                 "/repos/{repo}/pulls?state=open&sort=updated&direction=desc"
             ))
             .await?
             .iter()
             .map(|v| parse_pull(repo, v))
-            .collect())
+            .collect();
+        let login = self.login().await?;
+        let (owner, name) = repo.split_once('/').context("Invalid repo")?;
+        // Batch review metadata: one request per 25 PRs, not one request per PR.
+        for batch in pulls.chunks_mut(25) {
+            let fields = batch.iter().map(|p| format!(
+                "p{}: pullRequest(number:{}) {{ reviewDecision mergeable mergeStateStatus statusCheckRollup {{ state }} reviews(last:1, author:$viewer, states:[APPROVED,CHANGES_REQUESTED,COMMENTED,DISMISSED]) {{ nodes {{ state submittedAt }} }} }}", p.number, p.number
+            )).collect::<Vec<_>>().join(" ");
+            let query = format!(
+                "query($owner:String!,$name:String!,$viewer:String!) {{ repository(owner:$owner,name:$name) {{ {fields} }} }}"
+            );
+            let value = self.request(Method::POST, "/graphql", Some(&json!({"query":query,"variables":{"owner":owner,"name":name,"viewer":login}})), false).await?;
+            if value["errors"].as_array().is_some_and(|e| !e.is_empty()) {
+                bail!("GitHub review status unavailable: {}", value["errors"]);
+            }
+            for pull in batch {
+                let node = &value["data"]["repository"][format!("p{}", pull.number)];
+                apply_review_metadata(pull, node)?;
+                pull.status = parse_pull_status(node);
+            }
+        }
+        Ok(pulls)
+    }
+    pub async fn recently_completed(
+        &self,
+        repos: &[String],
+        days: u32,
+    ) -> Result<Vec<PullRequest>> {
+        if days == 0 || repos.is_empty() {
+            return Ok(vec![]);
+        }
+        if repos.iter().any(|r| !domain::valid_repo(r)) {
+            bail!("Invalid repo");
+        }
+        let login = self.login().await?;
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(i64::from(days));
+        let mut pulls = vec![];
+        for repo in repos {
+            // Closed PRs can be updated long after completion. Page by updated_at,
+            // then filter by actual completion time; never use updated_at as completion.
+            for page in 1..=100 {
+                let value = self.request(Method::GET, &format!("/repos/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page={page}"), None, true).await?;
+                let items = value.as_array().context("Expected closed PRs")?;
+                pulls.extend(items.iter().map(|v| parse_pull(repo, v)).filter(|p| {
+                    p.author.eq_ignore_ascii_case(&login)
+                        && p.closed_at
+                            .as_deref()
+                            .and_then(|date| chrono::DateTime::parse_from_rfc3339(date).ok())
+                            .is_some_and(|date| date >= cutoff)
+                }));
+                if recent_page_complete(items, &cutoff) {
+                    break;
+                }
+                if page == 100 {
+                    bail!(
+                        "Recent completions exceed the pagination budget; narrow the completion window or repo selection."
+                    );
+                }
+            }
+        }
+        Ok(pulls)
+    }
+    pub async fn history(&self, repo: &str, page: u32) -> Result<PullPage> {
+        if !domain::valid_repo(repo) || page == 0 || page > 1000 {
+            bail!("Invalid repository or history page");
+        }
+        let value = self.request(Method::GET, &format!("/repos/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=30&page={page}"), None, true).await?;
+        let values = value.as_array().context("Expected a GitHub history list")?;
+        Ok(PullPage { pulls: values.iter().map(|v| parse_pull(repo,v)).collect(), next_page: (values.len()==30 && page<1000).then_some(page+1), sync_error: (values.len()==30 && page==1000).then(|| "History is limited to 30,000 PRs per repository; older PRs can still be opened by URL.".into()) })
     }
     pub async fn pull(&self, repo: &str, number: u32) -> Result<PullRequest> {
         if !domain::valid_repo(repo) || number == 0 {
@@ -272,7 +348,7 @@ impl GitHub {
                 continue;
             }
             let id = domain::hash(&format!(
-                "{repo}/{number}/{}/{}/{}",
+                "capture-v2/{repo}/{number}/{}/{}/{}",
                 after.base,
                 after.head,
                 serde_json::to_string(&files)?
@@ -285,14 +361,74 @@ impl GitHub {
                     after.changed_files
                 ));
             }
-            let parsed=files.iter().map(|v|{
-                let path=string(v,"filename");
-                let (hunks,unavailable)=match v["patch"].as_str(){
-                    Some(p)=>match domain::parse_patch(&path,p,&id){Ok(h) if !h.is_empty()=>(h,None),Ok(_)=>(vec![],Some("No text hunks available; inspect the file in GitHub.".into())),Err(e)=>(vec![],Some(e.to_string()))},
-                    None=>(vec![],Some("GitHub did not supply a text patch (binary, oversized, renamed-only, or unavailable content).".into()))
+            let mut parsed: Vec<ChangedFile> = files.iter().map(|v| {
+                let path = string(v, "filename");
+                let (hunks, unavailable) = match v["patch"].as_str() {
+                    Some(p) => match domain::parse_patch(&path, p, &id) {
+                        Ok(h) if !h.is_empty() && crate::text_diff::matches_counts(&h, integer(v, "additions"), integer(v, "deletions")) => (h, None),
+                        Ok(_) => (vec![], Some("GitHub supplied no complete text patch; inspect file metadata in GitHub.".into())),
+                        Err(e) => (vec![], Some(e.to_string())),
+                    },
+                    None => (vec![], Some("GitHub did not supply a text patch (binary, metadata-only, or oversized content).".into())),
                 };
-                ChangedFile{path,previous_path:v["previous_filename"].as_str().map(str::to_string),status:string(v,"status"),additions:integer(v,"additions"),deletions:integer(v,"deletions"),hunks,unavailable}
+                ChangedFile { path, previous_path: v["previous_filename"].as_str().map(str::to_string), status: string(v, "status"), additions: integer(v, "additions"), deletions: integer(v, "deletions"), hunks, unavailable }
             }).collect();
+            let needs_content = parsed
+                .iter()
+                .any(|f| f.unavailable.is_some() && f.additions + f.deletions > 0);
+            if needs_content {
+                // PR diffs compare the merge base, which can differ from the target branch tip.
+                let comparison = self
+                    .request(
+                        Method::GET,
+                        &format!(
+                            "/repos/{repo}/compare/{}...{}?per_page=1",
+                            after.base, after.head
+                        ),
+                        None,
+                        true,
+                    )
+                    .await;
+                let merge_base = comparison
+                    .as_ref()
+                    .ok()
+                    .and_then(|v| v["merge_base_commit"]["sha"].as_str());
+                let mut bytes_left = 16 * 1024 * 1024;
+                for (index, file) in parsed
+                    .iter_mut()
+                    .filter(|f| f.unavailable.is_some() && f.additions + f.deletions > 0)
+                    .enumerate()
+                {
+                    let result = match merge_base {
+                        Some(base) if index < 20 && bytes_left > 0 => {
+                            self.reconstruct_file(
+                                repo,
+                                base,
+                                &after.head,
+                                file,
+                                &id,
+                                &mut bytes_left,
+                            )
+                            .await
+                        }
+                        Some(_) => Err(anyhow::anyhow!(
+                            "Text fallback budget reached (20 files / 16 MiB)"
+                        )),
+                        None => Err(anyhow::anyhow!(
+                            "Could not determine the immutable merge base for text reconstruction"
+                        )),
+                    };
+                    match result {
+                        Ok(hunks) => {
+                            file.hunks = hunks;
+                            file.unavailable = None;
+                        }
+                        Err(error) => {
+                            file.unavailable = Some(format!("Text capture unavailable: {error}"))
+                        }
+                    }
+                }
+            }
             return Ok(Snapshot {
                 id,
                 pull: after,
@@ -302,6 +438,153 @@ impl GitHub {
             });
         }
         bail!("The PR kept changing during capture. Try refreshing when the push finishes.")
+    }
+    async fn text_at(
+        &self,
+        repo: &str,
+        revision: &str,
+        path: &str,
+        bytes_left: &mut usize,
+    ) -> Result<String> {
+        let mut url = reqwest::Url::parse("https://api.github.com")?;
+        url.path_segments_mut()
+            .expect("base URL supports paths")
+            .extend(["repos"])
+            .extend(repo.split('/'))
+            .push("contents")
+            .extend(path.split('/'));
+        url.query_pairs_mut().append_pair("ref", revision);
+        let mut guard = self.session.lock().await;
+        let session = guard.as_mut().context("Connect GitHub first")?;
+        if session.next_request > Instant::now() {
+            let delay = session
+                .next_request
+                .saturating_duration_since(Instant::now());
+            if delay > Duration::from_secs(3) {
+                bail!("GitHub rate limit; retry later");
+            }
+            tokio::time::sleep(delay).await;
+        }
+        let mut response = self
+            .client
+            .get(url)
+            .bearer_auth(&session.token)
+            .header("Accept", "application/vnd.github.raw+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .send()
+            .await?;
+        session.next_request = Instant::now() + Duration::from_millis(100);
+        if !response.status().is_success() {
+            if response.status() == StatusCode::TOO_MANY_REQUESTS
+                || response.status() == StatusCode::FORBIDDEN
+            {
+                session.next_request = Instant::now() + Duration::from_secs(60);
+            }
+            bail!("GitHub content returned {}", response.status());
+        }
+        let limit = crate::text_diff::MAX_FILE_BYTES.min(*bytes_left);
+        if response
+            .content_length()
+            .is_some_and(|size| size > limit as u64)
+        {
+            bail!("File exceeds the remaining text capture budget");
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await? {
+            if bytes.len() + chunk.len() > limit {
+                bail!("File exceeds the remaining text capture budget");
+            }
+            *bytes_left -= chunk.len();
+            bytes.extend_from_slice(&chunk);
+        }
+        String::from_utf8(bytes).context("File is binary or not UTF-8 text")
+    }
+    pub(crate) async fn reconstruct_file(
+        &self,
+        repo: &str,
+        base: &str,
+        head: &str,
+        file: &ChangedFile,
+        revision: &str,
+        bytes_left: &mut usize,
+    ) -> Result<Vec<Hunk>> {
+        let old = if file.status == "added" {
+            String::new()
+        } else {
+            self.text_at(
+                repo,
+                base,
+                file.previous_path.as_deref().unwrap_or(&file.path),
+                bytes_left,
+            )
+            .await?
+        };
+        let new = if file.status == "removed" {
+            String::new()
+        } else {
+            self.text_at(repo, head, &file.path, bytes_left).await?
+        };
+        crate::text_diff::reconstruct(file, &old, &new, revision)
+    }
+    pub(crate) async fn context_base(&self, pull: &PullRequest) -> Result<String> {
+        let valid_sha = |sha: &str| sha.len() == 40 && sha.chars().all(|c| c.is_ascii_hexdigit());
+        anyhow::ensure!(
+            domain::valid_repo(&pull.repository) && valid_sha(&pull.base) && valid_sha(&pull.head),
+            "Invalid captured GitHub revision"
+        );
+        let comparison = self
+            .request(
+                Method::GET,
+                &format!(
+                    "/repos/{}/compare/{}...{}?per_page=1",
+                    pull.repository, pull.base, pull.head
+                ),
+                None,
+                true,
+            )
+            .await?;
+        let base = comparison["merge_base_commit"]["sha"]
+            .as_str()
+            .filter(|sha| valid_sha(sha))
+            .context("GitHub did not return an immutable merge base")?;
+        Ok(base.into())
+    }
+    pub(crate) async fn context_sources(
+        &self,
+        pull: &PullRequest,
+        base: &str,
+        file: &ChangedFile,
+    ) -> Result<(String, String)> {
+        let valid_path = |path: &str| {
+            !path.is_empty()
+                && !path.contains('\\')
+                && path
+                    .split('/')
+                    .all(|part| !part.is_empty() && part != "." && part != "..")
+        };
+        anyhow::ensure!(
+            valid_path(&file.path) && file.previous_path.as_deref().is_none_or(valid_path),
+            "Invalid captured file path"
+        );
+        let mut budget = 4 * 1024 * 1024;
+        let old = if file.status == "added" {
+            String::new()
+        } else {
+            self.text_at(
+                &pull.repository,
+                base,
+                file.previous_path.as_deref().unwrap_or(&file.path),
+                &mut budget,
+            )
+            .await?
+        };
+        let new = if file.status == "removed" {
+            String::new()
+        } else {
+            self.text_at(&pull.repository, &pull.head, &file.path, &mut budget)
+                .await?
+        };
+        Ok((old, new))
     }
     pub async fn comments(&self, pull: &PullRequest) -> Result<Vec<RemoteComment>> {
         let base = format!("/repos/{}", pull.repository);
@@ -313,6 +596,7 @@ impl GitHub {
             for v in self.pages(&path).await? {
                 result.push(RemoteComment {
                     id: v["id"].to_string(),
+                    in_reply_to_id: v["in_reply_to_id"].as_u64().map(|id| id.to_string()),
                     author: string(&v["user"], "login"),
                     body: string(&v, "body"),
                     path: v["path"].as_str().map(str::to_string),
@@ -332,6 +616,7 @@ impl GitHub {
             }
             result.push(RemoteComment {
                 id: format!("review-{}", review["id"]),
+                in_reply_to_id: None,
                 author: string(&review["user"], "login"),
                 body: string(&review, "body"),
                 path: None,
@@ -459,12 +744,30 @@ pub fn parse_pull(repo: &str, v: &Value) -> PullRequest {
         author: string(&v["user"], "login"),
         url: string(v, "html_url"),
         draft: v["draft"].as_bool().unwrap_or(false),
-        state: string(v, "state"),
+        state: if v["merged_at"].as_str().is_some() || v["merged"].as_bool() == Some(true) {
+            "merged".into()
+        } else {
+            string(v, "state")
+        },
         head: string(&v["head"], "sha"),
         base: string(&v["base"], "sha"),
         head_ref: string(&v["head"], "ref"),
         base_ref: string(&v["base"], "ref"),
         updated_at: string(v, "updated_at"),
+        closed_at: v["closed_at"].as_str().map(str::to_owned),
+        merged_at: v["merged_at"].as_str().map(str::to_owned),
+        viewer_review: None,
+        review_decision: None,
+        review_metadata_available: false,
+        status: (v.get("mergeable").is_some() || v.get("mergeable_state").is_some()).then(|| {
+            PullStatus {
+                mergeable: v["mergeable"]
+                    .as_bool()
+                    .map(|clean| if clean { "MERGEABLE" } else { "CONFLICTING" }.into()),
+                merge_state: v["mergeable_state"].as_str().map(str::to_uppercase),
+                checks: None,
+            }
+        }),
         requested: users("requested_reviewers"),
         assigned: users("assignees"),
         additions: integer(v, "additions"),
@@ -472,12 +775,66 @@ pub fn parse_pull(repo: &str, v: &Value) -> PullRequest {
         changed_files: integer(v, "changed_files"),
     }
 }
+pub(crate) fn parse_pull_status(node: &Value) -> Option<PullStatus> {
+    (node.get("mergeable").is_some()
+        || node.get("mergeStateStatus").is_some()
+        || node.get("statusCheckRollup").is_some())
+    .then(|| PullStatus {
+        mergeable: node["mergeable"].as_str().map(str::to_owned),
+        merge_state: node["mergeStateStatus"].as_str().map(str::to_owned),
+        checks: match node.get("statusCheckRollup") {
+            Some(Value::Null) => Some("NONE".into()),
+            Some(rollup) => rollup["state"].as_str().map(str::to_owned),
+            None => None,
+        },
+    })
+}
+fn recent_page_complete(items: &[Value], cutoff: &chrono::DateTime<chrono::Utc>) -> bool {
+    items.len() < 100
+        || items
+            .last()
+            .and_then(|v| v["updated_at"].as_str())
+            .and_then(|date| chrono::DateTime::parse_from_rfc3339(date).ok())
+            .is_some_and(|date| date < *cutoff)
+}
+
+pub(crate) fn apply_review_metadata(pull: &mut PullRequest, node: &Value) -> Result<()> {
+    if !node.is_object() || !node["reviews"]["nodes"].is_array() {
+        bail!(
+            "GitHub review status unavailable for {}#{}",
+            pull.repository,
+            pull.number
+        );
+    }
+    pull.review_metadata_available = true;
+    pull.review_decision = node["reviewDecision"].as_str().map(str::to_owned);
+    pull.viewer_review = node["reviews"]["nodes"]
+        .as_array()
+        .and_then(|reviews| reviews.last())
+        .and_then(|review| {
+            let state = review["state"].as_str()?;
+            if !["APPROVED", "CHANGES_REQUESTED", "COMMENTED"].contains(&state) {
+                return None;
+            }
+            Some(SubmittedReview {
+                state: state.into(),
+                submitted_at: review["submittedAt"].as_str()?.into(),
+            })
+        });
+    Ok(())
+}
+
 pub fn payload(
     snapshot: &Snapshot,
     request: &PublishRequest,
     notes: &[Note],
     login: &str,
 ) -> Result<Value> {
+    if snapshot.pull.state != "open" {
+        bail!(
+            "This PR is closed. Private notes and Codex discussion remain available; GitHub reviews require an open PR."
+        );
+    }
     if !["COMMENT", "APPROVE", "REQUEST_CHANGES"].contains(&request.event.as_str()) {
         bail!("Invalid review action");
     }
@@ -495,6 +852,12 @@ pub fn payload(
             .iter()
             .find(|n| &n.id == id && n.snapshot_id == snapshot.id)
             .context("A selected draft no longer belongs to this revision")?;
+        anyhow::ensure!(
+            note.anchor
+                .as_ref()
+                .is_none_or(|a| a.text_selection.is_none()),
+            "Text-selection conversations are AI-only and cannot be published to GitHub"
+        );
         if !note.github_draft || note.published_url.is_some() || note.body.trim().is_empty() {
             bail!("Only unpublished, explicitly prepared drafts can be sent");
         }
@@ -520,4 +883,64 @@ pub fn payload(
     Ok(
         json!({"commit_id":snapshot.pull.head,"event":request.event,"body":body,"comments":comments}),
     )
+}
+
+#[cfg(test)]
+mod inbox_tests {
+    use super::*;
+    #[test]
+    fn review_metadata_excludes_pending_and_dismissed_submissions() {
+        let mut pull = parse_pull("a/b", &json!({"number": 1}));
+        for state in [
+            "APPROVED",
+            "CHANGES_REQUESTED",
+            "COMMENTED",
+            "DISMISSED",
+            "PENDING",
+        ] {
+            apply_review_metadata(&mut pull, &json!({"reviewDecision":"REVIEW_REQUIRED","reviews":{"nodes":[{"state":state,"submittedAt":"2026-10-21T00:00:00Z"}]}})).unwrap();
+            assert_eq!(
+                pull.viewer_review.is_some(),
+                !["DISMISSED", "PENDING"].contains(&state)
+            );
+            assert!(pull.review_metadata_available);
+        }
+        apply_review_metadata(&mut pull, &json!({"reviews":{"nodes":[]}})).unwrap();
+        assert!(pull.viewer_review.is_none());
+        assert!(apply_review_metadata(&mut pull, &Value::Null).is_err());
+    }
+    #[test]
+    fn recent_pagination_continues_past_old_prs_with_new_comments() {
+        let cutoff = chrono::DateTime::parse_from_rfc3339("2026-10-19T00:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let recent =
+            json!({"closed_at":"2020-01-01T00:00:00Z", "updated_at":"2026-10-21T00:00:00Z"});
+        assert!(!recent_page_complete(&vec![recent; 100], &cutoff));
+        let old = json!({"updated_at":"2026-10-18T00:00:00Z"});
+        assert!(recent_page_complete(&vec![old; 100], &cutoff));
+        assert!(recent_page_complete(&[], &cutoff));
+    }
+    #[test]
+    fn completion_dates_and_legacy_cache_fields_are_preserved() {
+        let pull = parse_pull(
+            "a/b",
+            &json!({"number":1,"state":"closed","closed_at":"2026-10-20T12:00:00Z","merged_at":"2026-10-20T12:00:00Z"}),
+        );
+        assert_eq!(pull.state, "merged");
+        assert_eq!(pull.closed_at, pull.merged_at);
+        let mut old = serde_json::to_value(&pull).unwrap();
+        for field in [
+            "closedAt",
+            "mergedAt",
+            "viewerReview",
+            "reviewDecision",
+            "reviewMetadataAvailable",
+        ] {
+            old.as_object_mut().unwrap().remove(field);
+        }
+        let decoded: PullRequest = serde_json::from_value(old).unwrap();
+        assert!(decoded.viewer_review.is_none());
+        assert!(!decoded.review_metadata_available);
+    }
 }

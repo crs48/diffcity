@@ -17,6 +17,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
@@ -30,6 +31,8 @@ regex = "1"
 ts-rs = { version = "12", features = ["serde-compat"] }
 tauri-plugin-wdio-webdriver = { version = "1.5.0", optional = true }
 anyhow = "1.0.104"
+similar = { version = "3.2", features = ["text"] }
+tauri-plugin-clipboard-manager = "2"
 
 [dev-dependencies]
 tempfile = "3"

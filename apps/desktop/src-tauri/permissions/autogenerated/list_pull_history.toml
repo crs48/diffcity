@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-pull-history"
+description = "Enables the list_pull_history command without any pre-configured scope."
+commands.allow = ["list_pull_history"]
+
+[[permission]]
+identifier = "deny-list-pull-history"
+description = "Denies the list_pull_history command without any pre-configured scope."
+commands.deny = ["list_pull_history"]

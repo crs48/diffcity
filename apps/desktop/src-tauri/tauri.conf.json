@@ -9,7 +9,7 @@
   },
   "app": {
     "windows": [{ "label": "main", "title": "diffcity", "width": 1440, "height": 940, "minWidth": 1000, "minHeight": 650, "titleBarStyle": "Overlay", "hiddenTitle": true }],
-    "security": { "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'", "capabilities": ["main"] }
+    "security": { "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' data: https://github.com https://avatars.githubusercontent.com; style-src 'self' 'unsafe-inline'; script-src 'self'", "capabilities": ["main"] }
   },
-  "bundle": { "active": true, "targets": ["app"], "icon": ["icons/icon.icns", "icons/icon.png"], "category": "DeveloperTool", "shortDescription": "Guided GitHub pull request review", "macOS": { "minimumSystemVersion": "14.0" } }
+  "bundle": { "active": true, "targets": ["app"], "icon": ["icons/icon.icns", "icons/icon.png"], "category": "DeveloperTool", "shortDescription": "Guided GitHub pull request review", "macOS": { "minimumSystemVersion": "14.0", "signingIdentity": "-" } }
 }

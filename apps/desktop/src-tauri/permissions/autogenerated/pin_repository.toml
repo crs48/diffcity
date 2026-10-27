@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pin-repository"
+description = "Enables the pin_repository command without any pre-configured scope."
+commands.allow = ["pin_repository"]
+
+[[permission]]
+identifier = "deny-pin-repository"
+description = "Denies the pin_repository command without any pre-configured scope."
+commands.deny = ["pin_repository"]

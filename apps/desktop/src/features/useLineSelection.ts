@@ -17,14 +17,14 @@ const lineAtPointer = (
   hunk: Hunk,
   element: HTMLDivElement,
   active: Drag,
-  indexAtOffset?: (offset: number) => number | null,
+  indexAtOffset?: (offset: number, side: Side) => number | null,
 ) => {
   const bounds = element.getBoundingClientRect();
   const y = active.clientY - bounds.top;
   const offset =
     Math.max(0, Math.min(bounds.height - 1, y)) + element.scrollTop;
   const index = indexAtOffset
-    ? indexAtOffset(offset)
+    ? indexAtOffset(offset, active.side)
     : Math.max(
         0,
         Math.min(hunk.lines.length - 1, Math.floor(offset / rowHeight)),
@@ -40,7 +40,7 @@ export function useLineSelection(
   scroll: RefObject<HTMLDivElement | null>,
   onSelect: (anchor: Anchor) => void,
   scrollToIndex: (index: number) => void,
-  indexAtOffset?: (offset: number) => number | null,
+  indexAtOffset?: (offset: number, side: Side) => number | null,
 ) {
   const pivot = useRef<Endpoint | null>(null);
   const drag = useRef<Drag | null>(null);
@@ -71,12 +71,14 @@ export function useLineSelection(
       const active = drag.current;
       const element = scroll.current;
       if (!active || !element) return;
-      const bounds = element.getBoundingClientRect();
+      const container =
+        element.closest<HTMLElement>("[data-review-scroll]") ?? element;
+      const bounds = container.getBoundingClientRect();
       const y = active.clientY - bounds.top;
-      // Keep dragging usable when a hunk has virtualized, offscreen rows.
-      if (y < 24) element.scrollTop -= Math.min(16, (24 - y) / 2);
+      // Selection scrolls the shared review viewport, never an individual diff.
+      if (y < 24) container.scrollTop -= Math.min(16, (24 - y) / 2);
       else if (y > bounds.height - 24)
-        element.scrollTop += Math.min(16, (y - bounds.height + 24) / 2);
+        container.scrollTop += Math.min(16, (y - bounds.height + 24) / 2);
       const end = lineAtPointer(hunk, element, active, indexAtOffset);
       if (end !== active.end) {
         active.end = end;
@@ -135,13 +137,16 @@ export function useLineSelection(
     if (!next) return;
     commit(originFor(line, side, true), next.line, side);
     scrollToIndex(next.index);
-    requestAnimationFrame(() => {
-      scroll.current
-        ?.querySelector<HTMLButtonElement>(
-          `[data-side="${side}"][data-line="${next.line}"]`,
-        )
-        ?.focus({ preventScroll: true });
-    });
+    const focusNext = () => {
+      const target = scroll.current?.querySelector<HTMLButtonElement>(
+        `[data-side="${side}"][data-line="${next.line}"]`,
+      );
+      target?.focus({ preventScroll: true });
+      return !!target;
+    };
+    // Adjacent virtual blocks are buffered. Move focus synchronously when
+    // possible so rapid key repeats do not keep extending from a stale line.
+    if (!focusNext()) requestAnimationFrame(focusNext);
   };
   return {
     selected: preview ?? selection,

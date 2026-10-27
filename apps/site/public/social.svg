@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f6f8fa"/>
+  <rect x="20" y="20" width="1160" height="590" rx="18" fill="white" stroke="#d1d9e0"/>
+  <g fill="#1f2328" transform="translate(80 70)">
+    <rect fill="#d1242f" y="18" width="10" height="18" rx="1"/>
+    <rect fill="#1a7f37" x="14" width="10" height="36" rx="1"/>
+    <rect fill="#8250df" x="28" y="10" width="10" height="26" rx="1"/>
+    <text x="52" y="29" font-family="Arial, sans-serif" font-weight="700" font-size="30" letter-spacing="-1">diff.city</text>
+  </g>
+  <text x="80" y="258" fill="#1f2328" font-family="Arial, sans-serif" font-size="86" font-weight="700" letter-spacing="-5">See the story</text>
+  <text x="80" y="353" fill="#1f2328" font-family="Arial, sans-serif" font-size="86" font-weight="700" letter-spacing="-5">in every <tspan fill="#1a7f37">diff</tspan><tspan fill="#8250df">.</tspan></text>
+  <text x="84" y="418" fill="#59636e" font-family="Arial, sans-serif" font-size="24">A desktop home for GitHub reviews,</text>
+  <text x="84" y="452" fill="#59636e" font-family="Arial, sans-serif" font-size="24">with AI beside the code.</text>
+  <text x="84" y="551" fill="#59636e" font-family="Arial, sans-serif" font-size="18">GitHub  /  Codex  /  Claude Code</text>
+  <g transform="translate(770 199)">
+    <rect width="340" height="246" rx="12" fill="#fff" stroke="#d1d9e0"/>
+    <path d="M0 45H340" stroke="#d1d9e0"/>
+    <circle cx="23" cy="23" r="4" fill="#9198a1"/>
+    <circle cx="38" cy="23" r="4" fill="#9198a1"/>
+    <circle cx="53" cy="23" r="4" fill="#9198a1"/>
+    <rect x="20" y="67" width="188" height="8" rx="4" fill="#9198a1"/>
+    <rect y="92" width="340" height="37" fill="#ffebe9"/>
+    <path d="M22 111h10" stroke="#d1242f" stroke-width="2"/>
+    <rect x="49" y="107" width="158" height="8" rx="4" fill="#d1242f"/>
+    <rect y="130" width="340" height="76" fill="#dafbe1"/>
+    <path d="M22 150h10m-5-5v10m-5 30h10m-5-5v10" stroke="#1a7f37" stroke-width="2"/>
+    <rect x="49" y="146" width="226" height="8" rx="4" fill="#1a7f37"/>
+    <rect x="69" y="181" width="160" height="8" rx="4" fill="#1a7f37"/>
+    <rect x="20" y="222" width="129" height="7" rx="3.5" fill="#9198a1"/>
+  </g>
+</svg>

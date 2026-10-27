@@ -1,0 +1,152 @@
+---
+import Icon from "./Icon.astro";
+const screenshots = [
+  {
+    id: "guide",
+    label: "Follow the code",
+    icon: "branch",
+    image: "guide-code-notes",
+    title: "Important code, with the explanation beside it.",
+    description:
+      "Claude’s deeper code notes connect to the actual diff. The narrow index keeps chapters, conversations, and reviewed sections within reach.",
+    alt: "The full Diff City app showing a Claude Fable 5 guide to its mixed-edit sample PR, code notes beside the diff, and green reviewed sections in the guide rail.",
+    pr: 3,
+  },
+  {
+    id: "overview",
+    label: "See the overview",
+    icon: "file",
+    image: "guide-overview",
+    title: "Get the story before the line-by-line review.",
+    description:
+      "A real Claude Fable 5 walkthrough of a 20-file sample PR: database migrations, access policies, API changes, localization, and more.",
+    alt: "The full Diff City app displaying a Mermaid overview, reading path, and personal-account inbox for sample PR 3 with Claude Fable 5.",
+    pr: 3,
+  },
+  {
+    id: "conversation",
+    label: "Ask in place",
+    icon: "chat",
+    image: "inline-review",
+    title: "Keep your question attached to the code.",
+    description:
+      "An actual inline conversation with Claude about the sample changes. AI questions stay private; feedback for the author starts as an unpublished GitHub draft.",
+    alt: "The full Diff City app showing an inline code conversation with a human question, Claude’s response, and local review controls.",
+    pr: 3,
+  },
+  {
+    id: "chat",
+    label: "Keep the context",
+    icon: "spark",
+    image: "pr-chat",
+    title: "Continue the discussion alongside your review.",
+    description:
+      "The same conversation is available in PR chat, with its code context beside the composer. Copy a response or the whole thread with its context whenever you need it.",
+    alt: "The full Diff City app with the independent PR chat open next to the guided diff, showing a contextual AI conversation and copy controls.",
+    pr: 3,
+  },
+];
+---
+
+<div
+  class="preview-tabs"
+  role="tablist"
+  aria-label="Explore the review workflow"
+>
+  {screenshots.map((shot, i) => (
+    <button
+      type="button"
+      role="tab"
+      id={`tab-${shot.id}`}
+      aria-controls={`panel-${shot.id}`}
+      aria-selected={i === 0 ? "true" : "false"}
+      tabindex={i === 0 ? 0 : -1}
+    >
+      <Icon name={shot.icon} size={16} />
+      {shot.label}
+    </button>
+  ))}
+</div>
+<div class="screenshot-gallery">
+  {screenshots.map((shot, i) => (
+    <div
+      role="tabpanel"
+      id={`panel-${shot.id}`}
+      aria-labelledby={`tab-${shot.id}`}
+      tabindex="0"
+      hidden={i !== 0}
+    >
+      <figure class="app-preview">
+        <a
+          class="screenshot-link"
+          href={`/screenshots/${shot.image}.webp`}
+          target="_blank"
+          rel="noopener"
+          aria-label={`View full size: ${shot.label}`}
+        >
+          <img
+            src={`/screenshots/${shot.image}-1440.webp`}
+            srcset={`/screenshots/${shot.image}-960.webp 960w, /screenshots/${shot.image}-1440.webp 1440w, /screenshots/${shot.image}.webp 2880w`}
+            sizes="(max-width: 700px) calc(100vw - 36px), (max-width: 1244px) calc(100vw - 64px), 1180px"
+            width="2880"
+            height="1880"
+            alt={shot.alt}
+            loading={i === 0 ? "eager" : "lazy"}
+            decoding="async"
+          />
+          <span class="screenshot-expand">
+            <Icon name="plus" size={14} /> View full size
+          </span>
+        </a>
+        <figcaption>
+          <div>
+            <strong>{shot.title}</strong>
+            <p>{shot.description}</p>
+          </div>
+          <a href={`https://github.com/crs48/diffcity/pull/${shot.pr}`}>
+            Sample PR #{shot.pr}
+            <Icon name="arrow" size={14} />
+          </a>
+        </figcaption>
+      </figure>
+    </div>
+  ))}
+</div>
+<p class="capture-note">
+  Full-window screenshots from the real macOS app using sample PRs in the Diff
+  City repo. Guide and replies generated with Claude Code · Fable 5. Other
+  account avatars are hidden for privacy. Sample code is intentionally flawed;
+  the source repo is currently private.
+</p>
+<script>
+  const tabs = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+  );
+  const activate = (tab: HTMLButtonElement, focus = false) => {
+    tabs.forEach((item) => {
+      const active = item === tab;
+      item.setAttribute("aria-selected", String(active));
+      item.tabIndex = active ? 0 : -1;
+      const panel = document.getElementById(
+        item.getAttribute("aria-controls")!,
+      );
+      if (panel) panel.hidden = !active;
+    });
+    if (focus) tab.focus();
+  };
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => activate(tab));
+    tab.addEventListener("keydown", (event) => {
+      const keys: Record<string, number> = {
+        ArrowRight: (index + 1) % tabs.length,
+        ArrowLeft: (index + tabs.length - 1) % tabs.length,
+        Home: 0,
+        End: tabs.length - 1,
+      };
+      const next = keys[event.key];
+      if (next === undefined) return;
+      event.preventDefault();
+      activate(tabs[next], true);
+    });
+  });
+</script>

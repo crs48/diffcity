@@ -1,0 +1,62 @@
+name: Publish Diff City website
+
+on:
+  push:
+    paths:
+      - "apps/site/**"
+      - "packages/brand/**"
+      - ".github/workflows/site.yml"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+  pull_request:
+    paths:
+      - "apps/site/**"
+      - "packages/brand/**"
+      - ".github/workflows/site.yml"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @diffcity/site...
+      - name: Build static website
+        run: pnpm site:build
+        env:
+          PUBLIC_MACOS_DOWNLOAD_URL: ${{ vars.PUBLIC_MACOS_DOWNLOAD_URL }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/site/dist
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref_name == (vars.SITE_DEPLOY_BRANCH || 'main')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

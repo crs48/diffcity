@@ -20,10 +20,22 @@ impl Store {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(directory, std::fs::Permissions::from_mode(0o700))?;
         }
-        let connection = Connection::open(directory.join("diffcity.sqlite"))?;
-        connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;
-          CREATE TABLE IF NOT EXISTS documents (kind TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, updated TEXT NOT NULL, PRIMARY KEY(kind,key));
-          PRAGMA user_version=1;")?;
+        let mut connection = Connection::open(directory.join("diffcity.sqlite"))?;
+        connection.busy_timeout(std::time::Duration::from_secs(5))?;
+        connection.execute_batch(
+            "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;",
+        )?;
+        let version = crate::migrations::version(&connection)?;
+        if version > 0 && version < crate::migrations::VERSION {
+            let backup = directory.join(format!(
+                "before-schema-{version}-{}.sqlite",
+                chrono::Utc::now().timestamp_millis()
+            ));
+            connection
+                .execute("VACUUM INTO ?1", [backup.to_string_lossy().as_ref()])
+                .context("Could not back up the database before its schema upgrade")?;
+        }
+        crate::migrations::migrate(&mut connection)?;
         Ok(Self {
             connection: Mutex::new(connection),
             directory: directory.to_path_buf(),
@@ -63,6 +75,59 @@ impl Store {
             .map(|s| Ok(serde_json::from_str(&s?)?))
             .collect()
     }
+    pub fn snapshot_documents<T: DeserializeOwned>(
+        &self,
+        kind: &str,
+        snapshot: &str,
+    ) -> Result<Vec<T>> {
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        let mut stmt = db.prepare("SELECT value FROM documents WHERE kind=?1 AND json_extract(value,'$.snapshotId')=?2 ORDER BY updated DESC, key")?;
+        stmt.query_map(params![kind, snapshot], |r| r.get::<_, String>(0))?
+            .map(|s| Ok(serde_json::from_str(&s?)?))
+            .collect()
+    }
+    pub fn pull_guides(&self) -> Result<Vec<PullGuide>> {
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        // Include legacy selected guides without loading/migrating every review.
+        // Snapshot lookup uses the documents primary key; return only the newest
+        // run for each revision/provider, never the large guide or diff bodies.
+        let mut stmt = db.prepare(r#"
+            WITH runs AS (
+                SELECT json_object(
+                    'repository', json_extract(s.value, '$.pull.repository'),
+                    'number', json_extract(s.value, '$.pull.number'),
+                    'head', json_extract(s.value, '$.pull.head'),
+                    'base', json_extract(s.value, '$.pull.base'),
+                    'snapshotId', s.key,
+                    'generatedAt', json_extract(g.value, '$.generatedAt'),
+                    'preference', json_object(
+                        'provider', json_extract(g.value, '$.source'),
+                        'model', json_extract(g.value, '$.model'),
+                        'reasoningEffort', json_extract(g.value, '$.reasoningEffort')
+                    )
+                ) AS metadata,
+                row_number() OVER (
+                    PARTITION BY s.key, json_extract(g.value, '$.source')
+                    ORDER BY json_extract(g.value, '$.generatedAt') DESC, g.kind DESC, g.key DESC
+                ) AS rank
+                FROM documents g JOIN documents s
+                  ON s.kind='snapshot' AND s.key=json_extract(g.value, '$.snapshotId')
+                WHERE g.kind IN ('guide', 'guide-version')
+                  AND json_extract(g.value, '$.source') IN ('codex', 'claude')
+            )
+            SELECT metadata FROM runs WHERE rank=1
+            ORDER BY json_extract(metadata, '$.generatedAt') DESC, json_extract(metadata, '$.snapshotId')
+        "#)?;
+        stmt.query_map([], |r| r.get::<_, String>(0))?
+            .map(|row| Ok(serde_json::from_str(&row?)?))
+            .collect()
+    }
     pub fn batch(&self, documents: &[(&str, &str, serde_json::Value)]) -> Result<()> {
         let mut db = self
             .connection
@@ -90,15 +155,34 @@ impl Store {
         Ok(self.get("settings", "main")?.unwrap_or(Settings {
             repositories: vec!["crs48/diffcity".into()],
             theme: "system".into(),
+            locale: "en".into(),
+            completed_days: default_completed_days(),
             ..Settings::default()
         }))
     }
     pub fn notes(&self, snapshot: &str) -> Result<Vec<Note>> {
-        Ok(self
-            .list::<Note>("note")?
-            .into_iter()
-            .filter(|n| n.snapshot_id == snapshot)
-            .collect())
+        Ok({
+            let db = self
+                .connection
+                .lock()
+                .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+            let mut stmt = db.prepare("SELECT value FROM documents WHERE kind='note' AND json_extract(value,'$.snapshotId')=?1 ORDER BY updated")?;
+            stmt.query_map([snapshot], |r| r.get::<_, String>(0))?
+                .map(|value| Ok(serde_json::from_str(&value?)?))
+                .collect::<Result<Vec<Note>>>()?
+        })
+    }
+    pub fn previous_snapshot(&self, snapshot: &Snapshot) -> Result<Option<String>> {
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        // Only return the ID. Opening one review must not deserialize every saved diff.
+        Ok(db.query_row(
+            "SELECT key FROM documents WHERE kind='snapshot' AND json_extract(value,'$.pull.repository')=?1 COLLATE NOCASE AND json_extract(value,'$.pull.number')=?2 AND key!=?3 AND json_extract(value,'$.capturedAt')<?4 ORDER BY json_extract(value,'$.capturedAt') DESC LIMIT 1",
+            params![snapshot.pull.repository, snapshot.pull.number, snapshot.id, snapshot.captured_at],
+            |row| row.get(0),
+        ).optional()?)
     }
 }
 

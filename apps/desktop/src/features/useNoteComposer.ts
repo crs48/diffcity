@@ -3,7 +3,7 @@ import { api, type Anchor, type Note } from "../lib/api";
 import { newNote } from "../lib/review";
 import { sameAnchor } from "../lib/selection";
 
-// Workspace-owned state survives navigation and virtualization of an editor.
+// Workspace-owned state survives navigation and collapsing an editor.
 export function useNoteComposer(
   onNote: (note: Note) => void,
   onError: (error: unknown) => void,
@@ -42,6 +42,7 @@ export function useNoteComposer(
     snapshotId: string,
     anchor: Anchor | null,
     editing?: Note,
+    focusComposer = true,
   ) => {
     await flush();
     if (
@@ -49,14 +50,14 @@ export function useNoteComposer(
       current.current?.note.snapshotId === snapshotId &&
       sameAnchor(current.current.note.anchor, anchor)
     ) {
-      setFocus((n) => n + 1);
+      setFocus((n) => (focusComposer ? n + 1 : 0));
       return;
     }
     const note = editing ?? newNote(snapshotId, anchor, "");
     current.current = { note, savedBody: editing ? note.body : null };
     setDraft(note);
     setSaved(!!editing);
-    setFocus((n) => n + 1);
+    setFocus((n) => (focusComposer ? n + 1 : 0));
   };
   const change = (body: string) => {
     if (!current.current) return;
@@ -64,11 +65,23 @@ export function useNoteComposer(
     setDraft(current.current.note);
     setSaved(current.current.savedBody === body);
   };
-  const submit = async (onSubmit?: (note: Note) => Promise<void>) => {
+  const submit = async (
+    onSubmit?: (note: Note) => Promise<void>,
+    githubDraft = false,
+  ) => {
     const entry = current.current;
     if (!entry?.note.body.trim()) return;
-    const note = await flush();
+    if (githubDraft && entry.note.anchor?.textSelection)
+      throw new Error("Text selections are AI-only.");
+    let note = await flush();
     if (!note || current.current !== entry) return;
+    if (githubDraft) {
+      // Finish queued autosaves before converting the same note in place.
+      note = await api.note({ ...note, githubDraft: true });
+      entry.note = note;
+      onNote(note);
+      if (current.current !== entry) return;
+    }
     const next = newNote(note.snapshotId, note.anchor, "");
     current.current = { note: next, savedBody: null };
     setDraft(next);

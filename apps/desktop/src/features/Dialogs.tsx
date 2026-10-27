@@ -1,11 +1,14 @@
+import { useTranslation } from "react-i18next";
+import "../i18n";
+import { languages } from "../i18n";
 import { AppDialog } from "../ui/AppDialog";
+import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { useState } from "react";
 import {
   Check,
   ExternalLink,
   Github,
   LoaderCircle,
-  Search,
   Settings2,
   Sparkles,
   X,
@@ -14,11 +17,11 @@ import {
   api,
   type Bootstrap,
   type Note,
-  type Repository,
   type ReviewWorkspace,
   type Settings,
   type PublishResult,
 } from "../lib/api";
+import { isSampleRepo } from "../lib/inbox";
 import { countProgress } from "../lib/review";
 
 export function Connections({
@@ -30,17 +33,18 @@ export function Connections({
   onSave: (s: Settings) => Promise<void>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState(data.settings);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
-    <AppDialog label="Connections" onClose={onClose} busy={busy}>
+    <AppDialog label={t("Connections")} onClose={onClose} busy={busy}>
       <header>
         <Settings2 size={18} />
-        <h2>Connections</h2>
+        <h2>{t("Connections")} </h2>
         <button
           className="icon-button"
-          aria-label="Close connections"
+          aria-label={t("Close connections")}
           disabled={busy}
           onClick={onClose}
         >
@@ -63,7 +67,7 @@ export function Connections({
           />
         </div>
         <label>
-          GitHub CLI path
+          {t("GitHub CLI path")}{" "}
           <input
             placeholder={data.github.executable || "/opt/homebrew/bin/gh"}
             value={settings.ghPath ?? ""}
@@ -86,7 +90,7 @@ export function Connections({
           />
         </div>
         <label>
-          Codex executable
+          {t("Codex executable")}{" "}
           <input
             placeholder={data.codex.executable || "Path to OpenAI Codex"}
             value={settings.codexPath ?? ""}
@@ -95,44 +99,69 @@ export function Connections({
             }
           />
         </label>
+        <div className="connection-card">
+          <Sparkles size={20} aria-hidden="true" />
+          <div>
+            <h3>Claude Code</h3>
+            <p>
+              {t(
+                "Uses your existing Claude Code login. Choose Claude in Model settings or when creating a guide.",
+              )}
+            </p>
+          </div>
+        </div>
         <label>
-          Review model
-          <select
-            value={settings.model ?? ""}
+          {t("Claude executable")}
+          <input
+            placeholder="~/.local/bin/claude"
+            value={settings.claudePath ?? ""}
             onChange={(e) =>
-              setSettings({ ...settings, model: e.target.value || null })
+              setSettings({
+                ...settings,
+                claudePath: e.target.value || undefined,
+              })
+            }
+          />
+        </label>
+        <label>
+          {t("Language")}{" "}
+          <select
+            value={settings.locale || "en"}
+            onChange={(e) =>
+              setSettings({ ...settings, locale: e.target.value })
             }
           >
-            <option value="">Codex account default</option>
-            {data.models.map((m) => (
-              <option value={m.id} key={m.id}>
-                {m.name}
-                {m.isDefault ? " · default" : ""}
+            {languages.map((language) => (
+              <option key={language.id} value={language.id}>
+                {language.name}
               </option>
             ))}
           </select>
         </label>
         <label>
-          Appearance
+          {t("Appearance")}{" "}
           <select
             value={settings.theme}
             onChange={(e) =>
               setSettings({ ...settings, theme: e.target.value })
             }
           >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
+            <option value="system">{t("System")} </option>
+            <option value="light">{t("Light")} </option>
+            <option value="dark">{t("Dark")} </option>
           </select>
         </label>
         <p className="muted">
-          Reviews use your Codex login. Selected source is sent to its
-          configured service. Notes stay on this computer until you explicitly
-          publish them.
+          {t(
+            "Reviews use your Codex login. Selected source is sent to its configured service. Notes stay on this computer until you explicitly publish them.",
+          )}{" "}
         </p>
         <details>
-          <summary>Local storage</summary>
+          <summary>{t("Local storage")} </summary>
           <code>{data.dataDirectory}</code>
+          <p>
+            {t("Database schema:")} {data.schemaVersion}
+          </p>
         </details>
         {error && (
           <p className="error-text" role="alert">
@@ -162,133 +191,7 @@ export function Connections({
           ) : (
             <Check size={15} />
           )}{" "}
-          Save and reconnect
-        </button>
-      </footer>
-    </AppDialog>
-  );
-}
-
-export function Projects({
-  selected,
-  onChange,
-  onClose,
-}: {
-  selected: string[];
-  onChange: (repos: string[]) => Promise<void>;
-  onClose: () => void;
-}) {
-  const [repos, setRepos] = useState<Repository[]>([]);
-  const [query, setQuery] = useState("");
-  const [chosen, setChosen] = useState(selected);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const load = async () => {
-    setBusy(true);
-    try {
-      setRepos(await api.repositories());
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-  const toggle = (name: string) =>
-    setChosen((current) =>
-      current.includes(name)
-        ? current.filter((r) => r !== name)
-        : [...current, name],
-    );
-  return (
-    <AppDialog label="Choose projects" onClose={onClose} busy={busy}>
-      <header>
-        <Github size={18} />
-        <h2>Your projects</h2>
-        <button
-          className="icon-button"
-          aria-label="Close projects"
-          disabled={busy}
-          onClick={onClose}
-        >
-          <X size={18} />
-        </button>
-      </header>
-      <div className="modal-content">
-        <p>Choose the repositories you want in your review inbox.</p>
-        <div className="search-box">
-          <Search size={15} />
-          <input
-            aria-label="Search repositories"
-            placeholder="Search or enter owner/repository"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        {query.includes("/") && !repos.some((r) => r.fullName === query) && (
-          <button
-            className="secondary"
-            onClick={() => {
-              toggle(query.trim());
-              setQuery("");
-            }}
-          >
-            Add {query.trim()}
-          </button>
-        )}
-        <div className="repo-options">
-          {[...new Set([...chosen, ...repos.map((r) => r.fullName)])]
-            .filter((name) => name.toLowerCase().includes(query.toLowerCase()))
-            .map((name) => (
-              <label key={name}>
-                <input
-                  type="checkbox"
-                  checked={chosen.includes(name)}
-                  onChange={() => toggle(name)}
-                />
-                <span>{name}</span>
-                <small>
-                  {repos.find((r) => r.fullName === name)?.private
-                    ? "Private"
-                    : ""}
-                </small>
-              </label>
-            ))}
-        </div>
-        <button
-          className="text-button"
-          disabled={busy}
-          onClick={() => void load()}
-        >
-          {busy ? (
-            <LoaderCircle size={14} className="spin" />
-          ) : (
-            <Github size={14} />
-          )}{" "}
-          Load repositories from GitHub
-        </button>
-        {error && (
-          <p className="error-text" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
-      <footer>
-        <button
-          className="primary"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              await onChange(chosen);
-              onClose();
-            } catch (e) {
-              setError(String(e));
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Save {chosen.length} projects
+          {t("Save and reconnect")}{" "}
         </button>
       </footer>
     </AppDialog>
@@ -299,14 +202,19 @@ export function Finish({
   workspace: w,
   login,
   onPublished,
+  onCheckpoint,
   onClose,
 }: {
   workspace: ReviewWorkspace;
   login: string;
   onPublished: (r: PublishResult) => Promise<void>;
+  onCheckpoint: () => void;
   onClose: () => void;
 }) {
-  const drafts = w.notes.filter((n) => n.githubDraft && !n.publishedUrl);
+  const { t } = useTranslation();
+  const drafts = w.notes.filter(
+    (n) => n.githubDraft && !n.publishedUrl && !n.anchor?.textSelection,
+  );
   const [selected, setSelected] = useState(drafts.map((n) => n.id));
   const summaryKey = `diffcity.review-summary.${w.snapshot.id}`;
   const [body, setBody] = useState(
@@ -318,9 +226,12 @@ export function Finish({
   const [error, setError] = useState("");
   const counts = countProgress(w);
   const renderDraft = (n: Note) => (
-    <label className="draft-preview" key={n.id}>
+    <div className="draft-preview" key={n.id}>
       <input
         type="checkbox"
+        aria-label={t("Include draft {{number}}", {
+          number: drafts.indexOf(n) + 1,
+        })}
         checked={selected.includes(n.id)}
         onChange={() =>
           setSelected((ids) =>
@@ -337,18 +248,18 @@ export function Finish({
             {n.anchor.startLine !== n.anchor.line && `–${n.anchor.line}`}
           </code>
         )}
-        <p>{n.body}</p>
+        <CommentMarkdown body={n.body} />
       </div>
-    </label>
+    </div>
   );
   return (
-    <AppDialog label="Finish review" onClose={onClose} busy={busy} wide>
+    <AppDialog label={t("Finish review")} onClose={onClose} busy={busy} wide>
       <header>
         <Check size={18} />
-        <h2>Finish review</h2>
+        <h2>{t("Finish review")} </h2>
         <button
           className="icon-button"
-          aria-label="Close finish review"
+          aria-label={t("Close finish review")}
           disabled={busy}
           onClick={onClose}
         >
@@ -357,49 +268,79 @@ export function Finish({
       </header>
       <div className="modal-content">
         <p className="muted">
-          {w.snapshot.pull.repository} #{w.snapshot.pull.number} · revision{" "}
-          <code>{w.snapshot.pull.head.slice(0, 8)}</code>
+          {w.snapshot.pull.repository} #{w.snapshot.pull.number}
+          {t("· revision")} <code>{w.snapshot.pull.head.slice(0, 8)}</code>
         </p>
         <div className="coverage-grid">
           <div>
             <strong>
               {counts.reviewed}/{counts.total}
             </strong>
-            <span>Hunks reviewed</span>
+            <span>{t("Hunks reviewed")} </span>
           </div>
           <div>
             <strong>{counts.acknowledged}</strong>
-            <span>Summaries acknowledged</span>
+            <span>{t("Summaries acknowledged")} </span>
           </div>
           <div>
             <strong>{counts.deferred}</strong>
-            <span>Deferred</span>
+            <span>{t("Deferred")} </span>
           </div>
           <div>
             <strong>{counts.unassessed}</strong>
-            <span>Need assessment</span>
+            <span>{t("Need assessment")} </span>
           </div>
         </div>
         {counts.highRemaining > 0 && (
           <p className="attention-note">
-            {counts.highRemaining} high-attention steps remain. You can return
-            to the guide or submit a partial review.
+            {counts.highRemaining}
+            {t(
+              "high-attention steps remain. You can return to the guide or submit a partial review.",
+            )}{" "}
           </p>
         )}
-        <h3>Selected GitHub drafts</h3>
+        <div className="checkpoint-explanation">
+          <h3>{t("Keep a private review checkpoint")}</h3>
+          <p>
+            {t(
+              "Save this revision as your comparison point for the next update. This stays on your computer, leaves your notes and progress intact, and does not mark unread code as reviewed.",
+            )}
+          </p>
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                await api.checkpoint(w.snapshot.id);
+                onCheckpoint();
+              } catch (e) {
+                setError(String(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Check size={15} />
+            {t("Save review checkpoint")}
+          </button>
+        </div>
+        <h3>{t("Selected GitHub drafts")} </h3>
         {drafts.length ? (
           drafts.map(renderDraft)
         ) : (
           <p className="muted">
-            No drafts selected. Private notes and Codex conversations are not
-            included.
+            {t(
+              "No drafts selected. Private notes and AI conversations are not included.",
+            )}{" "}
           </p>
         )}
         <label>
-          Review summary
+          {t("Review summary")}{" "}
           <textarea
-            aria-label="GitHub review summary"
-            placeholder="Summarize your review…"
+            aria-label={t("GitHub review summary")}
+            placeholder={t("Summarize your review…")}
             value={body}
             onChange={(e) => {
               setBody(e.target.value);
@@ -408,11 +349,11 @@ export function Finish({
           />
         </label>
         <label>
-          Review action
+          {t("Review action")}{" "}
           <select value={event} onChange={(e) => setEvent(e.target.value)}>
-            <option value="COMMENT">Comment</option>
+            <option value="COMMENT">{t("Comment")} </option>
             <option value="APPROVE" disabled={w.snapshot.pull.author === login}>
-              Approve
+              {t("Approve")}{" "}
               {w.snapshot.pull.author === login
                 ? " · unavailable on your own PR"
                 : ""}
@@ -421,7 +362,7 @@ export function Finish({
               value="REQUEST_CHANGES"
               disabled={w.snapshot.pull.author === login}
             >
-              Request changes
+              {t("Request changes")}{" "}
               {w.snapshot.pull.author === login
                 ? " · unavailable on your own PR"
                 : ""}
@@ -429,8 +370,8 @@ export function Finish({
           </select>
         </label>
         <p className="muted">
-          Publishing as <strong>{login || "your GitHub account"}</strong>. Only
-          this summary and checked drafts will be sent.
+          {t("Publishing as")} <strong>{login || "your GitHub account"}</strong>
+          {t(". Only this summary and checked drafts will be sent.")}{" "}
         </p>
         {error && (
           <div className="error-text" role="alert">
@@ -448,7 +389,7 @@ export function Finish({
                   className="text-button"
                   onClick={() => void api.external(result.url)}
                 >
-                  View in GitHub <ExternalLink size={13} />
+                  {t("View in GitHub")} <ExternalLink size={13} />
                 </button>
               )}
             </div>
@@ -457,15 +398,16 @@ export function Finish({
       </div>
       <footer>
         <button className="secondary" disabled={busy} onClick={onClose}>
-          Back to guide
+          {t("Back to guide")}{" "}
         </button>
         <button
           className="primary"
           disabled={
             busy ||
+            w.snapshot.pull.state !== "open" ||
             result?.state === "published" ||
             (!body.trim() && !selected.length && event === "COMMENT") ||
-            w.snapshot.pull.repository === "diffcity/demo"
+            isSampleRepo(w.snapshot.pull.repository)
           }
           onClick={async () => {
             setBusy(true);
@@ -494,7 +436,7 @@ export function Finish({
           ) : (
             <Github size={15} />
           )}{" "}
-          Publish review
+          {t("Publish review")}{" "}
         </button>
       </footer>
     </AppDialog>

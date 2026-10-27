@@ -73,20 +73,23 @@ afterEach(async () => {
 
 function SelectionExample({
   onDiscuss = vi.fn(),
+  split = true,
+  source = hunk,
 }: {
   onDiscuss?: (a: Anchor) => void;
+  split?: boolean;
+  source?: Hunk;
 }) {
   const [selection, setSelection] = useState<Anchor | null>(null);
   return (
     <Diff
-      hunk={hunk}
+      hunk={source}
       selection={selection}
       onSelect={setSelection}
       onDiscuss={onDiscuss}
       notes={[]}
       comments={[]}
-      split
-      readingMode
+      split={split}
     />
   );
 }
@@ -96,6 +99,144 @@ const lineButton = (line: number, old = false) =>
   });
 
 describe("multi-line review", () => {
+  it.each([false, true])(
+    "selects across paint boundaries with pointer and keyboard (split: %s)",
+    async (split) => {
+      const user = userEvent.setup();
+      const discuss = vi.fn();
+      const source: Hunk = {
+        ...hunk,
+        lines: Array.from({ length: 140 }, (_, index) => ({
+          kind: "addition",
+          old: null,
+          new: index + 1,
+          text: `line ${index + 1}`,
+        })),
+      };
+      render(
+        <SelectionExample source={source} split={split} onDiscuss={discuss} />,
+      );
+      const region = screen.getByRole("region");
+      const bounds = (top: number, bottom: number) =>
+        ({ top, bottom, height: bottom - top }) as DOMRect;
+      vi.spyOn(region, "getBoundingClientRect").mockReturnValue(
+        bounds(-100, 3400),
+      );
+      Array.from(region.querySelectorAll(".diff-chunk")).forEach(
+        (chunk, index) => {
+          vi.spyOn(chunk, "getBoundingClientRect").mockReturnValue(
+            bounds(
+              index * 1600 - 100,
+              Math.min((index + 1) * 1600, 3500) - 100,
+            ),
+          );
+        },
+      );
+      Array.from(region.querySelectorAll("[data-index]")).forEach(
+        (row, index) => {
+          vi.spyOn(row, "getBoundingClientRect").mockReturnValue(
+            bounds(index * 25 - 100, (index + 1) * 25 - 100),
+          );
+        },
+      );
+      fireEvent.pointerDown(lineButton(63), {
+        pointerId: 1,
+        isPrimary: true,
+        button: 0,
+        clientY: 1460,
+      });
+      fireEvent.pointerMove(region, { pointerId: 1, clientY: 1560 });
+      fireEvent.pointerUp(region, { pointerId: 1, clientY: 1560 });
+      expect(screen.getByText("New lines 63–67 selected")).toBeTruthy();
+      lineButton(67).focus();
+      await user.keyboard("{Shift>}{ArrowUp}{ArrowUp}{ArrowUp}{/Shift}");
+      await waitFor(() => expect(document.activeElement).toBe(lineButton(64)));
+      await user.click(
+        screen.getByRole("button", { name: "Ask AI about lines 63–64" }),
+      );
+      expect(discuss).toHaveBeenCalledWith(
+        expect.objectContaining({ side: "RIGHT", startLine: 63, line: 64 }),
+      );
+      expect(region.querySelectorAll("[data-code-index]")).toHaveLength(140);
+    },
+  );
+
+  it.each([false, true])(
+    "keeps a Shift-click range when opening its gutter comment (split: %s)",
+    async (split) => {
+      const user = userEvent.setup();
+      const discuss = vi.fn();
+      render(<SelectionExample onDiscuss={discuss} split={split} />);
+      const region = screen.getByRole("region");
+      for (const [line, shiftKey] of [
+        [11, false],
+        [13, true],
+      ] as const) {
+        fireEvent.pointerDown(lineButton(line), {
+          pointerId: 1,
+          isPrimary: true,
+          button: 0,
+          shiftKey,
+        });
+        fireEvent.pointerUp(region, { pointerId: 1 });
+      }
+      expect(discuss).not.toHaveBeenCalled();
+      expect(lineButton(11).getAttribute("aria-pressed")).toBe("true");
+      expect(lineButton(13).getAttribute("aria-pressed")).toBe("true");
+      const comment = screen.getByRole("button", {
+        name: `Discuss ${hunk.path} lines 11–13`,
+      });
+      expect(comment.closest(".diff-line")).toBe(
+        lineButton(13).closest(".diff-line"),
+      );
+      expect(region.querySelectorAll(".selected .line-comment")).toHaveLength(
+        1,
+      );
+      expect(
+        region.querySelectorAll(".selected .line-comment-placeholder"),
+      ).toHaveLength(2);
+      await user.click(comment);
+      expect(discuss).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ side: "RIGHT", startLine: 11, line: 13 }),
+      );
+    },
+  );
+
+  it.each([false, true])(
+    "shows the range comment on the last old line when selected backwards (split: %s)",
+    async (split) => {
+      const user = userEvent.setup();
+      const discuss = vi.fn();
+      const source: Hunk = {
+        ...hunk,
+        lines: [
+          { kind: "context", old: 10, new: 20, text: "first" },
+          { kind: "deletion", old: 11, new: null, text: "removed" },
+          { kind: "addition", old: null, new: 21, text: "added" },
+          { kind: "context", old: 12, new: 22, text: "last" },
+        ],
+      };
+      render(
+        <SelectionExample source={source} onDiscuss={discuss} split={split} />,
+      );
+      fireEvent.click(lineButton(12, true), { detail: 0 });
+      fireEvent.click(lineButton(10, true), { detail: 0, shiftKey: true });
+      const comment = screen.getByRole("button", {
+        name: `Discuss ${hunk.path} lines 10–12`,
+      });
+      expect(comment.closest(".diff-line")).toBe(
+        lineButton(12, true).closest(".diff-line"),
+      );
+      expect(
+        screen.getByRole("region").querySelectorAll(".selected .line-comment"),
+      ).toHaveLength(1);
+      await user.click(comment);
+      expect(discuss).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ side: "LEFT", startLine: 10, line: 12 }),
+      );
+    },
+  );
+
   it("extends and shrinks a keyboard range while keeping its original endpoint", async () => {
     const user = userEvent.setup();
     const discuss = vi.fn();
@@ -106,11 +247,11 @@ describe("multi-line review", () => {
     await user.keyboard("{Shift>}{ArrowDown}{/Shift}");
     await waitFor(() => expect(document.activeElement).toBe(lineButton(13)));
     expect(
-      screen.getByRole("button", { name: "Comment on lines 11–13" }),
+      screen.getByRole("button", { name: "Ask AI about lines 11–13" }),
     ).toBeTruthy();
     await user.keyboard("{Shift>}{ArrowUp}{/Shift}");
     await user.click(
-      screen.getByRole("button", { name: "Comment on lines 11–12" }),
+      screen.getByRole("button", { name: "Ask AI about lines 11–12" }),
     );
     expect(discuss).toHaveBeenCalledWith(
       expect.objectContaining({ side: "RIGHT", startLine: 11, line: 12 }),
@@ -128,6 +269,23 @@ describe("multi-line review", () => {
       top: 0,
       height: 150,
     } as DOMRect);
+    vi.spyOn(
+      region.querySelector(".diff-chunk")!,
+      "getBoundingClientRect",
+    ).mockReturnValue({
+      top: 0,
+      bottom: 150,
+      height: 150,
+    } as DOMRect);
+    Array.from(region.querySelectorAll("[data-index]")).forEach(
+      (row, index) => {
+        vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
+          top: index * 25,
+          bottom: (index + 1) * 25,
+          height: 25,
+        } as DOMRect);
+      },
+    );
     fireEvent.pointerDown(lineButton(12, true), {
       pointerId: 1,
       isPrimary: true,
@@ -137,9 +295,9 @@ describe("multi-line review", () => {
     fireEvent.pointerMove(region, { pointerId: 1, clientY: 37 });
     fireEvent.pointerUp(region, { pointerId: 1, clientY: 37 });
     await user.click(
-      screen.getAllByRole("button", {
+      screen.getByRole("button", {
         name: `Discuss ${hunk.path} lines 11–12`,
-      })[0],
+      }),
     );
     expect(discuss).toHaveBeenCalledWith(
       expect.objectContaining({ side: "LEFT", startLine: 11, line: 12 }),
@@ -182,7 +340,14 @@ describe("multi-line review", () => {
               detail: "",
               executable: "",
             },
+            pins: { repositories: [], pulls: [] },
+            directory: { repositories: [], organizations: [], syncError: null },
             models: [],
+            modelPreference: {
+              provider: "codex",
+              model: "gpt-6-astra",
+              reasoningEffort: "xhigh",
+            },
             pulls: [],
             dataDirectory: "test-data",
           };
@@ -203,7 +368,7 @@ describe("multi-line review", () => {
               },
             ],
           };
-        if (command === "refresh_inbox") return [];
+        if (command === "refresh_inbox") return { pulls: [], syncError: null };
         if (command === "save_progress") return payload.progress;
         if (command === "save_note") {
           const note = payload.note as Note;
@@ -220,7 +385,7 @@ describe("multi-line review", () => {
           asked.push(note);
           return new Promise<Note>((resolve) => {
             reply = resolve;
-          });
+          }).then((answer) => ({ answer, draft: null }));
         }
         throw new Error(`Unexpected command: ${command}`);
       },
@@ -230,11 +395,7 @@ describe("multi-line review", () => {
     await user.click(
       await screen.findByRole("button", { name: "Explore a sample" }),
     );
-    await user.click(
-      await screen.findByRole("checkbox", {
-        name: "All lines for assistive reading",
-      }),
-    );
+
     const path = workspace.snapshot.files[0].path;
     const first = screen.getByRole("button", { name: `Select ${path} line 1` });
     const last = screen.getByRole("button", { name: `Select ${path} line 2` });
@@ -244,20 +405,19 @@ describe("multi-line review", () => {
     );
     fireEvent.click(last, { detail: 0, shiftKey: true });
     await user.click(
-      await screen.findByRole("button", { name: "Comment on lines 1–2" }),
+      await screen.findByRole("button", { name: "Ask AI about lines 1–2" }),
     );
     const composer = screen.getByRole("textbox", {
-      name: "Inline comment or Codex question",
+      name: "Inline comment or AI question",
     });
     await waitFor(() => expect(document.activeElement).toBe(composer));
-    await user.type(
-      composer,
+    await user.paste(
       "Will these two migration statements work with existing rows?",
     );
-    await user.click(screen.getByRole("button", { name: "Save comment" }));
+    await user.click(screen.getByRole("button", { name: "Save private note" }));
     await user.click(
       await screen.findByRole("button", {
-        name: "Ask Codex about this comment",
+        name: "Ask AI about this comment",
       }),
     );
     const thread = screen.getByRole("region", {
@@ -265,13 +425,11 @@ describe("multi-line review", () => {
     });
     expect(screen.queryByRole("complementary", { name: "PR chat" })).toBeNull();
     expect(
-      within(thread).getByLabelText("Codex response in progress"),
+      within(thread).getByLabelText("AI response in progress"),
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /^PR chat/ }));
     const chat = screen.getByRole("complementary", { name: "PR chat" });
-    expect(
-      within(chat).getByLabelText("Codex response in progress"),
-    ).toBeTruthy();
+    expect(within(chat).getByLabelText("AI response in progress")).toBeTruthy();
     expect(asked).toHaveLength(1);
     expect(asked[0].anchor).toMatchObject({
       side: "RIGHT",
@@ -279,7 +437,7 @@ describe("multi-line review", () => {
       line: 2,
     });
     expect(asked[0].githubDraft).toBe(false);
-    // Changing the selection while Codex is running must not move its response.
+    // Changing the selection while AI is running must not move its response.
     fireEvent.click(first, { detail: 0 });
     reply!({
       ...asked[0],
@@ -307,23 +465,35 @@ describe("multi-line review", () => {
       })[0],
     );
     await waitFor(() => expect(document.activeElement).toBe(composer));
-    await user.type(composer, "Keep this unfinished inline thought.");
+    await user.paste("Keep this unfinished inline thought.");
+    await user.click(
+      within(thread).getByRole("button", {
+        name: "Collapse inline discussion",
+      }),
+    );
+    expect(within(thread).queryByRole("textbox")).toBeNull();
+    await user.click(
+      within(thread).getByRole("button", { name: "Expand inline discussion" }),
+    );
+    expect(
+      (within(thread).getByRole("textbox") as HTMLTextAreaElement).value,
+    ).toBe("Keep this unfinished inline thought.");
     await user.click(screen.getByRole("tab", { name: /Overview/ }));
     await user.click(screen.getByRole("tab", { name: "Guide" }));
     expect(
       (
         screen.getByRole("textbox", {
-          name: "Inline comment or Codex question",
+          name: "Inline comment or AI question",
         }) as HTMLTextAreaElement
       ).value,
     ).toBe("Keep this unfinished inline thought.");
-    await user.type(
+    await user.click(
       within(chat).getByRole("textbox", {
-        name: "Message to Codex about this PR",
+        name: "Message to AI about this PR",
       }),
-      "How does that affect the rest of the PR?",
     );
-    await user.click(within(chat).getByRole("button", { name: "Ask Codex" }));
+    await user.paste("How does that affect the rest of the PR?");
+    await user.click(within(chat).getByRole("button", { name: "Ask AI" }));
     await waitFor(() => expect(asked).toHaveLength(2));
     expect(asked[1].anchor).toBeNull();
     reply!({
@@ -346,10 +516,12 @@ describe("multi-line review", () => {
         }),
       ).queryByText("The API must accommodate the migration rollout."),
     ).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Finish review" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Finish review" })[0],
+    );
     expect(
       within(screen.getByRole("dialog", { name: "Finish review" })).getByText(
-        "No drafts selected. Private notes and Codex conversations are not included.",
+        "No drafts selected. Private notes and AI conversations are not included.",
       ),
     ).toBeTruthy();
   });

@@ -220,44 +220,11 @@ pub fn rank(a: &Attention) -> u8 {
 }
 
 pub fn provisional(snapshot: &Snapshot) -> Guide {
-    let mut sections = Vec::new();
-    for file in &snapshot.files {
-        for hunk in &file.hunks {
-            let (attention, category, reason) = rule(hunk);
-            sections.push(GuideSection {
-                id: hunk.id.clone(),
-                title: file.path.clone(),
-                summary: "Review with Codex to get a guided explanation and code review.".into(),
-                attention,
-                category,
-                reason,
-                hunk_ids: vec![hunk.id.clone()],
-                unavailable_paths: vec![],
-                questions: vec![],
-                findings: vec![],
-                assessed: false,
-                foldable: false,
-            });
-        }
-        if let Some(reason) = &file.unavailable {
-            sections.push(GuideSection {
-                id: hash(&file.path),
-                title: file.path.clone(),
-                summary: reason.clone(),
-                attention: Attention::NeedsAssessment,
-                category: "Unavailable content".into(),
-                reason: "This content has not been assessed.".into(),
-                hunk_ids: vec![],
-                unavailable_paths: vec![file.path.clone()],
-                questions: vec![],
-                findings: vec![],
-                assessed: false,
-                foldable: false,
-            });
-        }
-    }
-    sections.sort_by_key(|s| rank(&s.attention));
+    let sections = crate::guide::provisional_sections(snapshot, &HashSet::new());
     Guide {
+        enrichment: None,
+        id: None,
+        reasoning_effort: None,
         snapshot_id: snapshot.id.clone(),
         summary: snapshot.pull.title.clone(),
         sections,
@@ -279,8 +246,11 @@ pub struct Proposal {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ProposedSection {
+    #[serde(default)]
+    pub naming_decisions: Vec<NamingDecision>,
     pub title: String,
     pub summary: String,
+    pub explanation: String,
     pub attention: Attention,
     pub category: String,
     pub reason: String,
@@ -295,6 +265,9 @@ pub fn validate_guide(
     model: &str,
     supplied: &HashSet<String>,
 ) -> Result<Guide> {
+    if proposal.summary.trim().is_empty() || proposal.sections.is_empty() {
+        bail!("Codex returned no walkthrough; kept the previous guide");
+    }
     let hunks: HashMap<_, _> = snapshot
         .files
         .iter()
@@ -302,10 +275,18 @@ pub fn validate_guide(
         .map(|h| (h.id.clone(), h))
         .collect();
     let mut seen = HashSet::new();
+    let mut named = HashSet::new();
     let mut sections = Vec::new();
     for s in proposal.sections {
-        if s.hunk_ids.is_empty() || s.title.trim().is_empty() || s.reason.trim().is_empty() {
-            bail!("Codex returned an empty section or rationale; kept the previous guide");
+        if s.hunk_ids.is_empty()
+            || s.title.trim().is_empty()
+            || s.summary.trim().is_empty()
+            || s.explanation.trim().is_empty()
+            || s.reason.trim().is_empty()
+        {
+            bail!(
+                "Codex returned an empty section, explanation, or rationale; kept the previous guide"
+            );
         }
         for id in &s.hunk_ids {
             if !hunks.contains_key(id) || !supplied.contains(id) || !seen.insert(id.clone()) {
@@ -318,6 +299,7 @@ pub fn validate_guide(
                 bail!("Finding is not grounded in its section");
             }
         }
+        crate::guide_naming::validate(snapshot, &s.hunk_ids, &s.naming_decisions, &mut named)?;
         let mut attention = s.attention;
         let mut reasons = vec![s.reason];
         let mut categories = vec![s.category];
@@ -336,7 +318,9 @@ pub fn validate_guide(
             .hunk_ids
             .iter()
             .all(|id| matches!(rule(hunks[id]).1.as_str(), "Documentation" | "Localization"));
-        if attention == Attention::Routine && (!routine_candidate || !s.findings.is_empty()) {
+        if attention == Attention::Routine
+            && (!routine_candidate || !s.findings.is_empty() || !s.naming_decisions.is_empty())
+        {
             attention = Attention::Standard;
         }
         let foldable = assessed && attention == Attention::Routine && s.findings.is_empty();
@@ -344,9 +328,12 @@ pub fn validate_guide(
         reasons.dedup();
         categories.dedup();
         sections.push(GuideSection {
+            naming_decisions: s.naming_decisions,
+            annotations: vec![],
             id,
             title: s.title,
             summary: s.summary,
+            explanation: s.explanation,
             attention,
             category: categories.join(" · "),
             reason: reasons.join(" "),
@@ -358,13 +345,8 @@ pub fn validate_guide(
             foldable,
         });
     }
-    let fallback = provisional(snapshot);
-    sections.extend(
-        fallback
-            .sections
-            .into_iter()
-            .filter(|s| s.hunk_ids.iter().all(|id| !seen.contains(id))),
-    );
+    sections.extend(crate::guide::provisional_sections(snapshot, &seen));
+    let mut sections = crate::guide::compact_sections(sections);
     sections.sort_by_key(|s| rank(&s.attention));
     if sections.iter().all(|s| s.attention == Attention::Routine)
         && let Some(s) = sections.first_mut()
@@ -380,6 +362,9 @@ pub fn validate_guide(
         ));
     }
     Ok(Guide {
+        enrichment: None,
+        id: None,
+        reasoning_effort: None,
         snapshot_id: snapshot.id.clone(),
         summary: proposal.summary,
         sections,
@@ -387,7 +372,7 @@ pub fn validate_guide(
         model: model.into(),
         generated_at: chrono::Utc::now().to_rfc3339(),
         limitations,
-        policy_version: 1,
+        policy_version: 5,
     })
 }
 

@@ -38,7 +38,7 @@ The reference project's README, license, dependency manifest, repository tree, a
 
 ## Goals
 
-- Show pinned GitHub repositories and a cross-repository inbox, with My PRs first, requested reviews next, assigned PRs after that, then other open PRs.
+- Automatically discover accessible GitHub repos and organization memberships, with a cross-repository inbox, with My PRs first, requested reviews next, assigned PRs after that, then other open PRs.
 - Review without disturbing the user's current checkout or requiring a clone for basic diff browsing.
 - Make Guide the default PR destination and support the complete review loop there.
 - Order meaningful sections by review priority, with evidence-backed callouts for consequential changes and concise prerequisite context.

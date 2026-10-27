@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-enrich-guide"
+description = "Enables the enrich_guide command without any pre-configured scope."
+commands.allow = ["enrich_guide"]
+
+[[permission]]
+identifier = "deny-enrich-guide"
+description = "Denies the enrich_guide command without any pre-configured scope."
+commands.deny = ["enrich_guide"]

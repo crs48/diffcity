@@ -1,6 +1,32 @@
-import { Button, Tabs, TabList, Tab, TabPanel } from "react-aria-components";
+import { useAgentAccess } from "./features/AgentAccess";
+import { usePullGuides } from "./features/usePullGuides";
+import {
+  guideJobKey,
+  pullGuideStatus,
+  type GuideProvider,
+} from "./lib/pull-guides";
+import { useTranslation } from "react-i18next";
+import i18n from "./i18n";
+import { useReviewPrefetch } from "./features/useReviewPrefetch";
+import { usePullHistory } from "./features/usePullHistory";
+import {
+  Button,
+  Tabs,
+  TabList,
+  Tab,
+  TabPanel,
+  Tooltip,
+  TooltipTrigger,
+} from "react-aria-components";
+import { PinToggle } from "./ui/PinToggle";
 import { ThemeSwitcher } from "./ui/ThemeSwitcher";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -14,8 +40,8 @@ import {
   FolderGit2,
   GitPullRequest,
   Github,
-  Inbox,
   LoaderCircle,
+  Library,
   MessageSquare,
   PanelLeftClose,
   Plus,
@@ -30,33 +56,107 @@ import {
   type Anchor,
   type Bootstrap,
   type Guide,
+  type EnrichmentTier,
+  type ModelPreference,
   type Note,
   type PullRequest,
   type ReviewProgress,
   type ReviewWorkspace,
-  type RunEvent,
+  type InboxSync,
+  type Pins,
 } from "./lib/api";
-import { bucket, key, newNote, parsePullUrl } from "./lib/review";
+import { newNote, parsePullUrl } from "./lib/review";
 import { GuideView } from "./features/Guide";
+import { ReviewScope } from "./features/ReviewScope";
+import { ReviewActivity, ReviewPopover } from "./features/ReviewToolbar";
+import { ReviewHeader } from "./features/ReviewHeader";
 import { Discussion } from "./features/Discussion";
 import { ConversationContext } from "./features/conversation";
+import {
+  useAiRuns,
+  isActiveRun,
+  threadRuns,
+  threadModel,
+} from "./features/useAiRuns";
 import { useNoteComposer } from "./features/useNoteComposer";
-import { Connections, Finish, Projects } from "./features/Dialogs";
+import { Connections, Finish } from "./features/Dialogs";
+import { DisplaySettings } from "./features/DisplaySettings";
+import { GuideEnrichment } from "./features/GuideEnrichment";
+import { mergeEnrichment } from "./lib/enrichment";
+import { GuideSwitcher } from "./features/GuideSwitcher";
+import { LocalCode, RepositoryContextButton } from "./features/LocalCode";
+import { ModelSettings } from "./features/ModelSettings";
+import { defaultModelPreference } from "./lib/models";
+import { AccountNavigation, RepoFilter } from "./features/AccountNavigation";
+import { PullList } from "./features/PullList";
+import {
+  SAMPLE_REPO,
+  isSampleRepo,
+  sameLogin,
+  requestedFrom,
+  visiblePulls,
+  pinKey,
+  pullPinId,
+  accountOwners,
+  accountActivity,
+  repositoriesForOwner,
+  resolveScope,
+  type InboxScope,
+} from "./lib/inbox";
 import "./styles.css";
 
 export default function App() {
+  const { t } = useTranslation();
+  const modelTriggerRef = useRef<HTMLButtonElement>(null);
+  const [inboxView, setInboxView] = useState<"open" | "history">("open");
   const [data, setData] = useState<Bootstrap | null>(null);
+  const [hideOtherAccounts, setHideOtherAccounts] = useState(
+    () => localStorage.getItem("diffcity.hideOtherAccounts") === "true",
+  );
   const [pulls, setPulls] = useState<PullRequest[]>([]);
-  const [project, setProject] = useState<string | null>(null);
+  const [scope, setScope] = useState<InboxScope>({
+    owner: null,
+    repository: null,
+  });
+  const repositories =
+    data?.directory.repositories.map((repo) => repo.fullName) ?? [];
+  const activity = accountActivity(data?.directory.repositories ?? [], pulls);
+  const owners = accountOwners(
+    data?.directory.repositories ?? [],
+    data?.directory.organizations ?? [],
+    data?.github.identity ?? "",
+    activity,
+  );
+  const { owner, repository: repo } = resolveScope(scope, repositories, owners);
+  const scopedRepositories = repositoriesForOwner(repositories, owner);
+  const history = usePullHistory(
+    repo,
+    inboxView === "history" && repo !== SAMPLE_REPO && !!data,
+    owner,
+    scopedRepositories.join(","),
+  );
+  const [samplePulls, setSamplePulls] = useState<PullRequest[]>([]);
   const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
   const [selection, setSelection] = useState<Anchor | null>(null);
   const [discussion, setDiscussion] = useState(false);
-  const [activeQuestion, setActiveQuestion] = useState<Note | null>(null);
   const selecting = useRef(0);
   const [mode, setMode] = useState<"guide" | "files" | "overview">("guide");
+  const reviewScroll = useRef<HTMLDivElement>(null);
+  const chatToggle = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    // The continuous guide restores its own chapter; other views start at the top.
+    if (reviewScroll.current) reviewScroll.current.scrollTop = 0;
+  }, [mode, workspace?.snapshot.id]);
   const [dialog, setDialog] = useState<
-    "connections" | "projects" | "finish" | null
+    | "connections"
+    | "finish"
+    | "display"
+    | "model"
+    | "new-guide"
+    | "local-code"
+    | null
   >(null);
+  const [localCodeVersion, setLocalCodeVersion] = useState(0);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Connecting your workspace…");
   const [loading, setLoading] = useState(false);
@@ -64,20 +164,96 @@ export default function App() {
   const [link, setLink] = useState("");
   const [showLink, setShowLink] = useState(false);
   const [inboxVisible, setInboxVisible] = useState(true);
-  const [run, setRun] = useState<string | null>(null);
-  const [runText, setRunText] = useState("");
-  const [stream, setStream] = useState("");
-  const [pendingGuide, setPendingGuide] = useState<Guide | null>(null);
+  const ai = useAiRuns();
+  const agentAccess = useAgentAccess();
+  const [pendingGuides, setPendingGuides] = useState<Guide[]>([]);
+  const guideInventory = usePullGuides();
+  const guideStartingRef = useRef(new Set<string>());
+  const [guideStarting, setGuideStarting] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const [guideErrors, setGuideErrors] = useState<Record<string, string>>({});
+  const pendingGuide = pendingGuides
+    .filter((g) => g.snapshotId === workspace?.snapshot.id)
+    .at(-1);
+  const isThreadBusy = (anchor: Anchor | null) =>
+    threadRuns(ai.runs, workspace?.snapshot.id ?? "", anchor).some(isActiveRun);
   const [newRevision, setNewRevision] = useState(false);
+  const [checkpointVersion, setCheckpointVersion] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const syncBusy = useRef(false);
+  const [syncProgress, setSyncProgress] = useState<InboxSync | null>(null);
+  const [syncError, setSyncError] = useState("");
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [pinSaving, setPinSaving] = useState(false);
+  const pinBusy = useRef(false);
+  const [pinNotice, setPinNotice] = useState("");
+  const pinned = new Set(data?.pins.pulls.map(pinKey) ?? []);
+  const changePin = async (
+    save: () => Promise<Pins>,
+    label: string,
+    focusId: string,
+  ) => {
+    if (pinBusy.current) return;
+    pinBusy.current = true;
+    setPinSaving(true);
+    const origin = document.activeElement;
+    try {
+      const pins = await save();
+      setData((current) => (current ? { ...current, pins } : current));
+      setPinNotice(label);
+    } catch (e) {
+      onError(e);
+    } finally {
+      pinBusy.current = false;
+      setPinSaving(false);
+      const restore =
+        document.activeElement === origin ||
+        document.activeElement === document.body;
+      requestAnimationFrame(() => {
+        if (restore)
+          (
+            document.getElementById(focusId) ??
+            document.getElementById("pull-search")
+          )?.focus();
+      });
+    }
+  };
+  const togglePullPin = (pull: PullRequest, focusId = pullPinId(pull)) => {
+    const next = !pinned.has(pinKey(pull));
+    void changePin(
+      () => api.pinPull(pull, next),
+      t(next ? "Pinned {{name}}" : "Unpinned {{name}}", {
+        name: `${pull.repository}#${pull.number}`,
+      }),
+      focusId,
+    );
+  };
+  const toggleRepoPin = (repository: string) => {
+    const next = !data?.pins.repositories.some((repo) =>
+      sameLogin(repo, repository),
+    );
+    void changePin(
+      () => api.pinRepository(repository, next),
+      t(next ? "Pinned {{name}}" : "Unpinned {{name}}", { name: repository }),
+      "pin-repository",
+    );
+  };
+  useReviewPrefetch(
+    pulls,
+    data?.github.identity ?? "",
+    !!data?.github.connected,
+    loading,
+    workspace ? pinKey(workspace.snapshot.pull) : null,
+  );
+  const [reviewSyncing, setReviewSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const setInboxOpen = (open: boolean) => {
     setInboxVisible(open);
     if (matchMedia("(max-width: 1000px)").matches) {
       requestAnimationFrame(() => {
         const target = open
-          ? document.querySelector<HTMLInputElement>(
-              '[aria-label="Search pull requests"]',
-            )
+          ? document.getElementById("pull-search")
           : document.getElementById("review-workspace");
         target?.focus();
       });
@@ -100,6 +276,7 @@ export default function App() {
   );
   const inline = useNoteComposer(onNote, onError);
   const chat = useNoteComposer(onNote, onError);
+  const startingTextQuestion = useRef(false);
   const flushInline = inline.flush;
   const flushChat = chat.flush;
   const flush = useCallback(async () => {
@@ -138,21 +315,69 @@ export default function App() {
     preference.addEventListener("change", apply);
     return () => preference.removeEventListener("change", apply);
   }, [data?.settings.theme]);
-  const refresh = useCallback(async () => {
-    const p = await api.inbox();
-    setPulls(p);
-    setLastSync(
-      new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    );
+  useEffect(() => {
+    const subscription = listen<InboxSync>("inbox-sync", (event) => {
+      setSyncProgress(event.payload);
+      setPulls(event.payload.pulls);
+    });
+    return () => {
+      void subscription.then((unlisten) => unlisten());
+    };
   }, []);
+  const refresh = useCallback(async () => {
+    if (syncBusy.current) return;
+    syncBusy.current = true;
+    setSyncing(true);
+    setSyncProgress(null);
+    try {
+      const result = await api.inbox();
+      setPulls(result.pulls);
+      setSyncError(result.syncError ?? "");
+      if (!result.syncError)
+        setLastSync(
+          new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        );
+    } finally {
+      syncBusy.current = false;
+      setSyncing(false);
+    }
+  }, []);
+  const discover = useCallback(async () => {
+    setDirectoryLoading(true);
+    try {
+      const directory = await api.directory();
+      setData((current) => (current ? { ...current, directory } : current));
+    } finally {
+      setDirectoryLoading(false);
+    }
+  }, []);
+  const refreshWorkspace = async () => {
+    if (!data?.github.connected) {
+      setDialog("connections");
+      return;
+    }
+    if (directoryLoading || syncing) return;
+    try {
+      await discover();
+      await refresh();
+    } catch (e) {
+      onError(e);
+    }
+  };
   const boot = useCallback(async () => {
     const result = await api.bootstrap();
     setData(result);
+    await i18n.changeLanguage(result.settings.locale || "en");
     setPulls(result.pulls);
     setStatus("");
-    if (result.github.connected) await refresh().catch(onError);
+    if (result.github.connected) {
+      void discover().then(refresh).catch(onError);
+    }
     return result;
-  }, [refresh, onError]);
+  }, [discover, refresh, onError]);
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
@@ -177,87 +402,100 @@ export default function App() {
       });
   }, [boot, onError]);
   useEffect(() => {
-    let removed = false;
-    const subscription = listen<RunEvent>("codex-run", (event) => {
-      if (
-        event.payload.runId !== run ||
-        event.payload.snapshotId !== current.current?.snapshot.id
-      )
-        return;
-      if (event.payload.phase === "stream")
-        setStream((text) => text + event.payload.text);
-      else setRunText(event.payload.text);
-    });
-    void subscription.then((unlisten) => {
-      if (removed) unlisten();
-    });
-    return () => {
-      removed = true;
-      void subscription.then((unlisten) => unlisten());
-    };
-  }, [run]);
-  useEffect(() => {
     if (!data?.github.connected) return;
     let tick = 0;
     const timer = setInterval(async () => {
       if (document.hidden || polling.current) return;
       polling.current = true;
       try {
-        if (++tick % 3 === 0) await refresh();
-        const w = current.current;
-        if (w && w.snapshot.pull.repository !== "diffcity/demo") {
-          const p = w.snapshot.pull;
-          const latest = await api.check(p.repository, p.number);
-          if (
-            current.current?.snapshot.id === w.snapshot.id &&
-            (latest.head !== p.head || latest.base !== p.base)
-          )
-            setNewRevision(true);
-          const fresh = await api.open(p.repository, p.number, false);
-          setWorkspace((current) =>
-            current?.snapshot.id === fresh.snapshot.id
-              ? {
-                  ...current,
-                  comments: fresh.comments,
-                  checks: fresh.checks,
-                  syncError: fresh.syncError,
-                }
-              : current,
-          );
-          setLastSync(
-            new Date().toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          );
-        }
+        if (++tick % 30 === 0) await discover();
+        if (tick % 3 === 0) void refresh().catch(onError);
       } catch (e) {
-        setWorkspace((w) => (w ? { ...w, syncError: String(e) } : w));
+        onError(e);
       } finally {
         polling.current = false;
       }
     }, 30_000);
     return () => clearInterval(timer);
-  }, [data?.github.connected, refresh]);
-  const open = async (repository: string, number: number, force = true) => {
+  }, [data?.github.connected, discover, refresh, onError]);
+  useEffect(() => {
+    const w = current.current;
+    if (
+      !data?.github.connected ||
+      loading ||
+      !w ||
+      isSampleRepo(w.snapshot.pull.repository)
+    )
+      return;
+    let removed = false;
+    let busy = false;
+    const generation = opening.current;
+    const matches = () =>
+      !removed &&
+      opening.current === generation &&
+      current.current?.snapshot.id === w.snapshot.id;
+    const sync = async () => {
+      if (document.hidden || busy) return;
+      busy = true;
+      setReviewSyncing(true);
+      try {
+        const fresh = await api.sync(
+          w.snapshot.pull.repository,
+          w.snapshot.pull.number,
+        );
+        if (!matches()) return;
+        setNewRevision(fresh.snapshot.id !== w.snapshot.id);
+        // Code, notes, guide and progress stay pinned to the review the user opened.
+        setWorkspace((current) =>
+          current?.snapshot.id === fresh.snapshot.id
+            ? {
+                ...current,
+                snapshot: { ...current.snapshot, pull: fresh.snapshot.pull },
+                comments: fresh.comments,
+                checks: fresh.checks,
+                syncError: fresh.syncError,
+              }
+            : current,
+        );
+      } catch (e) {
+        if (matches())
+          setWorkspace((current) =>
+            current ? { ...current, syncError: String(e) } : current,
+          );
+      } finally {
+        busy = false;
+        if (matches()) setReviewSyncing(false);
+      }
+    };
+    void sync();
+    const timer = setInterval(() => void sync(), 30_000);
+    return () => {
+      removed = true;
+      clearInterval(timer);
+    };
+  }, [workspace?.snapshot.id, data?.github.connected, loading]);
+  const open = async (repository: string, number: number, force = false) => {
     const request = ++opening.current;
     setLoading(true);
     setError("");
     try {
       await flush();
+      if (request !== opening.current) return;
       const w = await api.open(repository, number, force);
+      const samplePull = samplePulls.find((p) => p.number === number);
+      if (repository === SAMPLE_REPO && samplePull)
+        w.snapshot.pull = samplePull;
       if (request !== opening.current) return;
       setWorkspace(w);
       if (matchMedia("(max-width: 1000px)").matches) setInboxOpen(false);
-      setStream("");
       setSelection(null);
       setDiscussion(false);
       setMode("guide");
-      setPendingGuide(null);
       setNewRevision(false);
-      localStorage.setItem("diffcity.lastPr", w.snapshot.pull.url);
+      if (!isSampleRepo(repository))
+        localStorage.setItem("diffcity.lastPr", w.snapshot.pull.url);
     } catch (e) {
-      onError(e);
+      if (request === opening.current) onError(e);
     } finally {
       if (request === opening.current) setLoading(false);
     }
@@ -271,11 +509,9 @@ export default function App() {
       if (request !== opening.current) return;
       setWorkspace(w);
       if (matchMedia("(max-width: 1000px)").matches) setInboxOpen(false);
-      setStream("");
       setMode("guide");
       setSelection(null);
       setDiscussion(false);
-      setPendingGuide(null);
       setNewRevision(false);
     } catch (e) {
       onError(e);
@@ -294,10 +530,9 @@ export default function App() {
       if (matchMedia("(max-width: 1000px)").matches) setInboxOpen(false);
       setSelection(null);
       setDiscussion(false);
-      setPendingGuide(null);
       setNewRevision(true);
       setMode("guide");
-      setStream("");
+      return w;
     } catch (e) {
       onError(e);
     } finally {
@@ -312,6 +547,8 @@ export default function App() {
     const request = ++selecting.current;
     const snapshotId = workspace?.snapshot.id;
     try {
+      if (jumpToCode && matchMedia("(max-width: 1000px)").matches)
+        setDiscussion(false);
       if (openDiscussion) await inline.start(snapshotId!, anchor);
       if (
         request !== selecting.current ||
@@ -320,6 +557,11 @@ export default function App() {
         return;
       setSelection(anchor);
       if (jumpToCode) {
+        if (
+          anchor.textSelection &&
+          anchor.textSelection.snapshotId !== snapshotId
+        )
+          return;
         // A chat reference may point into another section or a filtered file.
         const section = workspace?.guide.sections.find((s) =>
           s.hunkIds.includes(anchor.hunkId),
@@ -332,16 +574,20 @@ export default function App() {
       onError(e);
     }
   };
-  const openChat = async (anchor: Anchor | null) => {
+  const openChat = async (anchor: Anchor | null, focusComposer = true) => {
     if (!workspace) return;
     try {
-      await chat.start(workspace.snapshot.id, anchor);
+      await chat.start(workspace.snapshot.id, anchor, undefined, focusComposer);
       setDiscussion(true);
     } catch (e) {
       onError(e);
     }
   };
   const prepare = async (note: Note) => {
+    if (note.anchor?.textSelection)
+      throw new Error(
+        "Text selections are AI-only and cannot be prepared for GitHub.",
+      );
     const draft = await api.note({
       ...newNote(note.snapshotId, note.anchor, note.body),
       githubDraft: true,
@@ -357,60 +603,293 @@ export default function App() {
       setDiscussion(true);
     }
   };
+  const guideSelection = useRef(false);
+  const [guideChanging, setGuideChanging] = useState(false);
+  const progressWrites = useRef<Promise<unknown>>(Promise.resolve());
   const progress = (p: ReviewProgress) => {
-    if (!workspace) return;
+    if (!workspace || guideSelection.current) return;
     setWorkspace((w) => (w ? { ...w, progress: p } : w));
-    void api.progress(workspace.snapshot.id, p).catch(onError);
+    progressWrites.current = progressWrites.current
+      .then(() => api.progress(workspace.snapshot.id, p))
+      .catch(onError);
   };
-  const analyze = async () => {
-    if (!workspace) return;
-    const id = crypto.randomUUID();
-    setRun(id);
-    setRunText("Starting Codex review…");
-    setStream("");
-    setError("");
+  const selectGuide = async (guideId: string) => {
+    if (!workspace || guideSelection.current) return;
+    const snapshotId = workspace.snapshot.id;
+    guideSelection.current = true;
+    setGuideChanging(true);
     try {
       await flush();
-      const guide = await api.analyze(workspace.snapshot.id, id);
-      if (current.current?.snapshot.id === guide.snapshotId)
-        setPendingGuide(guide);
-    } catch (e) {
-      onError(e);
+      await progressWrites.current;
+      const selected = await api.selectGuide(snapshotId, guideId);
+      if (current.current?.snapshot.id !== snapshotId) return;
+      setWorkspace((w) =>
+        w?.snapshot.id === snapshotId
+          ? { ...w, guide: selected.guide, progress: selected.progress }
+          : w,
+      );
+      setMode("guide");
+      setPendingGuides((guides) => guides.filter((g) => g.id !== guideId));
     } finally {
-      setRun(null);
+      guideSelection.current = false;
+      setGuideChanging(false);
+    }
+  };
+  const refreshModels = useCallback(async (provider: string) => {
+    const catalog = await api.models(provider);
+    if (provider === "codex") {
+      setData((current) =>
+        current
+          ? { ...current, codex: catalog.connection, models: catalog.models }
+          : current,
+      );
+    }
+    return catalog;
+  }, []);
+  const onEnriched = (guide: Guide) => {
+    setWorkspace((w) =>
+      w && w.guide.id === guide.id && w.snapshot.id === guide.snapshotId
+        ? { ...w, guide: mergeEnrichment(w.guide, guide) }
+        : w,
+    );
+    setPendingGuides((guides) =>
+      guides.map((g) => (g.id === guide.id ? mergeEnrichment(g, guide) : g)),
+    );
+  };
+  const enrich = async (guide: Guide, tier: EnrichmentTier) => {
+    if (!guide.id) return;
+    const result = await ai.start(
+      {
+        kind: "enrichment",
+        guideId: guide.id,
+        snapshotId: guide.snapshotId,
+        preference: {
+          provider: guide.source,
+          model: guide.model,
+          reasoningEffort: guide.reasoningEffort ?? null,
+        },
+      },
+      (runId) => api.enrich(guide.snapshotId, guide.id!, tier, runId),
+      onEnriched,
+    );
+    if (result) onEnriched(result);
+  };
+  const dismissEnrichment = async (guide: Guide, dismissed: boolean) => {
+    if (guide.id)
+      onEnriched(
+        await api.dismissEnrichment(guide.snapshotId, guide.id, dismissed),
+      );
+  };
+  const generateGuide = async (
+    review: ReviewWorkspace,
+    preference: ModelPreference,
+  ) => {
+    const snapshotId = review.snapshot.id;
+    const jobKey = guideJobKey(review.snapshot.pull, preference.provider);
+    setGuideErrors((errors) => ({ ...errors, [jobKey]: "" }));
+    ai.runs
+      .filter(
+        (r) => r.kind === "guide" && r.pullKey === jobKey && !isActiveRun(r),
+      )
+      .forEach((r) => ai.dismiss(r.id));
+    const guide = await ai.start(
+      {
+        kind: "guide",
+        snapshotId,
+        preference,
+        pullKey: guideJobKey(review.snapshot.pull, preference.provider),
+      },
+      (id) => api.analyze(snapshotId, id, preference),
+    );
+    if (guide) {
+      setPendingGuides((guides) => [...guides, guide]);
+      // Only a newly requested guide starts work automatically. Restores and switches never do.
+      if (
+        guide.enrichment?.files.some(
+          (file) => file.tier === "priority" && file.status === "pending",
+        )
+      )
+        void enrich(guide, "priority").catch(onError);
+    }
+    await guideInventory.refresh();
+  };
+  const analyze = async (preference: ModelPreference) => {
+    if (!workspace) return;
+    const review = workspace;
+    await flush();
+    await generateGuide(review, preference);
+  };
+  const generateInboxGuide = async (
+    pull: PullRequest,
+    provider: GuideProvider,
+  ) => {
+    const jobKey = guideJobKey(pull, provider);
+    if (
+      guideStartingRef.current.has(jobKey) ||
+      ai.runs.some(
+        (r) => r.kind === "guide" && r.pullKey === jobKey && isActiveRun(r),
+      )
+    )
+      return;
+    const { preference } = pullGuideStatus(
+      guideInventory.inventory,
+      pull,
+      provider,
+      data?.modelPreference ?? defaultModelPreference,
+    );
+    guideStartingRef.current.add(jobKey);
+    setGuideStarting(new Set(guideStartingRef.current));
+    setGuideErrors((errors) => ({ ...errors, [jobKey]: "" }));
+    ai.runs
+      .filter(
+        (r) => r.kind === "guide" && r.pullKey === jobKey && !isActiveRun(r),
+      )
+      .forEach((r) => ai.dismiss(r.id));
+    try {
+      // Capture current code without activating a different review or altering its progress.
+      const review = await api.sync(pull.repository, pull.number);
+      if (review.syncError) throw new Error(review.syncError);
+      setPulls((pulls) =>
+        pulls.map((p) =>
+          pinKey(p) === pinKey(pull) ? review.snapshot.pull : p,
+        ),
+      );
+      history.update(review.snapshot.pull);
+      setData((data) =>
+        data
+          ? {
+              ...data,
+              pins: {
+                ...data.pins,
+                pulls: data.pins.pulls.map((p) =>
+                  pinKey(p) === pinKey(pull) ? review.snapshot.pull : p,
+                ),
+              },
+            }
+          : data,
+      );
+      await generateGuide(review, preference);
+    } catch (error) {
+      setGuideErrors((errors) => ({ ...errors, [jobKey]: String(error) }));
+      onError(error);
+    } finally {
+      guideStartingRef.current.delete(jobKey);
+      setGuideStarting(new Set(guideStartingRef.current));
     }
   };
   const ask = async (note: Note) => {
-    const id = crypto.randomUUID();
-    setRun(id);
-    setActiveQuestion(note);
-    setStream("");
-    setRunText("Asking Codex…");
-    setError("");
-    try {
-      await flush();
-      onNote(await api.ask(note.snapshotId, note.id, id));
-    } catch (e) {
-      onError(e);
-    } finally {
-      setRun(null);
-      setStream("");
-      setActiveQuestion(null);
+    const access = agentAccess.access;
+    const activeModel = threadRuns(ai.runs, note.snapshotId, note.anchor).find(
+      isActiveRun,
+    )?.preference;
+    const preference = threadModel(
+      current.current?.snapshot.id === note.snapshotId
+        ? current.current.notes
+        : [],
+      note.anchor,
+      activeModel ?? data?.modelPreference ?? defaultModelPreference,
+    );
+    const answer = await ai.start(
+      {
+        kind: "question",
+        snapshotId: note.snapshotId,
+        question: note,
+        preference,
+        access,
+      },
+      (id) => api.ask(note.snapshotId, note.id, id, preference, access),
+    );
+    if (answer) {
+      onNote(answer.answer);
+      if (answer.draft) onNote(answer.draft);
     }
   };
-  const visible = pulls.filter(
-    (p) =>
-      (!project || p.repository === project) &&
-      `${p.title} ${p.number} ${p.author}`
-        .toLowerCase()
-        .includes(query.toLowerCase()),
+  const explainText = async (anchor: Anchor, question?: string) => {
+    if (
+      !workspace ||
+      !anchor.textSelection ||
+      isThreadBusy(anchor) ||
+      startingTextQuestion.current
+    )
+      return;
+    startingTextQuestion.current = true;
+    const snapshotId = workspace.snapshot.id;
+    try {
+      await flush();
+      if (current.current?.snapshot.id !== snapshotId) return;
+      const note = await api.note(
+        newNote(
+          snapshotId,
+          anchor,
+          question?.trim() ||
+            t(
+              "Help me understand this selected code. What does it do, and how does it fit into the surrounding code?",
+            ),
+        ),
+      );
+      onNote(note);
+      if (current.current?.snapshot.id !== snapshotId) return;
+      await chat.start(snapshotId, anchor);
+      await inline.start(snapshotId, anchor);
+      if (current.current?.snapshot.id !== snapshotId) return;
+      setSelection(anchor);
+      void ask(note).catch(onError);
+    } finally {
+      startingTextQuestion.current = false;
+    }
+  };
+  const login = data?.github.identity || "you";
+  const samples = repo === SAMPLE_REPO;
+  const visible = visiblePulls(
+    samples
+      ? samplePulls
+      : [
+          ...(data?.pins.pulls.filter((p) => !isSampleRepo(p.repository)) ??
+            []),
+          ...(inboxView === "open" ? pulls : history.pulls),
+        ],
+    {
+      login,
+      repository: repo,
+      owner,
+      query,
+      history: inboxView === "history",
+      completedDays: data?.settings.completedDays ?? 2,
+      pinned,
+    },
   );
-  const groups = [
-    "My pull requests",
-    "Review requested",
-    "Assigned to me",
-    "Other pull requests",
-  ];
+  const exploreInbox = async () => {
+    try {
+      setSamplePulls(await api.sampleInbox());
+      setScope({ owner: null, repository: SAMPLE_REPO });
+      setInboxView("open");
+      setQuery("");
+      setInboxOpen(true);
+    } catch (e) {
+      onError(e);
+    }
+  };
+  const simulateReview = (p: PullRequest) => {
+    const next = requestedFrom(p, login)
+      ? {
+          ...p,
+          requested: [],
+          viewerReview: {
+            state: "COMMENTED",
+            submittedAt: new Date().toISOString(),
+          },
+        }
+      : { ...p, requested: [login] };
+    setSamplePulls((current) =>
+      current.map((item) => (item.number === p.number ? next : item)),
+    );
+    setWorkspace((current) =>
+      current?.snapshot.pull.repository === SAMPLE_REPO &&
+      current.snapshot.pull.number === p.number
+        ? { ...current, snapshot: { ...current.snapshot, pull: next } }
+        : current,
+    );
+  };
   const pull = workspace?.snapshot.pull;
   return (
     <div className={`app ${inboxVisible ? "" : "inbox-hidden"}`}>
@@ -419,182 +898,207 @@ export default function App() {
         href="#review-workspace"
         onClick={() => setInboxOpen(false)}
       >
-        Skip to review
+        {t("Skip to review")}{" "}
       </a>
-      <aside className="project-rail" aria-label="Projects and connections">
-        <div className="traffic-spacer" data-tauri-drag-region />
-        <div className="brand">
-          <div className="brand-mark">
-            <i />
-            <i />
-            <i />
-          </div>
-          <strong>diffcity</strong>
-          <span>alpha</span>
-        </div>
-        <div className="workspace-label">YOUR WORKSPACE</div>
-        <Button
-          className={`rail-item ${!project ? "active" : ""}`}
-          aria-pressed={!project}
-          onPress={() => {
-            setProject(null);
-            setInboxOpen(true);
-          }}
-        >
-          <Inbox size={17} />
-          <span>All pull requests</span>
-          <small>{pulls.length}</small>
-        </Button>
-        <div className="rail-heading">
-          PROJECTS
-          <Button
-            className="icon-button"
-            aria-label="Add projects"
-            onPress={() => setDialog("projects")}
-          >
-            <Plus size={15} />
-          </Button>
-        </div>
-        <nav aria-label="Projects">
-          {data?.settings.repositories.map((repo) => (
-            <Button
-              className={`rail-item ${project === repo ? "active" : ""}`}
-              aria-pressed={project === repo}
-              aria-label={repo}
-              key={repo}
-              onPress={() => {
-                setProject(repo);
-                setInboxOpen(true);
-              }}
-            >
-              <FolderGit2 size={16} />
-              <span>{repo.split("/")[1]}</span>
-              <small>{pulls.filter((p) => p.repository === repo).length}</small>
-            </Button>
-          ))}
-        </nav>
-        <Button
-          className="rail-item add-project"
-          onPress={() => setDialog("projects")}
-        >
-          <Plus size={15} />
-          <span>Add project</span>
-        </Button>
-        <div className="rail-bottom">
-          <Button className="rail-item" onPress={() => void sample()}>
-            <BookOpen size={16} />
-            <span>Explore a sample</span>
-          </Button>
-          <Button
-            className="rail-item"
-            onPress={() => setDialog("connections")}
-          >
-            <Settings2 size={16} />
-            <span>Connections</span>
-          </Button>
-          <div className="connection-summary">
-            <span
-              className={`status-dot ${data?.github.connected ? "online" : ""}`}
-            />
-            <span>{data?.github.identity || "GitHub disconnected"}</span>
-            <Github size={13} />
-          </div>
-          <div className="connection-summary">
-            <span
-              className={`status-dot ${data?.codex.connected ? "online" : ""}`}
-            />
-            <span>
-              {data?.codex.connected ? "Codex connected" : "Codex disconnected"}
-            </span>
-            <Sparkles size={13} />
-          </div>
-        </div>
-      </aside>
+      <div className="sr-only" role="status">
+        {pinNotice}
+      </div>
+      <AccountNavigation
+        owners={owners}
+        hideOtherAccounts={hideOtherAccounts}
+        activity={activity}
+        owner={owner}
+        samples={samples}
+        data={data}
+        onOwner={(owner) => {
+          setScope({ owner, repository: null });
+          setInboxOpen(true);
+        }}
+        onRefresh={() => void refreshWorkspace()}
+        onSamples={() => void exploreInbox()}
+        onExample={() => void sample()}
+        onConnections={() => setDialog("connections")}
+        onLocalCode={() => setDialog("local-code")}
+        onModel={() => setDialog("model")}
+        modelOpen={dialog === "model"}
+        modelTriggerRef={modelTriggerRef}
+      />
       {inboxVisible && (
-        <aside className="inbox-pane" aria-label="Pull request inbox">
+        <aside className="inbox-pane" aria-label={t("Pull request inbox")}>
           <header data-tauri-drag-region>
-            <span>{project?.split("/")[1] || "Pull requests"}</span>
+            <span className="inbox-account" title={owner || undefined}>
+              {samples ? t("Sample inbox") : owner || t("All accounts")}
+            </span>
             <Button
               className="icon-button close-inbox"
-              aria-label="Close pull request list"
+              aria-label={t("Close pull request list")}
               onPress={() => setInboxOpen(false)}
             >
               <X size={16} />
             </Button>
             <Button
               className="icon-button"
-              aria-label="Refresh inbox"
-              isDisabled={loading || !data?.github.connected}
-              onPress={() => void refresh().catch(onError)}
+              aria-label={t("Display settings")}
+              isDisabled={!data}
+              onPress={() => setDialog("display")}
+            >
+              <Settings2 size={15} />
+            </Button>
+            <Button
+              className="icon-button"
+              aria-label={t("Refresh inbox")}
+              isDisabled={
+                loading || syncing || (!samples && !data?.github.connected)
+              }
+              onPress={() =>
+                samples
+                  ? void exploreInbox()
+                  : inboxView === "history"
+                    ? void history.load()
+                    : void refresh().catch(onError)
+              }
             >
               <RefreshCw size={15} />
             </Button>
           </header>
+          {!samples && (
+            <RepoFilter
+              repositories={scopedRepositories}
+              owner={owner}
+              repository={repo}
+              pinned={data?.pins.repositories ?? []}
+              saving={pinSaving}
+              onPin={toggleRepoPin}
+              onChange={(repository) => setScope({ owner, repository })}
+            />
+          )}
           <div className="search-box inbox-search">
             <Search size={14} />
             <input
-              aria-label="Search pull requests"
-              placeholder="Search pull requests"
+              id="pull-search"
+              aria-label={t("Search pull requests")}
+              placeholder={t("Search pull requests")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+          {!samples && data?.directory.syncError && (
+            <div className="history-status" role="alert">
+              {data.directory.syncError}
+              <Button
+                className="text-button"
+                onPress={() => void refreshWorkspace()}
+              >
+                {t("Retry")}
+              </Button>
+            </div>
+          )}
+          {!samples && syncError && (
+            <div className="history-status" role="alert">
+              {syncError}
+            </div>
+          )}
+          <div
+            className="inbox-scope"
+            role="group"
+            aria-label={t("Pull request scope")}
+          >
+            <Button
+              className="scope-button"
+              aria-pressed={inboxView === "open"}
+              onPress={() => setInboxView("open")}
+            >
+              {t("Inbox")}
+            </Button>
+            <Button
+              className="scope-button"
+              aria-pressed={inboxView === "history"}
+              onPress={() => setInboxView("history")}
+            >
+              {t("History")}
+            </Button>
+          </div>
+          {samples && (
+            <div className="sample-inbox-banner" role="status">
+              {t("Local samples · fictional authors and review states")}
+            </div>
+          )}
+          {inboxView === "history" && (
+            <div className="history-status" role="status">
+              {t("Closed and merged pull requests")}
+              {history.loading && ` · ${t("Loading…")}`}
+            </div>
+          )}
+          {!samples && inboxView === "history" && history.error && (
+            <div className="history-status" role="alert">
+              {history.error}
+              <Button
+                className="text-button"
+                onPress={() => void history.load()}
+                isDisabled={history.loading}
+              >
+                {t("Retry")}
+              </Button>
+            </div>
+          )}
           <div className="pull-list">
-            {groups.map((group) => {
-              const items = visible.filter(
-                (p) => bucket(p, data?.github.identity || "") === group,
-              );
-              return items.length ? (
-                <section key={group}>
-                  <h2>
-                    {group}
-                    <span>{items.length}</span>
-                  </h2>
-                  {items.map((p) => (
-                    <Button
-                      className={`pull-card ${pull && key(p) === key(pull) ? "active" : ""}`}
-                      key={key(p)}
-                      onPress={() => void open(p.repository, p.number, false)}
-                    >
-                      <div>
-                        <GitPullRequest size={15} />
-                        <span>#{p.number}</span>
-                        {p.draft && <small>Draft</small>}
-                      </div>
-                      <strong>{p.title}</strong>
-                      <footer>
-                        {p.repository.split("/")[1]}
-                        <span>·</span>
-                        {p.author}
-                      </footer>
-                    </Button>
-                  ))}
-                </section>
-              ) : null;
-            })}
+            <PullList
+              pulls={visible}
+              guides={{
+                ...guideInventory,
+                fallback: data?.modelPreference ?? defaultModelPreference,
+                runs: ai.runs,
+                starting: guideStarting,
+                errors: guideErrors,
+                generate: (p, provider) => void generateInboxGuide(p, provider),
+                retry: () => void guideInventory.refresh(),
+              }}
+              pinned={pinned}
+              saving={pinSaving}
+              onPin={togglePullPin}
+              selected={pull}
+              login={login}
+              history={inboxView === "history"}
+              onOpen={(p) => void open(p.repository, p.number, false)}
+            />
             {!visible.length && (
               <div className="inbox-empty">
                 <GitPullRequest size={25} />
                 <p>
                   {status ||
+                    (syncing || directoryLoading
+                      ? t("Loading your GitHub workspace…")
+                      : "") ||
                     (query
-                      ? "No matching pull requests"
-                      : "No open pull requests in these projects.")}
+                      ? t("No matching pull requests")
+                      : inboxView === "history"
+                        ? t("No closed or merged pull requests loaded.")
+                        : t("No pull requests in this inbox."))}
                 </p>
                 <Button
                   className="text-button"
-                  onPress={() => setDialog("projects")}
+                  onPress={() => void refreshWorkspace()}
                 >
-                  Choose projects <ArrowRight size={13} />
+                  {t("Refresh GitHub")} <ArrowRight size={13} />
                 </Button>
               </div>
             )}
           </div>
+          {!samples && inboxView === "history" && history.nextPage && (
+            <Button
+              className="secondary history-more"
+              isDisabled={history.loading}
+              onPress={() => void history.load(history.nextPage!)}
+            >
+              {t("Load older pull requests")}
+            </Button>
+          )}
           <Button
             className="open-pr-button"
             onPress={() => setShowLink(!showLink)}
           >
-            <Plus size={14} /> Open a PR by URL
+            <Plus size={14} />
+            {t("Open a PR by URL")}{" "}
           </Button>
           {showLink && (
             <form
@@ -609,20 +1113,33 @@ export default function App() {
               }}
             >
               <input
-                aria-label="GitHub pull request URL"
+                aria-label={t("GitHub pull request URL")}
                 autoFocus
                 placeholder="https://github.com/…/pull/…"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
               />
               <Button className="primary" type="submit">
-                Open
+                {t("Open")}{" "}
               </Button>
             </form>
           )}
-          <div className="sync-label">
+          <div className="sync-label" role="status">
             <span className="status-dot online" />
-            {lastSync ? `Synced ${lastSync}` : "Local workspace"}
+            {directoryLoading
+              ? t("Discovering your repos…")
+              : syncing
+                ? syncProgress
+                  ? t("Syncing repos {{completed}} / {{total}}", syncProgress)
+                  : t("Loading pull requests…")
+                : syncError
+                  ? t("Some results may be out of date")
+                  : lastSync
+                    ? t("Synced {{time}} · {{count}} repos", {
+                        time: lastSync,
+                        count: repositories.length,
+                      })
+                    : t("Local workspace")}
           </div>
         </aside>
       )}
@@ -630,25 +1147,69 @@ export default function App() {
         <header className="workspace-topbar" data-tauri-drag-region>
           <Button
             className="icon-button"
-            aria-label="Toggle pull request list"
+            aria-label={t("Toggle pull request list")}
             aria-expanded={inboxVisible}
             onPress={() => setInboxOpen(!inboxVisible)}
           >
             <PanelLeftClose size={17} />
           </Button>
-          <div className="breadcrumb">
+          <div
+            className="breadcrumb"
+            title={
+              pull
+                ? `${pull.repository} #${pull.number} · ${pull.title}`
+                : undefined
+            }
+          >
             {pull ? (
               <>
                 <span>{pull.repository}</span>
                 <ChevronRight size={13} />
                 <strong>#{pull.number}</strong>
-                {pull.draft && <span className="badge">Draft</span>}
+                <span className="compact-pr-title">{pull.title}</span>
+                {pull.state !== "open" ? (
+                  <span className="badge">
+                    {pull.state === "merged" ? t("Merged") : t("Closed")}
+                  </span>
+                ) : (
+                  pull.draft && <span className="badge">{t("Draft")}</span>
+                )}
               </>
             ) : (
-              <span>Your review workspace</span>
+              <span>{t("Your review workspace")} </span>
             )}
           </div>
-          <div className="spacer" />
+          {!loading &&
+            reviewSyncing &&
+            data?.github.connected &&
+            pull &&
+            !isSampleRepo(pull.repository) && (
+              <span
+                className="review-sync-status"
+                role="status"
+                title={t("Updating review in the background…")}
+              >
+                <LoaderCircle size={14} className="spin" aria-hidden />
+                <span className="sr-only">
+                  {t("Updating review in the background…")}
+                </span>
+              </span>
+            )}
+          {workspace && (
+            <TooltipTrigger delay={300}>
+              <Button
+                className="icon-button new-guide-button"
+                aria-label={t("New guide")}
+                isDisabled={loading || guideChanging || !data}
+                onPress={() => setDialog("new-guide")}
+              >
+                <Sparkles size={17} aria-hidden />
+              </Button>
+              <Tooltip className="rail-tooltip" placement="bottom">
+                {t("New guide")}
+              </Tooltip>
+            </TooltipTrigger>
+          )}
           <ThemeSwitcher
             value={data?.settings.theme || "system"}
             disabled={!data}
@@ -666,15 +1227,30 @@ export default function App() {
           />
           {pull && (
             <>
-              <Button
-                className="icon-button"
-                aria-label="Open in GitHub"
-                onPress={() => void api.external(pull.url)}
-              >
-                <ExternalLink size={16} />
-              </Button>
+              <PinToggle
+                id="workspace-pin"
+                label={t(
+                  pinned.has(pinKey(pull))
+                    ? "Unpin pull request {{name}}"
+                    : "Pin pull request {{name}}",
+                  { name: `${pull.repository}#${pull.number}` },
+                )}
+                pinned={pinned.has(pinKey(pull))}
+                disabled={pinSaving}
+                onPress={() => togglePullPin(pull, "workspace-pin")}
+              />
+              {!isSampleRepo(pull.repository) && (
+                <Button
+                  className="icon-button"
+                  aria-label={t("Open in GitHub")}
+                  onPress={() => void api.external(pull.url)}
+                >
+                  <ExternalLink size={16} />
+                </Button>
+              )}
               <Button
                 className="secondary finish-button"
+                aria-label={t("Finish review")}
                 onPress={async () => {
                   try {
                     await flush();
@@ -684,7 +1260,8 @@ export default function App() {
                   }
                 }}
               >
-                <Check size={14} /> Finish review
+                <Check size={14} />
+                <span>{t("Finish review")}</span>
               </Button>
             </>
           )}
@@ -694,7 +1271,7 @@ export default function App() {
             <span>{error}</span>
             <Button
               className="icon-button"
-              aria-label="Dismiss error"
+              aria-label={t("Dismiss error")}
               onPress={() => setError("")}
             >
               <X size={14} />
@@ -704,7 +1281,7 @@ export default function App() {
         {loading && (
           <div className="loading-banner" role="status">
             <LoaderCircle size={15} className="spin" />
-            Loading review…
+            {t("Loading review…")}{" "}
           </div>
         )}
         {workspace && pull ? (
@@ -713,38 +1290,20 @@ export default function App() {
             selectedKey={mode}
             onSelectionChange={(key) => setMode(key as typeof mode)}
           >
-            <div className="pr-heading">
-              <div>
-                <div className="eyebrow">
-                  <GitPullRequest size={13} />
-                  {pull.author} <span>·</span> {workspace.checks}
-                </div>
-                <h1>{pull.title}</h1>
-                <div className="pr-meta">
-                  <span>{workspace.snapshot.files.length} files</span>
-                  <span className="added">+{pull.additions}</span>
-                  <span className="removed">−{pull.deletions}</span>
-                  <span className="mono">{pull.head.slice(0, 8)}</span>
-                  {workspace.guide.source === "sample" && (
-                    <span className="badge">Sample</span>
-                  )}
-                </div>
-              </div>
-              <Button
-                className="primary analyze-button"
-                isDisabled={loading || !!run || !data?.codex.connected}
-                onPress={() => void analyze()}
-              >
-                <Sparkles size={15} />
-                {workspace.guide.source === "codex"
-                  ? "Review again"
-                  : "Review with Codex"}
-              </Button>
-            </div>
             <div className="workspace-tabs">
-              <TabList aria-label="Review views">
+              <TabList aria-label={t("Review views")}>
                 {(["guide", "files", "overview"] as const).map((tab) => (
-                  <Tab id={tab} key={tab}>
+                  <Tab
+                    id={tab}
+                    key={tab}
+                    aria-label={t(
+                      tab === "guide"
+                        ? "Guide"
+                        : tab === "files"
+                          ? "Files"
+                          : "Overview",
+                    )}
+                  >
                     {tab === "guide" ? (
                       <BookOpen size={14} />
                     ) : tab === "files" ? (
@@ -752,146 +1311,345 @@ export default function App() {
                     ) : (
                       <CircleDot size={14} />
                     )}{" "}
-                    {tab === "guide"
-                      ? "Guide"
-                      : tab === "files"
-                        ? "Files"
-                        : "Overview"}
+                    <span>
+                      {tab === "guide"
+                        ? t("Guide")
+                        : tab === "files"
+                          ? t("Files")
+                          : t("Overview")}
+                    </span>
                   </Tab>
                 ))}
               </TabList>
-              <Button
-                className="text-button"
-                onPress={async () => {
-                  try {
-                    if (discussion) {
-                      await chat.flush();
-                      setDiscussion(false);
-                    } else if (chat.draft?.snapshotId === workspace.snapshot.id)
-                      setDiscussion(true);
-                    else await openChat(null);
-                  } catch (e) {
-                    onError(e);
-                  }
-                }}
-              >
-                <MessageSquare size={14} /> PR chat{" "}
-                <span>{workspace.notes.length}</span>
-              </Button>
-            </div>
-            {run && (
-              <div className="run-banner">
-                <LoaderCircle size={14} className="spin" />
-                <span>{runText}</span>
-                <Button
-                  className="text-button"
-                  onPress={() => void api.cancel()}
+              <div id="review-guide-navigation" />
+              <div className="review-toolbar-spacer" />
+              {mode === "guide" && (
+                <ReviewPopover
+                  label={t("Saved guides")}
+                  detail={workspace.guide.model || t("Initial walkthrough")}
+                  icon={<Library size={16} aria-hidden />}
+                  attention={!!pendingGuide}
                 >
-                  Cancel
-                </Button>
-              </div>
-            )}
-            {pendingGuide?.snapshotId === workspace.snapshot.id && (
-              <div className="update-banner">
-                <Sparkles size={15} />
-                <span>Your guided review is ready.</span>
+                  <GuideSwitcher
+                    key={workspace.snapshot.id}
+                    guide={workspace.guide}
+                    pendingId={pendingGuide?.id}
+                    disabled={loading || guideChanging}
+                    onSelect={selectGuide}
+                  />
+                </ReviewPopover>
+              )}
+              <RepositoryContextButton
+                key={pull.repository}
+                repository={pull.repository}
+                head={pull.head}
+                version={localCodeVersion}
+                onOpen={() => setDialog("local-code")}
+              />
+              <TooltipTrigger delay={300}>
                 <Button
-                  onPress={() => {
-                    const currentSection =
-                      workspace.guide.sections.find(
-                        (s) => s.id === workspace.progress.activeSection,
-                      ) || workspace.guide.sections[0];
-                    const nextSection =
-                      pendingGuide.sections.find((s) =>
-                        s.hunkIds.some((id) =>
-                          currentSection?.hunkIds.includes(id),
-                        ),
-                      ) || pendingGuide.sections[0];
-                    setWorkspace({
-                      ...workspace,
-                      guide: pendingGuide,
-                      progress: {
-                        ...workspace.progress,
-                        activeSection: nextSection?.id ?? null,
-                      },
-                    });
-                    setPendingGuide(null);
+                  ref={chatToggle}
+                  className="icon-button review-chat-toggle"
+                  aria-label={t("PR chat")}
+                  aria-expanded={discussion}
+                  aria-controls={discussion ? "pr-chat" : undefined}
+                  onPress={async () => {
+                    try {
+                      if (discussion) {
+                        await chat.flush();
+                        setDiscussion(false);
+                      } else if (
+                        chat.draft?.snapshotId === workspace.snapshot.id
+                      )
+                        setDiscussion(true);
+                      else await openChat(null);
+                    } catch (e) {
+                      onError(e);
+                    }
                   }}
                 >
-                  Open updated guide <ArrowRight size={13} />
+                  <MessageSquare size={14} />
+                  <span className="review-chat-label">{t("PR chat")}</span>
+                  {workspace.notes.length > 0 && (
+                    <span className="review-chat-count">
+                      {workspace.notes.length}
+                    </span>
+                  )}
                 </Button>
-              </div>
-            )}
-            {newRevision && (
-              <div className="update-banner">
-                <GitPullRequest size={15} />
-                <span>
-                  New code is available. Your current review is preserved.
-                </span>
-                <Button onPress={() => void open(pull.repository, pull.number)}>
-                  Load new revision <ArrowRight size={13} />
-                </Button>
-              </div>
-            )}
-            {workspace.previousSnapshotId && (
-              <div className="update-banner">
-                <span>
-                  Earlier notes and progress remain saved with their original
-                  code.
-                </span>
-                <Button
-                  onPress={() => void saved(workspace.previousSnapshotId!)}
-                >
-                  Open previous revision
-                </Button>
-              </div>
-            )}
-            {workspace.syncError && (
-              <div className="sync-warning">
-                Showing saved content · {workspace.syncError}
-              </div>
-            )}
-            {workspace.changedHunks.length > 0 && (
-              <div className="update-banner">
-                {workspace.changedHunks.length} hunks changed since your
-                previous revision. Unchanged reviewed code was preserved.
-              </div>
-            )}
+                <Tooltip className="rail-tooltip" placement="bottom">
+                  {t("PR chat")}
+                </Tooltip>
+              </TooltipTrigger>
+              <ReviewActivity
+                guide={workspace.guide}
+                runs={ai.runs}
+                pending={!!pendingGuide}
+                newRevision={!!newRevision}
+                syncError={workspace.syncError}
+              >
+                {(closeActivity) => (
+                  <>
+                    {ai.runs
+                      .filter((run) => run.prompt && isActiveRun(run))
+                      .map((run) => (
+                        <div
+                          className="run-banner"
+                          key={`approval-${run.id}`}
+                          role="status"
+                        >
+                          <span>
+                            {t("Agent needs your response")} ·{" "}
+                            {run.prompt!.title}
+                          </span>
+                          <Button
+                            className="secondary"
+                            onPress={async () => {
+                              closeActivity();
+                              try {
+                                const review =
+                                  workspace.snapshot.id === run.snapshotId
+                                    ? workspace
+                                    : await saved(run.snapshotId);
+                                if (!review) return;
+                                await chat.start(
+                                  run.snapshotId,
+                                  run.question?.anchor ?? null,
+                                );
+                                setDiscussion(true);
+                              } catch (e) {
+                                onError(e);
+                              }
+                            }}
+                          >
+                            {t("View request")}
+                          </Button>
+                        </div>
+                      ))}
+                    <GuideEnrichment
+                      guide={workspace.guide}
+                      runs={ai.runs}
+                      onStart={(tier) =>
+                        void enrich(workspace.guide, tier).catch(onError)
+                      }
+                      onCancel={(id) => void ai.cancel(id)}
+                      onDismissRun={ai.dismiss}
+                      onDismiss={(dismissed) =>
+                        void dismissEnrichment(
+                          workspace.guide,
+                          dismissed,
+                        ).catch(onError)
+                      }
+                    />
+                    {ai.runs
+                      .filter(
+                        (run) =>
+                          run.snapshotId === workspace.snapshot.id &&
+                          (run.kind === "guide" ||
+                            (run.kind === "enrichment" &&
+                              run.guideId !== workspace.guide.id)),
+                      )
+                      .map((run) => (
+                        <div className="run-banner" key={run.id} role="status">
+                          {isActiveRun(run) && (
+                            <LoaderCircle size={14} className="spin" />
+                          )}
+                          <span>
+                            {run.preference.model} · {t(run.text)}
+                          </span>
+                          <Button
+                            className="text-button"
+                            isDisabled={run.phase === "cancelling"}
+                            onPress={() =>
+                              isActiveRun(run)
+                                ? void ai.cancel(run.id)
+                                : ai.dismiss(run.id)
+                            }
+                          >
+                            {t(isActiveRun(run) ? "Cancel" : "Dismiss")}
+                          </Button>
+                        </div>
+                      ))}
+                    {pendingGuides
+                      .filter((g) => g.snapshotId === workspace.snapshot.id)
+                      .map((guide) => (
+                        <div className="update-banner" key={guide.id}>
+                          <Sparkles size={15} />
+                          <span>
+                            {guide.model} · {t("Your guided review is ready.")}
+                          </span>
+                          <Button
+                            isDisabled={guideChanging}
+                            onPress={() => {
+                              closeActivity();
+                              if (guide.id)
+                                void selectGuide(guide.id)
+                                  .then(() =>
+                                    setPendingGuides((guides) =>
+                                      guides.filter((g) => g.id !== guide.id),
+                                    ),
+                                  )
+                                  .catch(onError);
+                            }}
+                          >
+                            {t("Open updated guide")} <ArrowRight size={13} />
+                          </Button>
+                        </div>
+                      ))}
+                    {newRevision && (
+                      <div className="update-banner">
+                        <GitPullRequest size={15} />
+                        <span>
+                          {t(
+                            "New code is available. Your current review is preserved.",
+                          )}{" "}
+                        </span>
+                        <Button
+                          onPress={() => {
+                            closeActivity();
+                            void open(pull.repository, pull.number, true);
+                          }}
+                        >
+                          {t("Load new revision")} <ArrowRight size={13} />
+                        </Button>
+                      </div>
+                    )}
+                    {workspace.syncError && (
+                      <div className="sync-warning">
+                        {t("Showing saved content ·")} {workspace.syncError}
+                      </div>
+                    )}
+                  </>
+                )}
+              </ReviewActivity>
+            </div>
             <ConversationContext.Provider
               value={{
                 workspace,
+                access: agentAccess.access,
+                setAccess: agentAccess.change,
+                respondAgent: api.respondAgent,
                 inline,
                 chat,
-                busy: !!run,
-                activeQuestion,
-                stream,
+                runs: ai.runs.filter(
+                  (r) => r.snapshotId === workspace.snapshot.id,
+                ),
+                isBusy: isThreadBusy,
+                modelFor: (anchor) =>
+                  threadModel(
+                    workspace.notes,
+                    anchor,
+                    data?.modelPreference ?? defaultModelPreference,
+                  ),
+                cancel: ai.cancel,
+                dismiss: ai.dismiss,
                 ask,
+                explainText,
                 prepare,
                 edit,
                 openInline: (a) => void select(a, true, true),
-                openChat: (a) => void openChat(a),
+                openChat: (a, focus) => void openChat(a, focus),
                 onError,
               }}
             >
-              <div className="review-body">
-                <TabPanel id={mode} className="review-panel">
-                  <GuideView
-                    key={workspace.snapshot.id}
-                    workspace={workspace}
-                    selection={selection}
-                    onSelect={(a) => void select(a)}
-                    onDiscuss={(a) => void select(a, true)}
-                    onProgress={progress}
-                    onFinish={() => void finish()}
-                    mode={mode}
-                  />
-                </TabPanel>
+              <div className="review-body" data-chat-open={discussion}>
+                <div className="review-document">
+                  <div className="review-canvas">
+                    <div id="review-guide-index" />
+                    <div
+                      ref={reviewScroll}
+                      className="review-scroll"
+                      data-review-scroll
+                    >
+                      <TabPanel key={mode} id={mode} className="review-panel">
+                        <ReviewHeader workspace={workspace} />
+                        {pull?.repository === SAMPLE_REPO && (
+                          <div className="sample-workspace-banner">
+                            <span>
+                              {t(
+                                "Local sample · shared invitation code, fictional PR metadata",
+                              )}
+                            </span>
+                            {pull.state === "open" &&
+                              !sameLogin(pull.author, login) &&
+                              !pull.draft && (
+                                <Button
+                                  className="secondary"
+                                  onPress={() => simulateReview(pull)}
+                                >
+                                  {t(
+                                    requestedFrom(pull, login)
+                                      ? "Simulate submitted review"
+                                      : "Simulate review request",
+                                  )}
+                                </Button>
+                              )}
+                          </div>
+                        )}
+
+                        {pull?.state !== "open" && (
+                          <div className="history-status">
+                            {t(
+                              "Historical review: code, private comments, and AI chat are available. GitHub publication requires an open PR.",
+                            )}
+                          </div>
+                        )}
+                        <ReviewScope
+                          key={`${workspace.snapshot.id}/${mode}`}
+                          workspace={workspace}
+                          refreshKey={checkpointVersion}
+                          onFinish={() => void finish()}
+                          onDiscuss={(a) => void select(a, true, true)}
+                        >
+                          {workspace.previousSnapshotId && (
+                            <div className="update-banner">
+                              <span>
+                                {t(
+                                  "Earlier notes and progress remain saved with their original code.",
+                                )}{" "}
+                              </span>
+                              <Button
+                                onPress={() =>
+                                  void saved(workspace.previousSnapshotId!)
+                                }
+                              >
+                                {t("Open previous revision")}{" "}
+                              </Button>
+                            </div>
+                          )}
+                          {workspace.changedHunks.length > 0 && (
+                            <div className="update-banner">
+                              {workspace.changedHunks.length}
+                              {t(
+                                "hunks changed since your previous revision. Unchanged reviewed code was preserved.",
+                              )}{" "}
+                            </div>
+                          )}
+
+                          <GuideView
+                            key={workspace.snapshot.id}
+                            workspace={workspace}
+                            selection={selection}
+                            onSelect={(a) => void select(a)}
+                            onDiscuss={(a) => void select(a, true)}
+                            onProgress={progress}
+                            onFinish={() => void finish()}
+                            mode={mode}
+                          />
+                        </ReviewScope>
+                      </TabPanel>
+                    </div>
+                    <div id="review-minimap-host" />
+                  </div>
+                </div>
                 {discussion && (
                   <Discussion
                     onClose={() => {
                       void chat
                         .flush()
-                        .then(() => setDiscussion(false))
+                        .then(() => {
+                          setDiscussion(false);
+                          chatToggle.current?.focus();
+                        })
                         .catch(onError);
                     }}
                   />
@@ -911,22 +1669,27 @@ export default function App() {
               </div>
               <div className="city-ground" />
             </div>
-            <div className="eyebrow">LESS SCROLLING. MORE UNDERSTANDING.</div>
+            <div className="eyebrow">
+              {t("LESS SCROLLING. MORE UNDERSTANDING.")}{" "}
+            </div>
             <h1>
-              Find the story
-              <br />
-              inside the diff.
+              {t("Find the story")} <br />
+              {t("inside the diff.")}{" "}
             </h1>
             <p>
-              Review the changes that matter first.
-              <br />A guided path from pull request to confident feedback.
+              {t("Review the changes that matter first.")} <br />
+              {t("A guided path from pull request to confident feedback.")}{" "}
             </p>
             <div className="welcome-actions">
-              <Button className="primary" onPress={() => setDialog("projects")}>
-                <FolderGit2 size={16} /> Choose your projects
+              <Button
+                className="primary"
+                onPress={() => void refreshWorkspace()}
+              >
+                <FolderGit2 size={16} />
+                {t("Refresh GitHub")}{" "}
               </Button>
               <Button className="secondary" onPress={() => void sample()}>
-                Try a guided review <ArrowRight size={16} />
+                {t("Try a guided review")} <ArrowRight size={16} />
               </Button>
             </div>
             {status && (
@@ -937,18 +1700,72 @@ export default function App() {
             )}
             <div className="welcome-details">
               <span>
-                <ShieldIcon /> Consequential code first
+                <ShieldIcon />
+                {t("Consequential code first")}{" "}
               </span>
               <span>
-                <MessageSquare size={14} /> Think alongside Codex
+                <MessageSquare size={14} />
+                {t("Think alongside your AI agent")}{" "}
               </span>
               <span>
-                <Github size={14} /> Stay in sync with GitHub
+                <Github size={14} />
+                {t("Stay in sync with GitHub")}{" "}
               </span>
             </div>
           </div>
         )}
       </main>
+      {dialog === "display" && data && (
+        <DisplaySettings
+          days={data.settings.completedDays ?? 2}
+          hideOtherAccounts={hideOtherAccounts}
+          onHideOtherAccounts={(hidden) => {
+            localStorage.setItem("diffcity.hideOtherAccounts", String(hidden));
+            setHideOtherAccounts(hidden);
+          }}
+          onClose={() => setDialog(null)}
+          onSave={async (completedDays) => {
+            const settings = await api.settings({
+              ...data.settings,
+              completedDays,
+            });
+            setData((current) =>
+              current ? { ...current, settings } : current,
+            );
+            if (data.github.connected) await refresh();
+          }}
+        />
+      )}
+      {(dialog === "model" || (dialog === "new-guide" && workspace)) &&
+        data && (
+          <ModelSettings
+            preference={data.modelPreference ?? defaultModelPreference}
+            purpose={dialog === "new-guide" ? "guide" : "default"}
+            triggerRef={dialog === "model" ? modelTriggerRef : undefined}
+            models={data.models}
+            connection={data.codex}
+            onClose={() => setDialog(null)}
+            onRefresh={refreshModels}
+            onSave={async (preference) => {
+              if (dialog === "new-guide") {
+                void analyze(preference).catch(onError);
+                return;
+              }
+              const modelPreference = await api.modelPreference(preference);
+              setData((current) =>
+                current ? { ...current, modelPreference } : current,
+              );
+            }}
+          />
+        )}
+      {dialog === "local-code" && (
+        <LocalCode
+          repository={workspace?.snapshot.pull.repository}
+          head={workspace?.snapshot.pull.head}
+          onClose={() => setDialog(null)}
+          onChange={() => setLocalCodeVersion((v) => v + 1)}
+        />
+      )}
       {dialog === "connections" && data && (
         <Connections
           data={data}
@@ -959,30 +1776,22 @@ export default function App() {
           }}
         />
       )}
-      {dialog === "projects" && data && (
-        <Projects
-          selected={data.settings.repositories}
-          onClose={() => setDialog(null)}
-          onChange={async (repositories) => {
-            const settings = await api.settings({
-              ...data.settings,
-              repositories,
-            });
-            setData({ ...data, settings });
-            await refresh();
-          }}
-        />
-      )}
       {dialog === "finish" && workspace && (
         <Finish
           workspace={workspace}
           login={data?.github.identity || ""}
           onClose={() => setDialog(null)}
+          onCheckpoint={() => {
+            setCheckpointVersion((version) => version + 1);
+            setDialog(null);
+          }}
           onPublished={async () => {
+            setCheckpointVersion((version) => version + 1);
+            await refresh();
             const w = await api.open(
               workspace.snapshot.pull.repository,
               workspace.snapshot.pull.number,
-              false,
+              true,
             );
             setWorkspace((current) =>
               current?.snapshot.id === w.snapshot.id

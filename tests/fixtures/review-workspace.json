@@ -19,7 +19,12 @@
       "assigned": [],
       "additions": 26,
       "deletions": 0,
-      "changedFiles": 7
+      "changedFiles": 7,
+      "closedAt": null,
+      "mergedAt": null,
+      "viewerReview": null,
+      "reviewDecision": null,
+      "reviewMetadataAvailable": false
     },
     "capturedAt": "2026-10-20T12:00:00Z",
     "files": [
@@ -286,13 +291,13 @@
                 "kind": "addition",
                 "old": null,
                 "new": 2,
-                "text": "  \"invite.title\": \"Inviter un coll\u00e8gue\","
+                "text": "  \"invite.title\": \"Inviter un collègue\","
               },
               {
                 "kind": "addition",
                 "old": null,
                 "new": 3,
-                "text": "  \"invite.help\": \"Un lien lui permettra de rejoindre votre \u00e9quipe.\""
+                "text": "  \"invite.help\": \"Un lien lui permettra de rejoindre votre équipe.\""
               },
               {
                 "kind": "addition",
@@ -310,7 +315,7 @@
   },
   "guide": {
     "snapshotId": "demo-invitations-v1",
-    "summary": "Review team invitations and their expiry policy.",
+    "summary": "This change introduces team invitations with a seven-day lifetime, backed by a database deadline and new copy in English and French. The important review question is whether the new workflow preserves existing records and keeps each invitation inside its team.\n\n### How the change fits together\n\nThe migration adds `expires_at`; a helper calculates a deadline; a focused test checks the lifetime. The visible creation path does not yet call that helper or supply the required expiry. Documentation explains the Members-page workflow, while matching locale keys supply the interface text. These pieces support the same feature, but their failure modes differ.\n\n```mermaid\nflowchart TD\n  accTitle: Team invitation changes\n  accDescr: The migration requires expiry storage, but invitation creation omits the value. A separate helper and test define the seven-day lifetime. Documentation and translations describe the intended workflow.\n  A[Required expiry column] --> B[Creation omits expiry]\n  C[Seven-day deadline helper] --> D[Lifetime test]\n  B --> E[Workflow documentation]\n  B --> F[English and French copy]\n```\n\n### Behavior and compatibility\n\n| Area | Change | What to verify |\n| --- | --- | --- |\n| Existing data | A required expiry column is introduced | Populate deadlines before enforcing the constraint |\n| Team access | Lookup and creation form the invitation boundary | Scope the email lookup to the current team |\n| New invitations | A helper defines a seven-day deadline | Wire it into creation and verify acceptance rejects expired invitations |\n| User guidance | Documentation and translated copy describe the flow | Keep the promised lifetime consistent with behavior |\n\n### Where to focus\n\nStart with the database migration, then follow the team boundary through lookup and creation. These changes have the largest consequences if they are wrong. Next, read the expiry helper beside its test; finish with the documentation and localization updates.\n\nThe supplied lookup searches by email without tenant scope. The migration needs scrutiny on a database with existing rows. Both deserve attention before treating the feature as ready for deployment.\n\n### Evidence and open questions\n\nThe focused test demonstrates the intended seven-day calculation; it does **not** establish that expired invitations are rejected or that upgrades preserve existing data. No tests were executed for this illustrative guide, and unseen callers remain unassessed. The code chapters below keep these checks next to the relevant diff.\n",
     "sections": [
       {
         "id": "section-0",
@@ -319,14 +324,13 @@
         "attention": "high",
         "category": "Database migration",
         "reason": "Existing rows need an expiry value before adding NOT NULL.",
-        "hunkIds": [
-          "8e1714e7bf328bdbffa8972b"
-        ],
+        "hunkIds": ["8e1714e7bf328bdbffa8972b"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": false
+        "foldable": false,
+        "explanation": "The new expiry column changes both upgrades and invitation creation.\n\n#### Before and after\n\n| Path | Before | With this change |\n| --- | --- | --- |\n| Existing invitations | No expiry value required | Every row needs `expires_at` |\n| New invitations | Inserts can omit expiry | Inserts must supply a deadline |\n\n#### Important details\n\n- **Upgrade risk.** `042_invitation_expiry.sql` adds `TIMESTAMPTZ NOT NULL` immediately, without a default or backfill. Existing rows cannot satisfy that constraint; an empty development database would hide the problem.\n- **Indexing is separate.** The expiry index supports lookups. It neither fills the new column nor rejects expired invitations during acceptance.\n- **Rollout to verify.** Decide a policy for existing invitations, backfill their deadlines, and only then enforce the required value. This is a proposed sequence to check; it is not implemented by the supplied migration.\n\n#### Evidence\n\n- The diff contains no populated-database upgrade test. Verify compatibility with existing rows and older application instances before rollout."
       },
       {
         "id": "section-1",
@@ -335,14 +339,13 @@
         "attention": "high",
         "category": "Authorization",
         "reason": "Verify tenant scope in lookup and creation.",
-        "hunkIds": [
-          "d27777591d2d5fe1bb58ebcd"
-        ],
+        "hunkIds": ["d27777591d2d5fe1bb58ebcd"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": false
+        "foldable": false,
+        "explanation": "`inviteMember()` checks administrator access, then reuses or creates an invitation.\n\n#### Follow the request\n\n```mermaid\nflowchart LR\n  accTitle: Invitation lookup and creation\n  accDescr: Administrator access is checked before an email-only lookup. An existing invitation is returned, or a new invitation is created with the actor's tenant identifier.\n  A[Administrator check] --> B[Find invitation by email]\n  B --> C{Existing invitation?}\n  C -->|Yes| D[Return existing record]\n  C -->|No| E[Create with actor tenant]\n```\n\n#### Important details\n\n- **Read and write scopes differ.** The lookup filters only by email; creation includes `tenant_id: actor.tenant_id`. Administrator access alone does not establish ownership of the record being reused.\n- **Concrete failure case.** If team A already invited an email address, an administrator in team B can receive team A's record when inviting that same address.\n- **Expiry is not wired in.** The creation call also omits the newly required `expires_at`. The supplied code shows neither a database default nor a call to `invitationExpiry()` that would supply it.\n\n#### Evidence\n\n- Follow the tenant and deadline values into the actual lookup and insert. The supplied helper test does not establish either integration."
       },
       {
         "id": "section-2",
@@ -351,15 +354,13 @@
         "attention": "standard",
         "category": "Implementation and tests",
         "reason": "Read the helper and its test together.",
-        "hunkIds": [
-          "027290e5bbcb1ef3f6f62a37",
-          "85af06994c8900d1871e38cc"
-        ],
+        "hunkIds": ["027290e5bbcb1ef3f6f62a37", "85af06994c8900d1871e38cc"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": false
+        "foldable": false,
+        "explanation": "`invitationExpiry(now)` defines a deterministic seven-day duration.\n\n#### What the test establishes\n\n| Evidence | What it demonstrates |\n| --- | --- |\n| Explicit `now` argument | Calculation does not depend on the wall clock |\n| January 1 input → January 8 expectation | Seven 24-hour periods are added |\n| No creation or acceptance call in this test | Persistence and expiry enforcement remain unverified |\n\n#### Important details\n\n- **Duration, not enforcement.** The helper calculates a deadline; it does not itself persist it or reject an invitation. The visible `inviteMember()` does not call the helper, and acceptance code was not supplied.\n- **Time policy matters.** Exactly 168 elapsed hours can differ from seven local calendar days around daylight-saving transitions. Confirm which policy the product intends.\n- **Evidence limit.** The test is present in the diff; it was not executed for this illustrative guide."
       },
       {
         "id": "section-3",
@@ -368,14 +369,13 @@
         "attention": "routine",
         "category": "Documentation",
         "reason": "Documentation only; expand to inspect the copy.",
-        "hunkIds": [
-          "04b0cee67fd2432eb6dcc8fc"
-        ],
+        "hunkIds": ["04b0cee67fd2432eb6dcc8fc"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": true
+        "foldable": true,
+        "explanation": "- **User-facing promise.** The documentation directs administrators to the Members page and says invitations expire after seven days.\n- **Behavioral dependency.** That promise relies on deadlines being persisted and enforced during acceptance. The arithmetic test alone does not establish either behavior.\n- **Review scope.** This file changes copy, with no executable logic. Check the promise against the shipped invitation flow."
       },
       {
         "id": "section-4",
@@ -384,22 +384,20 @@
         "attention": "routine",
         "category": "Localization",
         "reason": "Matching translation keys without placeholders.",
-        "hunkIds": [
-          "686489737153a8eec643c89d",
-          "1417763e30bce78457bc0396"
-        ],
+        "hunkIds": ["686489737153a8eec643c89d", "1417763e30bce78457bc0396"],
         "unavailablePaths": [],
         "questions": [],
         "findings": [],
         "assessed": true,
-        "foldable": true
+        "foldable": true,
+        "explanation": "- **Matching keys.** English and French both add `invite.title` and `invite.help` for the invitation heading and help text.\n- **No parameter changes.** Neither entry has interpolation placeholders, and neither file removes a key. The supplied pair has no key or parameter mismatch.\n- **Evidence limit.** UI callers and other locale files were not supplied. Review these two files together after the behavior changes."
       }
     ],
     "source": "sample",
     "model": "fixture",
     "generatedAt": "2026-10-20T12:00:00Z",
     "limitations": [],
-    "policyVersion": 1
+    "policyVersion": 3
   },
   "notes": [],
   "progress": {

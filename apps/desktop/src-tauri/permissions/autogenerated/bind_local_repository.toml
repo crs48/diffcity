@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bind-local-repository"
+description = "Enables the bind_local_repository command without any pre-configured scope."
+commands.allow = ["bind_local_repository"]
+
+[[permission]]
+identifier = "deny-bind-local-repository"
+description = "Denies the bind_local_repository command without any pre-configured scope."
+commands.deny = ["bind_local_repository"]

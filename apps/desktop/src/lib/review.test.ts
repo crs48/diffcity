@@ -1,19 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { bucket, countProgress, parsePullUrl } from "./review";
-import type { PullRequest, ReviewWorkspace } from "./api";
+import { countProgress, parsePullUrl } from "./review";
+import type { ReviewWorkspace } from "./api";
 describe("review navigation", () => {
-  it("makes inbox relationships exclusive with author first", () => {
-    const p = {
-      author: "me",
-      requested: ["me"],
-      assigned: ["me"],
-    } as PullRequest;
-    expect(bucket(p, "me")).toBe("My pull requests");
-    expect(bucket({ ...p, author: "someone" }, "me")).toBe("Review requested");
-    expect(bucket({ ...p, author: "someone", requested: [] }, "me")).toBe(
-      "Assigned to me",
-    );
-  });
   it("opens only recognized GitHub pull request URLs", () => {
     expect(
       parsePullUrl("https://github.com/crs48/diffcity/pull/1/files"),

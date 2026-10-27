@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-refresh-directory"
+description = "Enables the refresh_directory command without any pre-configured scope."
+commands.allow = ["refresh_directory"]
+
+[[permission]]
+identifier = "deny-refresh-directory"
+description = "Denies the refresh_directory command without any pre-configured scope."
+commands.deny = ["refresh_directory"]

@@ -1,14 +1,136 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum AgentAccess {
+    #[default]
+    Limited,
+    Ask,
+    Full,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentInputOption {
+    pub label: String,
+    pub value: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentInputQuestion {
+    pub id: String,
+    pub label: String,
+    pub kind: String,
+    pub required: bool,
+    pub multiple: bool,
+    pub options: Vec<AgentInputOption>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentPrompt {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub details: String,
+    pub questions: Vec<AgentInputQuestion>,
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentAnswer {
+    pub allow: bool,
+    #[serde(default)]
+    pub answers: std::collections::BTreeMap<String, Vec<String>>,
+}
+
+/// A human review boundary, never advanced by capture, prefetch, or AI analysis.
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewCheckpoint {
+    pub head: String,
+    pub reviewed_at: String,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewBaseline {
+    pub checkpoint: Option<ReviewCheckpoint>,
+    pub sync_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewComparison {
+    pub baseline: ReviewCheckpoint,
+    pub snapshot: Snapshot,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub repositories: Vec<String>,
     pub codex_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub claude_path: Option<String>,
     pub gh_path: Option<String>,
     pub model: Option<String>,
     pub theme: String,
+    #[serde(default = "default_locale")]
+    pub locale: String,
+    #[serde(default = "default_completed_days")]
+    pub completed_days: u32,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCodeSettings {
+    pub roots: Vec<String>,
+    pub overrides: std::collections::BTreeMap<String, String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCheckout {
+    pub repository: String,
+    pub path: String,
+}
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalRepositoryIndex {
+    pub checkouts: Vec<LocalCheckout>,
+    pub warnings: Vec<String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalCodeDirectory {
+    pub settings: LocalCodeSettings,
+    pub index: LocalRepositoryIndex,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct RepositoryContext {
+    pub repository: String,
+    pub path: Option<String>,
+    pub candidates: Vec<String>,
+    pub branch: Option<String>,
+    pub head: Option<String>,
+    pub dirty: bool,
+    pub pr_head_available: bool,
+    pub detail: String,
+}
+
+pub fn default_completed_days() -> u32 {
+    2
+}
+
+pub fn default_locale() -> String {
+    "en".into()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -26,6 +148,41 @@ pub struct Model {
     pub id: String,
     pub name: String,
     pub is_default: bool,
+    pub description: String,
+    pub reasoning_efforts: Vec<ReasoningOption>,
+    pub default_reasoning_effort: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ReasoningOption {
+    pub effort: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelPreference {
+    pub provider: String,
+    pub model: String,
+    pub reasoning_effort: Option<String>,
+}
+
+impl Default for ModelPreference {
+    fn default() -> Self {
+        Self {
+            provider: "claude".into(),
+            model: "claude-fable-5".into(),
+            reasoning_effort: Some("high".into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelCatalog {
+    pub connection: Connection,
+    pub models: Vec<Model>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -35,8 +192,42 @@ pub struct Bootstrap {
     pub github: Connection,
     pub codex: Connection,
     pub models: Vec<Model>,
+    pub model_preference: ModelPreference,
     pub pulls: Vec<PullRequest>,
     pub data_directory: String,
+    pub schema_version: u32,
+    pub directory: RepositoryDirectory,
+    pub pins: Pins,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Pins {
+    pub repositories: Vec<String>,
+    pub pulls: Vec<PullRequest>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct RepositoryDirectory {
+    pub repositories: Vec<Repository>,
+    pub organizations: Vec<String>,
+    pub sync_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxResult {
+    pub pulls: Vec<PullRequest>,
+    pub sync_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxSync {
+    pub completed: usize,
+    pub total: usize,
+    pub pulls: Vec<PullRequest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -46,6 +237,10 @@ pub struct Repository {
     pub full_name: String,
     pub private: bool,
     pub description: String,
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    #[serde(default)]
+    pub pushed_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -64,11 +259,40 @@ pub struct PullRequest {
     pub head_ref: String,
     pub base_ref: String,
     pub updated_at: String,
+    #[serde(default)]
+    pub closed_at: Option<String>,
+    #[serde(default)]
+    pub merged_at: Option<String>,
+    #[serde(default)]
+    pub viewer_review: Option<SubmittedReview>,
+    #[serde(default)]
+    pub review_decision: Option<String>,
+    #[serde(default)]
+    pub review_metadata_available: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub status: Option<PullStatus>,
     pub requested: Vec<String>,
     pub assigned: Vec<String>,
     pub additions: u32,
     pub deletions: u32,
     pub changed_files: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PullStatus {
+    pub mergeable: Option<String>,
+    pub merge_state: Option<String>,
+    // NONE means GitHub explicitly returned no rollup; null means unavailable.
+    pub checks: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmittedReview {
+    pub state: String,
+    pub submitted_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
@@ -97,6 +321,15 @@ pub struct Hunk {
     pub path: String,
     pub header: String,
     pub lines: Vec<DiffLine>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct HunkContext {
+    pub before: Vec<DiffLine>,
+    pub after: Vec<DiffLine>,
+    pub before_remaining: u32,
+    pub after_remaining: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -139,11 +372,24 @@ pub enum Side {
 #[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Anchor {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub text_selection: Option<TextSelection>,
     pub hunk_id: String,
     pub path: String,
     pub side: Side,
     pub start_line: u32,
     pub line: u32,
+}
+
+/// Zero-based UTF-16 columns, with an exclusive end (matching DOM Range offsets).
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TextSelection {
+    pub snapshot_id: String,
+    pub start_column: u32,
+    pub end_column: u32,
+    pub text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -155,12 +401,55 @@ pub struct Finding {
     pub anchor: Anchor,
 }
 
+/// Explanatory marginalia, separate from findings and user/GitHub comments.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct GuideAnnotation {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[ts(optional, as = "Option<String>")]
+    pub details: String,
+    pub id: String,
+    pub title: String,
+    pub body: String,
+    pub anchor: Anchor,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum NamingKind {
+    Database,
+    Api,
+    Domain,
+    Configuration,
+}
+
+/// A durable vocabulary decision for the reviewer, not a defect or approval.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NamingDecision {
+    pub name: String,
+    pub previous_name: Option<String>,
+    pub kind: NamingKind,
+    pub reason: String,
+    pub question: String,
+    pub anchor: Anchor,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct GuideSection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(optional, as = "Option<Vec<NamingDecision>>")]
+    pub naming_decisions: Vec<NamingDecision>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(optional, as = "Option<Vec<GuideAnnotation>>")]
+    pub annotations: Vec<GuideAnnotation>,
     pub id: String,
     pub title: String,
     pub summary: String,
+    // Full Markdown walkthrough; absent in guides saved before policy version 2.
+    #[serde(default)]
+    pub explanation: String,
     pub attention: Attention,
     pub category: String,
     pub reason: String,
@@ -172,9 +461,51 @@ pub struct GuideSection {
     pub foldable: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum EnrichmentStatus {
+    Pending,
+    Complete,
+    Failed,
+    Skipped,
+    Interrupted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum EnrichmentTier {
+    Priority,
+    Further,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct EnrichmentFile {
+    pub path: String,
+    pub tier: EnrichmentTier,
+    pub status: EnrichmentStatus,
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GuideEnrichment {
+    pub files: Vec<EnrichmentFile>,
+    pub dismissed: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Guide {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub enrichment: Option<GuideEnrichment>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub reasoning_effort: Option<String>,
     pub snapshot_id: String,
     pub summary: String,
     pub sections: Vec<GuideSection>,
@@ -185,9 +516,40 @@ pub struct Guide {
     pub policy_version: u32,
 }
 
+/// Lightweight history entry; guide bodies are loaded only when selected.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct GuideVersion {
+    pub id: String,
+    pub source: String,
+    pub model: String,
+    pub reasoning_effort: Option<String>,
+    pub generated_at: String,
+    pub section_count: usize,
+}
+
+/// Inbox metadata only: no diff, guide prose, or enrichment bodies.
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PullGuide {
+    pub repository: String,
+    pub number: u32,
+    pub head: String,
+    pub base: String,
+    pub snapshot_id: String,
+    pub generated_at: String,
+    pub preference: ModelPreference,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub thread_title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub model: Option<ModelPreference>,
     pub id: String,
     pub snapshot_id: String,
     pub anchor: Option<Anchor>,
@@ -197,6 +559,13 @@ pub struct Note {
     pub github_draft: bool,
     pub published_url: Option<String>,
     pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct AskReply {
+    pub answer: Note,
+    pub draft: Option<Note>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS, Default)]
@@ -213,6 +582,9 @@ pub struct ReviewProgress {
 #[serde(rename_all = "camelCase")]
 pub struct RemoteComment {
     pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub in_reply_to_id: Option<String>,
     pub author: String,
     pub body: String,
     pub path: Option<String>,
@@ -240,6 +612,9 @@ pub struct ReviewWorkspace {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct RunEvent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub guide: Option<Guide>,
     pub run_id: String,
     pub snapshot_id: String,
     pub phase: String,
@@ -262,4 +637,12 @@ pub struct PublishResult {
     pub state: String,
     pub url: String,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct PullPage {
+    pub pulls: Vec<PullRequest>,
+    pub next_page: Option<u32>,
+    pub sync_error: Option<String>,
 }

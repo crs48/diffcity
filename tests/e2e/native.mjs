@@ -10,7 +10,7 @@ const binary =
   process.env.DIFFCITY_TEST_BINARY ||
   resolve(
     root,
-    "target/debug/bundle/macos/diffcity.app/Contents/MacOS/diffcity",
+    "target/aarch64-apple-darwin/debug/bundle/macos/diffcity.app/Contents/MacOS/diffcity",
   );
 const port = 4459;
 const base = `http://127.0.0.1:${port}`;

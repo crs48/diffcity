@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-sample-inbox"
+description = "Enables the sample_inbox command without any pre-configured scope."
+commands.allow = ["sample_inbox"]
+
+[[permission]]
+identifier = "deny-sample-inbox"
+description = "Denies the sample_inbox command without any pre-configured scope."
+commands.deny = ["sample_inbox"]
