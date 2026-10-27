@@ -84,6 +84,7 @@ import { DisplaySettings } from "./features/DisplaySettings";
 import { GuideEnrichment } from "./features/GuideEnrichment";
 import { mergeEnrichment } from "./lib/enrichment";
 import { GuideSwitcher } from "./features/GuideSwitcher";
+import { GuideReadyNotice, type ReadyGuide } from "./features/GuideReadyNotice";
 import { LocalCode, RepositoryContextButton } from "./features/LocalCode";
 import { ModelSettings } from "./features/ModelSettings";
 import { defaultModelPreference } from "./lib/models";
@@ -167,6 +168,9 @@ export default function App() {
   const ai = useAiRuns();
   const agentAccess = useAgentAccess();
   const [pendingGuides, setPendingGuides] = useState<Guide[]>([]);
+  const [guideNotices, setGuideNotices] = useState<ReadyGuide[]>([]);
+  const dismissGuideNotice = (id: string) =>
+    setGuideNotices((notices) => notices.filter((notice) => notice.id !== id));
   const guideInventory = usePullGuides();
   const guideStartingRef = useRef(new Set<string>());
   const [guideStarting, setGuideStarting] = useState<ReadonlySet<string>>(
@@ -613,24 +617,47 @@ export default function App() {
       .then(() => api.progress(workspace.snapshot.id, p))
       .catch(onError);
   };
-  const selectGuide = async (guideId: string) => {
-    if (!workspace || guideSelection.current) return;
-    const snapshotId = workspace.snapshot.id;
+  const selectGuide = async (
+    guideId: string,
+    snapshotId = current.current?.snapshot.id,
+  ) => {
+    if (!snapshotId || guideSelection.current) return;
+    const request = ++opening.current;
+    const switchingReview = current.current?.snapshot.id !== snapshotId;
     guideSelection.current = true;
     setGuideChanging(true);
+    if (switchingReview) setLoading(true);
     try {
       await flush();
       await progressWrites.current;
+      if (request !== opening.current) return;
       const selected = await api.selectGuide(snapshotId, guideId);
-      if (current.current?.snapshot.id !== snapshotId) return;
+      // A later PR navigation wins over an in-flight notification click.
+      if (request !== opening.current) return;
       setWorkspace((w) =>
         w?.snapshot.id === snapshotId
           ? { ...w, guide: selected.guide, progress: selected.progress }
-          : w,
+          : selected,
       );
+      if (switchingReview) {
+        setSelection(null);
+        setDiscussion(false);
+        setNewRevision(false);
+        if (matchMedia("(max-width: 1000px)").matches) setInboxOpen(false);
+        if (!isSampleRepo(selected.snapshot.pull.repository))
+          localStorage.setItem("diffcity.lastPr", selected.snapshot.pull.url);
+      }
       setMode("guide");
       setPendingGuides((guides) => guides.filter((g) => g.id !== guideId));
+      dismissGuideNotice(guideId);
+      requestAnimationFrame(() => {
+        if (request === opening.current)
+          document
+            .getElementById("review-workspace")
+            ?.focus({ preventScroll: true });
+      });
     } finally {
+      if (request === opening.current) setLoading(false);
       guideSelection.current = false;
       setGuideChanging(false);
     }
@@ -703,6 +730,20 @@ export default function App() {
     );
     if (guide) {
       setPendingGuides((guides) => [...guides, guide]);
+      if (guide.id) {
+        const notice: ReadyGuide = {
+          id: guide.id,
+          snapshotId: guide.snapshotId,
+          repository: review.snapshot.pull.repository,
+          number: review.snapshot.pull.number,
+          title: review.snapshot.pull.title,
+          model: `${guide.source === "claude" ? "Claude" : "Codex"} · ${guide.model}`,
+        };
+        setGuideNotices((notices) => [
+          ...notices.filter((n) => n.id !== notice.id),
+          notice,
+        ]);
+      }
       // Only a newly requested guide starts work automatically. Restores and switches never do.
       if (
         guide.enrichment?.files.some(
@@ -1626,7 +1667,7 @@ export default function App() {
                           )}
 
                           <GuideView
-                            key={workspace.snapshot.id}
+                            key={`${workspace.snapshot.id}:${workspace.guide.id ?? "initial"}`}
                             workspace={workspace}
                             selection={selection}
                             onSelect={(a) => void select(a)}
@@ -1715,6 +1756,13 @@ export default function App() {
           </div>
         )}
       </main>
+      <GuideReadyNotice
+        notices={guideNotices}
+        disabled={loading}
+        opening={guideChanging}
+        onView={(notice) => selectGuide(notice.id, notice.snapshotId)}
+        onDismiss={dismissGuideNotice}
+      />
       {dialog === "display" && data && (
         <DisplaySettings
           days={data.settings.completedDays ?? 2}

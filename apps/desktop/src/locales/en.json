@@ -652,5 +652,13 @@
   "Could not copy. Try again.": "Could not copy. Try again.",
   "Reviewed section": "Reviewed section",
   "Hide other account avatars": "Hide other account avatars",
-  "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share.": "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share."
+  "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share.": "Keep only the selected account in the sidebar, or your personal account when viewing all accounts. For screenshots, also filter the inbox to the repo you want to share.",
+  "Guide notifications": "Guide notifications",
+  "Guide ready": "Guide ready",
+  "Guide ready for {{pull}}: {{model}}. Choose View guide to open it.": "Guide ready for {{pull}}: {{model}}. Choose View guide to open it.",
+  "Dismiss guide notification": "Dismiss guide notification",
+  "View guide": "View guide",
+  "Opening guide…": "Opening guide…",
+  "{{count}} more guides ready_one": "{{count}} more guide ready",
+  "{{count}} more guides ready_other": "{{count}} more guides ready"
 }
