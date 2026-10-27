@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
         line,
     };
     let mut comments: Vec<RemoteComment> = serde_json::from_str(include_str!(
-        "../../../../../tests/fixtures/comment-context.json"
+        "../../../../tests/fixtures/comment-context.json"
     ))?;
     comments[1].path = Some(anchor.path.clone());
     comments[1].line = Some(line);

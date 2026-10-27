@@ -45,12 +45,22 @@ export function verifyMacArchitecture(bundle = defaultBundle) {
   return binaries;
 }
 
+/** Distribution contains the app only; smoke tools belong in Cargo examples. */
+export function verifyDistributionContents(bundle = defaultBundle) {
+  const executables = readdirSync(join(bundle, "Contents/MacOS"));
+  if (executables.length !== 1 || executables[0] !== "diffcity")
+    throw new Error(
+      `Unexpected distribution executables: ${executables.join(", ")}`,
+    );
+}
+
 if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   const bundle = resolve(process.argv[2] ?? defaultBundle);
   const binaries = verifyMacArchitecture(bundle);
+  verifyDistributionContents(bundle);
   execFileSync("codesign", ["--verify", "--deep", "--strict", bundle], {
     stdio: "inherit",
   });

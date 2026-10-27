@@ -10,7 +10,10 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { verifyMacArchitecture } from "./verify-macos-architecture.mjs";
+import {
+  verifyMacArchitecture,
+  verifyDistributionContents,
+} from "./verify-macos-architecture.mjs";
 
 let root;
 before(() => {
@@ -71,5 +74,15 @@ test("rejects an Intel-only helper inside an ARM app", () => {
   assert.throws(
     () => verifyMacArchitecture(app),
     /Missing arm64: Contents\/Helpers\/review-helper/,
+  );
+});
+
+test("rejects development tools even when they are native ARM executables", () => {
+  const app = bundle("arm64");
+  assert.doesNotThrow(() => verifyDistributionContents(app));
+  copyFileSync(join(root, "arm64"), join(app, "Contents/MacOS/live-smoke"));
+  assert.throws(
+    () => verifyDistributionContents(app),
+    /Unexpected distribution executables/,
   );
 });

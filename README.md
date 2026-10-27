@@ -2,7 +2,11 @@
 
 A desktop workspace for reviewing GitHub pull requests through AI-guided walkthroughs with Codex and Claude. Consequential changes come first; assessed routine changes fold into summaries you can expand.
 
-**Status:** working local macOS alpha. **Owner:** Christopher Smothers. **License:** [MIT](LICENSE). The repository remains private; [diff.city](https://diff.city) hosts the product website and will provide public downloads. See the [Astro website](apps/site/README.md) for local development and GitHub Pages setup.
+**Status:** public macOS alpha. **Owner:** Christopher Smothers. **License:** [MIT](LICENSE).
+
+[Download for Mac](https://github.com/crs48/diffcity/releases) · [Website](https://diff.city) · [Installation](docs/installation.md) · [Contributing](CONTRIBUTING.md)
+
+Apple silicon (M1 or newer), macOS 14+. Download the DMG from Releases and drag Diff City into Applications. Early unsigned alphas are **not notarized** and require macOS approval on first launch; the release notes state the signing status. Bring your GitHub CLI login and a local Codex or Claude Code installation. No Diff City account is required. Updates are manual for now.
 
 ## See the review workflow
 
@@ -49,7 +53,7 @@ Development and production app builds explicitly target Apple silicon (`aarch64-
 
 If `rustc -vV` reports `host: x86_64-apple-darwin` on an ARM Mac, use the native compiler for this checkout with `rustup toolchain install 1.97.1-aarch64-apple-darwin --component rustfmt --component clippy` followed by `rustup override set 1.97.1-aarch64-apple-darwin`. This leaves other repositories' toolchains unchanged. The explicit app target and bundle check are still required; a successful build alone does not establish its architecture.
 
-Local builds use ad-hoc code signing, and `pnpm desktop:verify` also verifies the complete bundle signature. Developer ID signing, notarization, automatic updates, and a public release remain separate release work. Intel-only and universal release packages are not currently produced.
+Local builds use ad-hoc code signing, and `pnpm desktop:verify` also verifies the complete bundle signature. Tagged releases run the full validation and packaging pipeline, producing a DMG, ZIP, source manifest, checksums, and dependency notices. The pipeline supports Developer ID signing and notarization; explicitly labeled unsigned alphas remain available while distribution credentials are configured. See [the release guide](docs/releasing.md). Intel-only and universal packages and automatic updates are not currently provided.
 
 If Connections reports a network timeout while `gh api user` succeeds, inspect any per-application network-filter prompt for the installed app. A CLI login succeeding does not establish that a newly built executable has network access. The full error appears in Connections; private drafts remain local.
 
@@ -138,13 +142,13 @@ node tests/e2e/native.mjs
 For a connection check that does not invoke a model or publish feedback:
 
 ```sh
-DIFFCITY_CONNECT_ONLY=1 cargo run -p diffcity --bin live-smoke
+DIFFCITY_CONNECT_ONLY=1 cargo run -p diffcity --example live-smoke
 ```
 
 To verify automatic organization/repo discovery, the complete open inbox, and two pages of an account's history without invoking a model or publishing feedback:
 
 ```sh
-cargo run -p diffcity --bin directory-smoke -- ACCOUNT_OR_ORGANIZATION
+cargo run -p diffcity --example directory-smoke -- ACCOUNT_OR_ORGANIZATION
 ```
 
 This read-only check stores metadata in the ignored `.local/directory-smoke/` directory. Omit the account argument to check your personal account's history.

@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
     let probe = directory.join("probe.py");
     std::fs::write(
         &probe,
-        include_str!("../../../../../tests/fixtures/access-probe-mcp.py"),
+        include_str!("../../../../tests/fixtures/access-probe-mcp.py"),
     )?;
     let marker = format!("mcp-evidence-{}", uuid::Uuid::new_v4());
     std::fs::write(directory.join("marker.txt"), &marker)?;

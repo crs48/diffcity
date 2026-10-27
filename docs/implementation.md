@@ -1,5 +1,7 @@
 # Local alpha implementation
 
+Release preparation: development smoke helpers and the contract exporter now live in `apps/desktop/src-tauri/examples/`. Use `cargo run -p diffcity --example NAME`; historical validation commands below retain the original `--bin` spelling. Distributed bundles are checked to contain only the `diffcity` executable.
+
 Updated October 20, 2026. This document describes the implemented application; the initial product plan also includes later distribution and product work.
 
 ## Runtime and architecture
