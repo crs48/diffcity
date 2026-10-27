@@ -26,9 +26,10 @@ const screenshots = [
     label: "Ask in place",
     icon: "chat",
     image: "inline-review",
+    recording: "inline-conversation",
     title: "Keep your question attached to the code.",
     description:
-      "An actual inline conversation with Claude about the sample changes. AI questions stay private; feedback for the author starts as an unpublished GitHub draft.",
+      "Select lines, open the + composer, and ask Claude what to check before shipping a delete endpoint. Scroll through its real answer, then continue the same conversation in PR chat. AI questions stay private; author feedback starts as an unpublished draft.",
     alt: "The full Diff City app showing an inline code conversation with a human question, Claude’s response, and local review controls.",
   },
   {
@@ -73,33 +74,61 @@ const screenshots = [
       hidden={i !== 0}
     >
       <figure class="app-preview">
-        <a
-          class="screenshot-link"
-          href={`/screenshots/${shot.image}.webp`}
-          target="_blank"
-          rel="noopener"
-          aria-label={`View full size: ${shot.label}`}
-        >
-          <img
-            src={`/screenshots/${shot.image}-1440.webp`}
-            srcset={`/screenshots/${shot.image}-960.webp 960w, /screenshots/${shot.image}-1440.webp 1440w, /screenshots/${shot.image}.webp 2880w`}
-            sizes="(max-width: 700px) calc(100vw - 36px), (max-width: 1244px) calc(100vw - 64px), 1180px"
-            width="2880"
-            height="1880"
-            alt={shot.alt}
-            loading={i === 0 ? "eager" : "lazy"}
-            decoding="async"
-          />
-          <span class="screenshot-expand">
-            <Icon name="plus" size={14} /> View full size
-          </span>
-        </a>
+        {shot.recording ? (
+          <video
+            class="review-recording"
+            controls
+            playsinline
+            preload="none"
+            poster={`/demos/${shot.recording}.webp`}
+            width="1440"
+            height="940"
+            aria-label={`${shot.label}: full-window Diff City demonstration, no audio`}
+            aria-describedby={`description-${shot.id}`}
+          >
+            <source src={`/demos/${shot.recording}.mp4`} type="video/mp4" />
+            <a href={`/demos/${shot.recording}.gif`}>
+              Watch the GIF demonstration
+            </a>
+          </video>
+        ) : (
+          <a
+            class="screenshot-link"
+            href={`/screenshots/${shot.image}.webp`}
+            target="_blank"
+            rel="noopener"
+            aria-label={`View full size: ${shot.label}`}
+          >
+            <img
+              src={`/screenshots/${shot.image}-1440.webp`}
+              srcset={`/screenshots/${shot.image}-960.webp 960w, /screenshots/${shot.image}-1440.webp 1440w, /screenshots/${shot.image}.webp 2880w`}
+              sizes="(max-width: 700px) calc(100vw - 36px), (max-width: 1244px) calc(100vw - 64px), 1180px"
+              width="2880"
+              height="1880"
+              alt={shot.alt}
+              loading={i === 0 ? "eager" : "lazy"}
+              decoding="async"
+            />
+            <span class="screenshot-expand">
+              <Icon name="plus" size={14} /> View full size
+            </span>
+          </a>
+        )}
         <figcaption>
-          <div>
+          <div id={`description-${shot.id}`}>
             <strong>{shot.title}</strong>
             <p>{shot.description}</p>
+            {shot.recording && (
+              <p class="recording-links">
+                <span>Full app recording · no audio</span>
+                <a href={`/demos/${shot.recording}.gif`}>View GIF</a>
+                <a href={`/demos/${shot.recording}.mp4`} download>
+                  Download video
+                </a>
+              </p>
+            )}
           </div>
-          <a href="https://github.com/crs48/diffcity/compare/fixtures/2026-10/baseline...fixtures/2026-10/mixed">
+          <a href="https://github.com/crs48/diffcity/pull/18">
             Explore the sample
             <Icon name="arrow" size={14} />
           </a>
@@ -109,10 +138,11 @@ const screenshots = [
   ))}
 </div>
 <p class="capture-note">
-  Full-window screenshots from the real macOS app using sample PRs in the Diff
-  City repo. Guide and replies generated with Claude Code · Fable 5. Other
-  account avatars are hidden for privacy. Sample code is intentionally flawed
-  and available in the source repo for trying the review workflow yourself.
+  Full-window recordings and screenshots from the real macOS app using sample
+  PRs in the Diff City repo. Guide and replies generated with Claude Code ·
+  Fable 5. Recordings are condensed; AI waiting time is shortened. Other account
+  avatars are hidden for privacy. Sample code is intentionally flawed and
+  available in the source repo for trying the review workflow yourself.
 </p>
 <script>
   const tabs = Array.from(
@@ -126,7 +156,11 @@ const screenshots = [
       const panel = document.getElementById(
         item.getAttribute("aria-controls")!,
       );
-      if (panel) panel.hidden = !active;
+      if (panel) {
+        panel.hidden = !active;
+        if (!active)
+          panel.querySelectorAll("video").forEach((video) => video.pause());
+      }
     });
     if (focus) tab.focus();
   };

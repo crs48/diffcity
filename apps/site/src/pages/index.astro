@@ -54,7 +54,8 @@ const details = [
   ],
 ];
 const description =
-  "A desktop workspace for GitHub pull requests. Follow AI-guided walkthroughs, ask questions in the code, and review what changed with Codex and Claude.";
+  "AI code review for GitHub pull requests with your existing Claude Code or OpenAI Codex agent. Explore guided diffs, ask inline questions, and prepare review drafts.";
+const title = "Diff City — AI code review with Claude Code and Codex";
 ---
 
 <!doctype html>
@@ -63,16 +64,13 @@ const description =
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <title>Diff City — See the story in every diff.</title>
+    <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href="https://diff.city/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://diff.city/" />
-    <meta
-      property="og:title"
-      content="Diff City — See the story in every diff."
-    />
+    <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content="https://diff.city/social.png" />
     <meta property="og:image:width" content="1200" />
@@ -150,7 +148,8 @@ const description =
           </span>
         </p>
         <p class="hero-description">
-          A desktop home for GitHub reviews, with AI beside the code.
+          Review GitHub PRs with your Claude Code or Codex agent beside the
+          code.
         </p>
         <div class="hero-actions">
           <a class="button button-primary" href="#download">
@@ -164,9 +163,7 @@ const description =
         </div>
         <p class="hero-note">
           macOS · Apple silicon <span> / </span>{" "}
-          {downloadUrl
-            ? "Early alpha"
-            : "Open source · MIT licensed"}
+          {downloadUrl ? "Early alpha" : "Open source · MIT licensed"}
         </p>
       </section>
       <section
@@ -271,7 +268,9 @@ const description =
         <div class="download-copy">
           <span class="eyebrow">
             <span class="status-dot"></span>{" "}
-            {downloadUrl ? "Public alpha for macOS" : "Open source, built for review"}
+            {downloadUrl
+              ? "Public alpha for macOS"
+              : "Open source, built for review"}
           </span>
           <h2 id="download-title">
             Your next review <br />
@@ -285,9 +284,7 @@ const description =
             <Icon name="github" size={17} /> Follow the project on GitHub{" "}
             <Icon name="arrow" size={16} />
           </a>
-          <small>
-            Made by Christopher Smothers. Contributions welcome.
-          </small>
+          <small>Made by Christopher Smothers. Contributions welcome.</small>
         </div>
         <div class="download-card">
           <div class="download-symbol">
@@ -306,9 +303,14 @@ const description =
                 <Icon name="down" size={18} /> Download for macOS
               </a>
               <p class="download-status">
-                {notarized ? "Signed and notarized by Apple." : "Unsigned alpha · not notarized. macOS requires approval on first launch."}
-                {" "}<a href={`${repository}/blob/main/docs/installation.md`}>Install instructions</a>
-                {" · "}<a href={releasesUrl}>Release notes &amp; checksums</a>
+                {notarized
+                  ? "Signed and notarized by Apple."
+                  : "Unsigned alpha · not notarized. macOS requires approval on first launch."}{" "}
+                <a href={`${repository}/blob/main/docs/installation.md`}>
+                  Install instructions
+                </a>
+                {" · "}
+                <a href={releasesUrl}>Release notes &amp; checksums</a>
               </p>
             </>
           ) : (
@@ -367,8 +369,8 @@ const description =
               <Icon name="plus" size={18} />
             </summary>
             <p>
-              Yes. Diff City is MIT licensed and developed in public at
-              {" "}<a href={repository}>github.com/crs48/diffcity</a>. You can
+              Yes. Diff City is MIT licensed and developed in public at{" "}
+              <a href={repository}>github.com/crs48/diffcity</a>. You can
               inspect the code, build it yourself, and contribute improvements.
             </p>
           </details>

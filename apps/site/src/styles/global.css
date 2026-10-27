@@ -352,6 +352,25 @@
     width: 100%;
     height: auto;
   }
+  .review-recording {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #fff;
+  }
+  .recording-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    align-items: center;
+  }
+  .recording-links a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .recording-links a:hover {
+    color: var(--green);
+  }
   .screenshot-expand {
     position: absolute;
     bottom: 14px;

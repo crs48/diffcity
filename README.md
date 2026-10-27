@@ -1,6 +1,6 @@
 # diffcity
 
-A desktop workspace for reviewing GitHub pull requests through AI-guided walkthroughs with Codex and Claude. Consequential changes come first; assessed routine changes fold into summaries you can expand.
+AI code review for GitHub pull requests with your existing **Claude Code** or **OpenAI Codex** agent. Diff City is a desktop workspace for guided diffs, inline AI conversations, and local review drafts. Consequential changes come first; assessed routine changes fold into summaries you can expand.
 
 **Status:** public macOS alpha. **Owner:** Christopher Smothers. **License:** [MIT](LICENSE).
 
@@ -10,7 +10,13 @@ Apple silicon (M1 or newer), macOS 14+. Download the DMG from Releases and drag 
 
 ## See the review workflow
 
-These are full-window captures of the real macOS app reviewing [mixed-edit sample](https://github.com/crs48/diffcity/compare/fixtures/2026-10/baseline...fixtures/2026-10/mixed): 20 files and more than 16,000 changed lines covering migrations, access policies, API contracts, localization, and renames. The guide and replies were generated with **Claude Code · Fable 5 · High**. The sample deliberately contains review issues and is not intended to be merged. Other account avatars are hidden for privacy. The guide surfaces its coverage limits for oversized or omitted changes.
+These are full-window captures of the real macOS app reviewing the [mixed-edit demo PR](https://github.com/crs48/diffcity/pull/18): 20 files and more than 16,000 changed lines covering migrations, access policies, API contracts, localization, and renames. The guide and replies were generated with **Claude Code · Fable 5 · High**. The sample deliberately contains review issues and is not intended to be merged. Other account avatars are hidden for privacy. The guide surfaces its coverage limits for oversized or omitted changes.
+
+**Ask your coding agent, right in the diff.** Select lines, click **+**, type a question, and read Claude’s response inline. Continue the same conversation in PR chat with the code context attached.
+
+![Full-window demo selecting code lines, asking Claude a review question, scrolling through its answer, and continuing in PR chat](apps/site/public/demos/inline-conversation.gif)
+
+18-second recording of the real app, with AI waiting time shortened. No zoom or cropping; only the Diff City repository and personal account are shown. [Watch with playback controls](https://diff.city/#workflow) (choose **Ask in place**) or [download the video](https://diff.city/demos/inline-conversation.mp4).
 
 **Follow the code.** Deeper code notes sit beside the diff, and the narrow guide index links to review locations and shows green blocks for reviewed chapters.
 
