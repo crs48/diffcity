@@ -51,6 +51,20 @@ Never commit or paste certificate/private-key material into issues. Store it dir
 
 The repository must be public for anonymous release downloads. `diff.city` uses GitHub Pages. `SITE_DEPLOY_BRANCH` should be unset or `main`, and the `github-pages` environment should allow `main`.
 
+## Public repository transition
+
+On October 27, 2026, the original development repository was retained as the private, read-only `crs48/diffcity-private-history` archive. The public `crs48/diffcity` repository has a separate identity and sanitized Git history. Original PRs remain in the archive; the public repository has its own PR numbering. Public screenshot examples link to the sanitized fixture comparison.
+
+Keep existing clones of the original repository pointed at the private archive. Clone the public repository afresh for contributions; do not push an old clone's branches or tags into it, because that could reintroduce removed history. The migration workspace and private backups are retained locally. Live tests require an explicit disposable PR URL rather than assuming historical PR numbers still identify the same change.
+
+Main requires pull requests and passing desktop, dependency, and secret-scanning checks. Released version tags cannot be force-updated or deleted. Actions require pinned SHAs and use read-only tokens by default. Private vulnerability reporting, secret scanning, push protection, and dependency updates are enabled. The [security exploration](explorations/0001_[_]_SECURITY_BOUNDARIES_AND_PUBLIC_LAUNCH_READINESS.md) records remaining agent-access limitations and follow-up work.
+
+## First public alpha verification
+
+[Version 0.1.0-alpha.1](https://github.com/crs48/diffcity/releases/tag/v0.1.0-alpha.1) was published on October 27, 2026 from sanitized commit `4f970a1467bece304be3ef49df35539bb8fb7110`. The release workflow passed source tests, dependency and secret scans, ARM packaging, and integrity checks. All six assets were then downloaded without GitHub authentication; both asset digests and published SHA256 checksums matched. The mounted public DMG contains one ARM64 executable, a valid ad-hoc signature, and the expected macOS 14 minimum.
+
+This is an unsigned, unnotarized alpha with manual updates. Download/packaging verification does not replace a clean-machine installation test, which remains outstanding. The [installation guide](installation.md) explains macOS approval and recovery.
+
 ## Local packaging
 
 ```sh
