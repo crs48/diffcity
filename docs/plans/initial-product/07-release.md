@@ -54,9 +54,9 @@ Add contribution instructions, development setup, architecture overview, issue t
 - [x] Add repeatable source-build and contributor instructions.
 - [x] Audit exact dependency licenses and third-party attribution.
 - [x] Inspect public-release history and all shipped assets.
-- [ ] Prepare diff.city downloads and docs after hosting/DNS is selected.
+- [x] Prepare diff.city downloads and docs after hosting/DNS is selected.
 - [x] Make the repository public when the owner chooses to publish.
-- [ ] Verify public source access, downloads, docs, and install instructions.
+- [x] Verify public source access, downloads, docs, and install instructions.
 
 ## Validation and exit criteria
 

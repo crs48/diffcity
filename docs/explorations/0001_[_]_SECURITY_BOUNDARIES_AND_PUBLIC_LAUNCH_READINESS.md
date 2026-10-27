@@ -14,7 +14,7 @@ The most important findings concern **agent startup, filesystem confidentiality,
 2. **Confirmed boundary limitation:** the bundled Codex read-only sandbox could read a synthetic file outside its working directory while denying a write inside that directory. Read-only is not repository-only. This test used the runtime's command API and the same sandbox-policy shape; it did not attempt model-driven exfiltration.
 3. **Confirmed:** new UI sessions defaulted to Ask although the security documentation promised Limited. The companion fix defaults new/invalid/unavailable preferences to Limited, preserving deliberate existing choices. Full access remains a global persistent preference, which should become repository/session scoped.
 4. **Confirmed dependency finding:** the lockfile included Tokio 1.54.0, affected by a memory-safety advisory. The companion fix updates it to 1.54.1. A fresh Rust audit reports zero vulnerability findings, with two warnings in Linux-only dependencies. JavaScript auditing reported no known advisories at investigation time.
-5. **Remaining launch work:** finish the unsigned-alpha download and site checks. Sanitized history is now public in a fresh repository; the original repository and its retained PR refs remain in a private archive. Public reporting, branch/tag protection, secret scanning and dependency checks are enabled. A successful build or clean advisory scan does not establish a secure agent boundary.
+5. **Public alpha shipped:** `v0.1.0-alpha.1` is publicly downloadable. Anonymous downloads of all six release files matched their checksums; the mounted DMG contains one ARM64 executable with a valid ad-hoc signature and macOS 14 minimum. Sanitized history is public in a fresh repository; the original repository and retained PR refs remain in a private archive. Public reporting, branch/tag protection, secret scanning and dependency checks are enabled. Apple notarization and clean-machine installation testing remain follow-up work. A successful build or clean advisory scan does not establish a secure agent boundary.
 
 **Recommendation:** ship a transparently limited alpha only after the concrete startup/default/dependency fixes and publication checks. Prioritize a backend-owned, repository-scoped access policy next. Do not advertise Limited as a confidentiality sandbox or as safe for arbitrary hostile repositories on an account containing secrets.
 
@@ -249,7 +249,7 @@ The runtime is an independently updated dependency. Record provider executable p
 ### Launch and follow-up work
 
 - [x] Finish authorized history/privacy cleanup, including retained GitHub refs or a clean-repository alternative.
-- [ ] Verify unsigned-alpha label, installation instructions and public download bytes.
+- [x] Verify unsigned-alpha label, installation instructions and public download bytes.
 - [x] Enable and verify private vulnerability reporting after publication.
 - [x] Pin all workflow actions to verified commit SHAs.
 - [x] Protect main and release tags in GitHub.
@@ -280,7 +280,8 @@ The runtime is an independently updated dependency. Record provider executable p
 - [x] Run all 126 Rust tests and all 220 frontend tests after the fixes. An initial unconstrained frontend run timed out in three UI tests during concurrent compilation; the two-worker rerun passed all tests.
 - [x] Confirm the patched Limited startup also excludes the synthetic user MCP server.
 - [x] Pass GitHub CI for the ARM app, site and security jobs.
-- [x] Build and mount the unsigned-alpha DMG; verify the single ARM executable, ad-hoc signature integrity, manifest and every published-file checksum. This is not a clean-machine launch test.
+- [x] Build and mount the unsigned-alpha DMG; verify the single ARM executable, ad-hoc signature integrity, manifest and every packaged-file checksum. This is not a clean-machine launch test.
+- [x] Download all six published `v0.1.0-alpha.1` assets anonymously, verify GitHub asset digests and `SHA256SUMS.txt`, and mount the public DMG to recheck architecture, signature, platform version and absence of development executables. The manifest identifies sanitized source commit `4f970a1467bece304be3ef49df35539bb8fb7110`.
 
 Local probe scripts, runtime schemas, scan outputs, and the audited pre-cleanup commit identity are retained in ignored `.local/security-audit/`. Probes used Codex CLI `0.164.0-alpha.11.1` and Claude Code `2.1.304`. They did not request inference, access real secret contents, publish comments, or contact business integrations. Local probes test provider startup/sandbox primitives; they are not full model-driven exploit tests.
 
