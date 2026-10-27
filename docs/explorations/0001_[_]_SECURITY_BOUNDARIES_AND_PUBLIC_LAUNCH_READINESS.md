@@ -252,7 +252,8 @@ The runtime is an independently updated dependency. Record provider executable p
 - [x] Pin all workflow actions to verified commit SHAs.
 - [ ] Protect main and release tags in GitHub.
 - [x] Add weekly/PR advisory and redacted history-secret checks, reuse them before release builds, and configure weekly Dependabot updates.
-- [ ] Verify the new security workflow on GitHub after pushing.
+- [x] Verify the new security workflow in GitHub PR CI: dependency and history-secret checks passed.
+- [ ] Reverify security checks in the final public repository after history migration.
 - [ ] Create repository/session grants enforced in Rust, with config-change invalidation.
 - [ ] Make downgrades cancel or re-authorize queued/running elevated work.
 - [ ] Add a real confined-read path with no generic execution tool.
@@ -276,6 +277,8 @@ The runtime is an independently updated dependency. Record provider executable p
 - [x] Inspect GitHub branch/action/environment settings without changing visibility.
 - [x] Run all 126 Rust tests and all 220 frontend tests after the fixes. An initial unconstrained frontend run timed out in three UI tests during concurrent compilation; the two-worker rerun passed all tests.
 - [x] Confirm the patched Limited startup also excludes the synthetic user MCP server.
+- [x] Pass GitHub CI for the ARM app, site and security jobs.
+- [x] Build and mount the unsigned-alpha DMG; verify the single ARM executable, ad-hoc signature integrity, manifest and every published-file checksum. This is not a clean-machine launch test.
 
 Local probe scripts, runtime schemas, scan outputs, and the audited pre-cleanup commit identity are retained in ignored `.local/security-audit/`. Probes used Codex CLI `0.164.0-alpha.11.1` and Claude Code `2.1.304`. They did not request inference, access real secret contents, publish comments, or contact business integrations. Local probes test provider startup/sandbox primitives; they are not full model-driven exploit tests.
 
