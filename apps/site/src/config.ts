@@ -6,3 +6,6 @@ if (configuredDownload && !/^https:\/\/[^\s]+$/.test(configuredDownload)) {
   throw new Error("PUBLIC_MACOS_DOWNLOAD_URL must be an HTTPS download URL.");
 }
 export const downloadUrl: string | undefined = configuredDownload;
+export const releasesUrl = `${repository}/releases`;
+export const notarized =
+  import.meta.env.PUBLIC_MACOS_SIGNING_MODE === "developer-id";

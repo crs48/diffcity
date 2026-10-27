@@ -17,15 +17,15 @@ Astro prints the available local URL (normally port 4321). `site:build` runs Ast
 
 ## Downloads
 
-The default page says **private alpha** and **public download coming soon**. It deliberately does not send visitors to a nonexistent release or expose a local/ad-hoc-signed development build.
+The page links to the public MIT repository. Without a configured download it offers source builds; with a verified public release it displays the macOS download, release notes, checksums, and installation instructions.
 
-Once a distributable macOS build is publicly available, set the repository Actions variable `PUBLIC_MACOS_DOWNLOAD_URL` to its public HTTPS download URL and rerun the website workflow. This enables the download button. A release asset in a private repository is not a public download; make sure an unauthenticated visitor can fetch the configured URL. Installation/signing instructions belong in the accompanying release notes.
+Set the repository Actions variable `PUBLIC_MACOS_DOWNLOAD_URL` to a verified public HTTPS release asset URL and rerun the website workflow on `main`. Prefer the versioned `releases/download/TAG/diffcity-macos-arm64.dmg` URL; GitHub's latest-release shortcut excludes alphas. Confirm an unauthenticated visitor can fetch it before enabling the link.
 
-The planned public source repository is `https://github.com/crs48/diffcity`. Update the private-alpha copy when the repository opens. Publishing this site does not change the repository's visibility.
+The workflow also passes `MACOS_SIGNING_MODE` as `PUBLIC_MACOS_SIGNING_MODE`. Only `developer-id` displays “signed and notarized”; otherwise the page explicitly explains that the alpha is unsigned/not notarized and links to macOS approval instructions. Keep this setting consistent with the linked artifact's `release.json`. Publishing this site does not change repository visibility. See [release operations](../../docs/releasing.md).
 
 ## GitHub Pages
 
-The `Publish Diff City website` workflow validates website changes and uploads only the static `dist` directory. Production deployment uses the branch in the `SITE_DEPLOY_BRANCH` repository variable, falling back to `main`. The initial deployment uses `feat/review-history-localization-migrations` while the app is developed privately. After merging into `main`, remove that variable (or set it to `main`) and remove the development branch from the `github-pages` environment's allowed branches.
+The `Publish Diff City website` workflow validates website changes and uploads only the static `dist` directory. Production uses `main`. Leave `SITE_DEPLOY_BRANCH` unset (or set it to `main`) and allow `main` in the `github-pages` environment's deployment branch policy. The variable remains available for an intentional temporary preview deployment.
 
 In repository **Settings → Pages**, the build source must be **GitHub Actions**. Allow the chosen production branch in the `github-pages` environment's deployment branch policy. Pull requests and other branches build without deploying. No personal access token is stored in the workflow; GitHub's short-lived deployment token is used.
 

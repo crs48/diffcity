@@ -1,6 +1,6 @@
 {
   "name": "diffcity",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "license": "MIT",
   "packageManager": "pnpm@10.11.1",
@@ -11,12 +11,15 @@
     "desktop:verify": "node scripts/verify-macos-architecture.mjs",
     "check": "pnpm --filter @diffcity/desktop check",
     "test": "cargo test --workspace && pnpm --filter @diffcity/desktop test",
-    "contracts": "cargo run -p diffcity --bin export-contracts",
+    "contracts": "cargo run -p diffcity --example export-contracts",
     "format": "prettier --write apps/desktop/src apps/desktop/*.json && cargo fmt --all",
     "lint": "pnpm --filter @diffcity/desktop lint && cargo clippy --workspace --all-targets -- -D warnings",
     "site:dev": "pnpm --filter @diffcity/site dev",
     "site:build": "pnpm --filter @diffcity/site build",
-    "site:preview": "pnpm --filter @diffcity/site preview"
+    "site:preview": "pnpm --filter @diffcity/site preview",
+    "release:check": "node --test scripts/*.test.mjs",
+    "release:prepare": "node scripts/release-meta.mjs && node scripts/third-party-notices.mjs",
+    "release:build": "pnpm --filter @diffcity/desktop tauri build --target aarch64-apple-darwin --bundles app,dmg --config ../../.local/release/tauri.conf.json && node scripts/package-release.mjs"
   },
   "devDependencies": {
     "prettier": "^3.8.0"

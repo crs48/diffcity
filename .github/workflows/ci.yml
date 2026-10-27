@@ -26,7 +26,8 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: pnpm check
       - run: pnpm lint
-      - run: pnpm test
-      - run: node --test scripts/verify-macos-architecture.test.mjs
+      - run: cargo test --workspace --locked
+      - run: pnpm --filter @diffcity/desktop exec vitest run --maxWorkers=2 --testTimeout=15000
+      - run: pnpm release:check
       - name: Build and verify Apple silicon app
         run: pnpm desktop:build

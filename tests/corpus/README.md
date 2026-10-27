@@ -48,8 +48,8 @@ The mixed PR targets its dedicated baseline to produce thousands of deletions as
 ## Live verification
 
 ```sh
-cargo run -p diffcity --bin corpus-smoke -- 2 3 4 5 6
-DIFFCITY_CORPUS_ANALYZE=4 cargo run -p diffcity --bin corpus-smoke -- 4
+cargo run -p diffcity --example corpus-smoke -- 2 3 4 5 6
+DIFFCITY_CORPUS_ANALYZE=4 cargo run -p diffcity --example corpus-smoke -- 4
 ```
 
 The harness uses the existing local `gh` login, opens each PR through the same Rust service as the app, validates every captured added/deleted line anchor, checks historical state, and reports capture limitations and renames. The optional analysis generates a real Codex guide and a private two-line migration discussion. It never publishes GitHub comments or merges anything. The default isolated database and JSON workspaces live in ignored `.local/corpus-smoke/`; override `DIFFCITY_DATA_DIR` and `DIFFCITY_REPOSITORY` if needed. The analysis option specifically expects the unsafe-migration fixture.
@@ -86,4 +86,4 @@ stateDiagram-v2
   Requested --> Requested: Refresh resets fixtures
 ```
 
-Run `cargo run -p diffcity --bin inbox-smoke -- crs48/diffcity` for read-only GitHub metadata checks and JSON exports under `.local/inbox-smoke/`. It checks that all open PRs carry review metadata and that recent completions belong to the signed-in user, then exports the isolated local samples for browser replay. It does not connect to Codex or publish feedback.
+Run `cargo run -p diffcity --example inbox-smoke -- crs48/diffcity` for read-only GitHub metadata checks and JSON exports under `.local/inbox-smoke/`. It checks that all open PRs carry review metadata and that recent completions belong to the signed-in user, then exports the isolated local samples for browser replay. It does not connect to Codex or publish feedback.

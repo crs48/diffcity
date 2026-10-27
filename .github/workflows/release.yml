@@ -1,0 +1,129 @@
+name: Release macOS app
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing version tag on main (for example v0.1.0-alpha.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      MACOS_SIGNING_MODE: ${{ vars.MACOS_SIGNING_MODE || 'developer-id' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a version tag from main and an ARM runner
+        run: |
+          test "$(uname -m)" = arm64
+          git rev-parse --verify "refs/tags/$RELEASE_TAG"
+          test "$(git rev-list -n 1 "refs/tags/$RELEASE_TAG")" = "$(git rev-parse HEAD)"
+          git merge-base --is-ancestor HEAD origin/main
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.11.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Validate versions and signing configuration
+        id: release
+        run: node scripts/release-meta.mjs
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - run: rustup show
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+      - run: pnpm install --frozen-lockfile
+      - name: Validate source
+        run: |
+          pnpm contracts
+          git diff --exit-code -- packages/contracts
+          cargo fmt --all -- --check
+          pnpm check
+          pnpm lint
+          cargo test --workspace --locked
+          pnpm --filter @diffcity/desktop exec vitest run --maxWorkers=2 --testTimeout=15000
+          node --test scripts/*.test.mjs
+      - name: Collect dependency licenses
+        run: node scripts/third-party-notices.mjs
+      - name: Build the app and disk image
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
+        env:
+          APPLE_CERTIFICATE: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_SIGNING_IDENTITY: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_SIGNING_IDENTITY || '-' }}
+          APPLE_ID: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ steps.release.outputs.signing == 'developer-id' && secrets.APPLE_TEAM_ID || '' }}
+        with:
+          projectPath: apps/desktop
+          args: --target aarch64-apple-darwin --bundles app,dmg --config ../../.local/release/tauri.conf.json
+      - name: Verify and package release assets
+        run: node scripts/package-release.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-release
+          path: |
+            .local/release/assets/*
+            .local/release/notes.md
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: macos-release
+          path: release
+      - name: Publish verified assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+        shell: bash
+        run: |
+          cd release/assets
+          sha256sum --strict -c SHA256SUMS.txt
+          cd ../..
+          # Never replace a published version. A retry may only complete a draft.
+          if gh release view "$RELEASE_TAG" --json isDraft > release/existing.json 2>/dev/null; then
+            test "$(jq -r .isDraft release/existing.json)" = true
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft \
+              --title "Diff City $RELEASE_TAG" --notes-file release/notes.md
+          fi
+          gh release upload "$RELEASE_TAG" release/assets/* --clobber
+          gh release edit "$RELEASE_TAG" --notes-file release/notes.md \
+            --draft=false --prerelease="$PRERELEASE" --latest="$([ "$PRERELEASE" = true ] && echo false || echo true)"

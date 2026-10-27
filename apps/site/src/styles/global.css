@@ -633,10 +633,15 @@
     font-size: 12px;
   }
   .download-status {
-    font-size: 11px;
+    font-size: 13px;
+    margin-top: 12px;
     line-height: 1.7;
     color: var(--muted);
     text-align: center;
+  }
+  .download-status a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
   .download-availability {
     font-size: 12px;

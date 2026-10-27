@@ -1,0 +1,24 @@
+name: Bug report
+description: Report a problem with Diff City
+body:
+  - type: markdown
+    attributes:
+      value: "Remove private code, repository names, credentials, and conversations from attachments. Report security issues privately using SECURITY.md."
+  - type: input
+    id: version
+    attributes:
+      label: Diff City version and macOS version
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: What happened?
+      description: Include reproduction steps, expected behavior, and the actual result. Prefer a public or synthetic PR.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Optional context
+      description: Provider/CLI version, access mode, sanitized screenshots or error text.

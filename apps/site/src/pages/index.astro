@@ -4,7 +4,7 @@ import "../styles/global.css";
 import Icon from "../components/Icon.astro";
 import Logo from "../components/Logo.astro";
 import ReviewPreview from "../components/ReviewPreview.astro";
-import { repository, downloadUrl } from "../config";
+import { repository, downloadUrl, releasesUrl, notarized } from "../config";
 const features = [
   {
     number: "01",
@@ -166,7 +166,7 @@ const description =
           macOS · Apple silicon <span> / </span>{" "}
           {downloadUrl
             ? "Early alpha"
-            : "Private alpha. Public release on the way."}
+            : "Open source · MIT licensed"}
         </p>
       </section>
       <section
@@ -271,7 +271,7 @@ const description =
         <div class="download-copy">
           <span class="eyebrow">
             <span class="status-dot"></span>{" "}
-            {downloadUrl ? "Available for macOS" : "Currently in private alpha"}
+            {downloadUrl ? "Public alpha for macOS" : "Open source, built for review"}
           </span>
           <h2 id="download-title">
             Your next review <br />
@@ -279,14 +279,14 @@ const description =
           </h2>
           <p>
             Diff City is starting on Mac. Built with Tauri, designed around
-            GitHub, and headed for an MIT-licensed open-source release.
+            GitHub, and open source under the MIT license.
           </p>
           <a href={repository} class="text-link">
             <Icon name="github" size={17} /> Follow the project on GitHub{" "}
             <Icon name="arrow" size={16} />
           </a>
           <small>
-            The repository is private for now. It will live at crs48/diffcity.
+            Made by Christopher Smothers. Contributions welcome.
           </small>
         </div>
         <div class="download-card">
@@ -306,15 +306,17 @@ const description =
                 <Icon name="down" size={18} /> Download for macOS
               </a>
               <p class="download-status">
-                Early alpha. See the release notes for installation details.
+                {notarized ? "Signed and notarized by Apple." : "Unsigned alpha · not notarized. macOS requires approval on first launch."}
+                {" "}<a href={`${repository}/blob/main/docs/installation.md`}>Install instructions</a>
+                {" · "}<a href={releasesUrl}>Release notes &amp; checksums</a>
               </p>
             </>
           ) : (
             <>
-              <p class="download-availability">Public download coming soon.</p>
+              <p class="download-availability">Build it from source.</p>
               <p class="download-status">
-                We’re refining the review experience before the first public
-                build. The download will appear here when it’s ready.
+                Follow the setup guide on GitHub, or check releases for a
+                packaged macOS build.
               </p>
               <a class="button download-button" href={repository}>
                 <Icon name="github" size={17} /> Project on GitHub{" "}
@@ -365,9 +367,9 @@ const description =
               <Icon name="plus" size={18} />
             </summary>
             <p>
-              That’s the plan. The repository is currently private while the app
-              takes shape. The public release will be MIT licensed and available
-              at <a href={repository}>github.com/crs48/diffcity</a>.
+              Yes. Diff City is MIT licensed and developed in public at
+              {" "}<a href={repository}>github.com/crs48/diffcity</a>. You can
+              inspect the code, build it yourself, and contribute improvements.
             </p>
           </details>
           <details>

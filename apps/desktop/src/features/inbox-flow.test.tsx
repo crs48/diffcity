@@ -532,7 +532,7 @@ it("discovers orgs, repos and PRs automatically without adding or saving reposit
   discovered = {
     organizations: ["example-org", "empty-org"],
     syncError: null,
-    repositories: ["example-org/sample-repo", "example-org/ui", "me/personal"].map(
+    repositories: ["example-org/api", "example-org/ui", "me/personal"].map(
       (fullName) => ({
         id: fullName,
         fullName,
@@ -552,10 +552,10 @@ it("discovers orgs, repos and PRs automatically without adding or saving reposit
   const user = userEvent.setup();
   render(<App />);
   await user.click(await screen.findByRole("button", { name: "example-org" }));
-  await screen.findByRole("button", { name: /Automatic example-org\/sample-repo/ });
+  await screen.findByRole("button", { name: /Automatic example-org\/api/ });
   expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
     "All repos",
-    "sample-repo",
+    "api",
     "ui",
   ]);
   expect(screen.queryByRole("button", { name: "Add repos" })).toBeNull();

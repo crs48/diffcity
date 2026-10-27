@@ -39,6 +39,7 @@ jobs:
         run: pnpm site:build
         env:
           PUBLIC_MACOS_DOWNLOAD_URL: ${{ vars.PUBLIC_MACOS_DOWNLOAD_URL }}
+          PUBLIC_MACOS_SIGNING_MODE: ${{ vars.MACOS_SIGNING_MODE }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/site/dist
