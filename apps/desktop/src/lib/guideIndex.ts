@@ -194,6 +194,7 @@ export type IndexGroup = {
   id: string;
   lane: "sections" | "activity";
   top: number;
+  position: number;
   items: GuideIndexEntry[];
 };
 
@@ -218,12 +219,14 @@ export function packIndex(
     const group = lanes[lane].at(-1);
     if (group && top - group.top < 30) {
       group.top += (top - group.top) / (group.items.length + 1);
+      group.position += (position - group.position) / (group.items.length + 1);
       group.items.push(entry);
     } else {
       lanes[lane].push({
         id: `${lane}-${entry.id}`,
         lane,
         top,
+        position,
         items: [entry],
       });
     }

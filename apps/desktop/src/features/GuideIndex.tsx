@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { useMemo, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
   Button,
@@ -204,16 +204,16 @@ function IndexMarker({
   tabIndex,
   onFocus,
   onJump,
+  onGroupJump,
 }: {
   group: IndexGroup;
   active: boolean;
   tabIndex: number;
   onFocus: () => void;
   onJump: (entry: GuideIndexEntry) => void;
+  onGroupJump: (group: IndexGroup) => void;
 }) {
   const { t } = useTranslation();
-  const trigger = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(false);
   const { items } = group;
   const mixed = new Set(items.map((e) => e.kind)).size > 1;
   const first = items[0];
@@ -230,73 +230,47 @@ function IndexMarker({
           })
         : `${t(kinds[first.kind].label)}: ${first.title}`;
   return (
-    <>
-      <TooltipTrigger delay={220} isDisabled={open}>
-        <Button
-          ref={trigger}
-          className={`guide-index-marker ${group.lane} index-${mixed ? "mixed" : first.kind}`}
-          style={{ top: group.top }}
-          aria-label={
-            items.length === 1 && first.reviewed
-              ? `${label} · ${t("Code reviewed")}`
-              : label
-          }
-          aria-current={active ? "location" : undefined}
-          aria-haspopup={items.length > 1 ? "dialog" : undefined}
-          aria-expanded={items.length > 1 ? open : undefined}
-          data-index-marker={group.id}
-          excludeFromTabOrder={tabIndex < 0}
-          onFocus={onFocus}
-          onPress={() => (items.length > 1 ? setOpen(true) : onJump(first))}
-        >
-          {group.lane === "sections" ? (
-            <span className="guide-index-chapter-dot" aria-hidden />
-          ) : mixed ? (
-            <Layers size={15} aria-hidden />
-          ) : (
-            <EntryIcon entry={first} />
-          )}
-          {items.length > 1 && group.lane === "activity" && (
-            <span className="guide-index-count">
-              {items.length > 99 ? "99+" : items.length}
-            </span>
-          )}
-        </Button>
-        <Tooltip placement="right" offset={10} className="guide-index-tooltip">
-          {items.slice(0, 3).map((entry) => (
-            <EntryPreview
-              key={entry.id}
-              entry={entry}
-              compact={items.length > 1}
-            />
-          ))}
-          {items.length > 1 && (
-            <p className="muted">
-              {t("Click to explore all {{count}} locations", {
-                count: items.length,
-              })}
-            </p>
-          )}
-        </Tooltip>
-      </TooltipTrigger>
-      <Popover
-        triggerRef={trigger}
-        isOpen={open}
-        onOpenChange={setOpen}
-        className="guide-index-popover"
-        placement="right top"
-        offset={10}
+    <TooltipTrigger delay={220}>
+      <Button
+        className={`guide-index-marker ${group.lane} index-${mixed ? "mixed" : first.kind}`}
+        style={{ top: group.top }}
+        aria-label={
+          items.length === 1 && first.reviewed
+            ? `${label} · ${t("Code reviewed")}`
+            : label
+        }
+        aria-current={active ? "location" : undefined}
+        data-index-marker={group.id}
+        excludeFromTabOrder={tabIndex < 0}
+        onFocus={onFocus}
+        onPress={() => (items.length > 1 ? onGroupJump(group) : onJump(first))}
       >
-        <Dialog aria-label={t("Nearby guide locations")}>
-          <IndexList
-            entries={items}
-            title={t("Nearby guide locations")}
-            close={() => setOpen(false)}
-            onJump={onJump}
+        {group.lane === "sections" ? (
+          <span className="guide-index-chapter-dot" aria-hidden />
+        ) : mixed ? (
+          <Layers size={15} aria-hidden />
+        ) : (
+          <EntryIcon entry={first} />
+        )}
+        {items.length > 1 && group.lane === "activity" && (
+          <span className="guide-index-count">
+            {items.length > 99 ? "99+" : items.length}
+          </span>
+        )}
+      </Button>
+      <Tooltip placement="right" offset={10} className="guide-index-tooltip">
+        {items.slice(0, 3).map((entry) => (
+          <EntryPreview
+            key={entry.id}
+            entry={entry}
+            compact={items.length > 1}
           />
-        </Dialog>
-      </Popover>
-    </>
+        ))}
+        {items.length > 1 && (
+          <p className="muted">{t("Click to scroll to this area")}</p>
+        )}
+      </Tooltip>
+    </TooltipTrigger>
   );
 }
 
@@ -328,6 +302,23 @@ export function GuideIndex({
   const tabStop = groups.some((g) => g.id === focused)
     ? focused
     : groups[0]?.id;
+  const jumpToGroup = (group: IndexGroup) => {
+    const element = root.current;
+    const viewport = element?.closest<HTMLElement>("[data-review-scroll]");
+    if (!element || !viewport) return;
+    const bounds = element.getBoundingClientRect();
+    viewport.scrollTo({
+      top: Math.max(
+        0,
+        viewport.scrollTop +
+          bounds.top -
+          viewport.getBoundingClientRect().top +
+          group.position * bounds.height -
+          16,
+      ),
+      behavior: "auto",
+    });
+  };
   if (!host) return null;
   return createPortal(
     <nav className="guide-index" aria-label={t("Guide index")}>
@@ -413,6 +404,7 @@ export function GuideIndex({
             tabIndex={group.id === tabStop ? 0 : -1}
             onFocus={() => setFocused(group.id)}
             onJump={onJump}
+            onGroupJump={jumpToGroup}
           />
         ))}
       </div>

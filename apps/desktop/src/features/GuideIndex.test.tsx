@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -118,6 +119,40 @@ async function jumpTo(title: string) {
     .setup()
     .click(within(dialog).getByRole("button", { name: `Jump to ${title}` }));
 }
+
+it("scrolls directly to grouped markers with mouse or keyboard without opening another picker", async () => {
+  render(<Example />);
+  const user = userEvent.setup();
+  await act(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  const marker = screen
+    .getAllByRole("button", { name: /guide locations near/ })
+    .find((button) => button.classList.contains("activity"))!;
+  expect(marker.hasAttribute("aria-haspopup")).toBe(false);
+  openChat.mockClear();
+  const scroll = vi.mocked(Element.prototype.scrollTo);
+  scroll.mockClear();
+  await user.click(marker);
+  expect(scroll).toHaveBeenCalledWith({
+    top: expect.any(Number),
+    behavior: "auto",
+  });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(openChat).not.toHaveBeenCalled();
+  scroll.mockClear();
+  marker.focus();
+  await user.keyboard("{Enter}");
+  expect(scroll).toHaveBeenCalledWith({
+    top: expect.any(Number),
+    behavior: "auto",
+  });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(openChat).not.toHaveBeenCalled();
+});
 
 it("fills the reviewed chapter's rail segment immediately and exposes its status in previews", async () => {
   const w = indexedWorkspace();

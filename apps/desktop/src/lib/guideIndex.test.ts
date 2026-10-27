@@ -3,6 +3,19 @@ import { expect, it } from "vitest";
 import { newNote } from "./review";
 import { buildGuideIndex, packIndex, threadTarget } from "./guideIndex";
 
+it("retains the actual group position even when its icon is clamped at a rail edge", () => {
+  const entries = buildGuideIndex(indexedWorkspace()).filter(
+    (e) => e.kind === "note" || e.kind === "naming",
+  );
+  const [group] = packIndex(
+    entries.map((entry, index) => ({ entry, position: index * 0.01 })),
+    1000,
+  );
+  expect(group.items).toHaveLength(2);
+  expect(group.top).toBe(0);
+  expect(group.position).toBe(0.005);
+});
+
 it("centers isolated markers on exact positions instead of rounding to a rail slot", () => {
   const entries = buildGuideIndex(indexedWorkspace()).filter(
     (e) => e.kind === "note" || e.kind === "naming",
