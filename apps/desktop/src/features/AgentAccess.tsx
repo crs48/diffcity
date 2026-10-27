@@ -41,9 +41,9 @@ export function useAgentAccess() {
   const [access, setAccess] = useState<AgentAccess>(() => {
     try {
       const stored = localStorage.getItem("diffcity.agent-access");
-      return modes.find((mode) => mode.id === stored)?.id ?? "ask";
+      return modes.find((mode) => mode.id === stored)?.id ?? "limited";
     } catch {
-      return "ask";
+      return "limited";
     }
   });
   const change = (value: AgentAccess) => {

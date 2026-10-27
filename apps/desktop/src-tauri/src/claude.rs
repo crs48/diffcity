@@ -79,6 +79,11 @@ impl Session {
         let mut settings = json!({"disableAllHooks":true,"autoMemoryEnabled":false,"modelPicker":{"options":[{"model":"claude-fable-5","label":"Fable 5","description":"Fable 5 · A separate perspective on this review"}],"replaceBuiltInOptions":false}});
         if access.connected() {
             cmd.args([
+                // Headless Claude starts project MCP servers without a trust
+                // dialog. Only inherit user-managed integrations, even in Full
+                // access; selecting an access mode does not trust repo config.
+                "--setting-sources",
+                "user",
                 "--permission-prompt-tool=stdio",
                 "--permission-prompts",
                 "host",
@@ -96,6 +101,7 @@ impl Session {
                 // remain automatic; shell, edits and MCP calls are reviewable.
                 settings["permissions"] =
                     json!({"ask":["Bash", "Edit", "Write", "NotebookEdit", "mcp__*"]});
+                settings["sandbox"] = json!({"autoAllowBashIfSandboxed":false});
             }
         } else {
             cmd.args([

@@ -18,7 +18,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  security:
+    uses: ./.github/workflows/security.yml
+    with:
+      ref: ${{ inputs.tag || github.ref_name }}
+
   build:
+    needs: security
     runs-on: macos-15
     timeout-minutes: 60
     outputs:
