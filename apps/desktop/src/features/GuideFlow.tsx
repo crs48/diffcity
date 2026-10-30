@@ -36,6 +36,7 @@ import type {
 import { countProgress, labels, sectionHasDiscussion } from "../lib/review";
 import { anchorKey } from "../lib/diffRows";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
+import { normalizeGuideMarkdown } from "../lib/guideMarkdown";
 import { useConversation } from "./conversation";
 import { useGuideScroll } from "./useGuideScroll";
 
@@ -289,7 +290,7 @@ export function GuideFlow(props: Props) {
           ) : (
             <CommentMarkdown
               body={
-                w.guide.summary ||
+                normalizeGuideMarkdown(w.guide.summary) ||
                 w.snapshot.pull.body ||
                 t("No description provided.")
               }

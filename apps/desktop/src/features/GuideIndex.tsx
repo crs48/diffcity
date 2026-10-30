@@ -259,7 +259,7 @@ function IndexMarker({
         )}
       </Button>
       <Tooltip placement="right" offset={10} className="guide-index-tooltip">
-        {items.slice(0, 3).map((entry) => (
+        {items.map((entry) => (
           <EntryPreview
             key={entry.id}
             entry={entry}
