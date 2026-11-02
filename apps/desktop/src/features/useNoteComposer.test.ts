@@ -20,26 +20,25 @@ it("retains an unsaved comment on failure and serializes saves without duplicate
       persisted.set(result.id, result);
       return result;
     });
-  const { result } = renderHook(() => useNoteComposer(onNote, vi.fn()));
+  const { result } = renderHook(() => useNoteComposer(onNote));
   await act(() => result.current.start("snapshot", null));
   act(() => result.current.change("Keep this question."));
   await act(async () => {
     await expect(result.current.close()).rejects.toThrow("disk full");
   });
-  expect(result.current.draft?.body).toBe("Keep this question.");
+  expect(result.current.getDraft()?.body).toBe("Keep this question.");
   await act(async () => {
     await Promise.all([result.current.flush(), result.current.flush()]);
   });
   expect(save).toHaveBeenCalledTimes(2);
   expect(persisted.size).toBe(1);
-  expect(result.current.saved).toBe(true);
   await act(() => result.current.start("snapshot", null));
-  expect(result.current.draft?.body).toBe("Keep this question.");
+  expect(result.current.getDraft()?.body).toBe("Keep this question.");
   act(() => result.current.change("An updated question."));
   await act(() => result.current.submit());
   expect(persisted.size).toBe(1);
   expect(persisted.get("saved-one")?.body).toBe("An updated question.");
-  expect(result.current.draft?.body).toBe("");
+  expect(result.current.getDraft()?.body).toBe("");
 });
 
 it("keeps exact text context on follow-up drafts and distinguishes two words on the same line", async () => {
@@ -60,13 +59,13 @@ it("keeps exact text context on follow-up drafts and distinguishes two words on 
     ...n,
     id: n.id || "question",
   }));
-  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  const { result } = renderHook(() => useNoteComposer(vi.fn()));
   await act(() => result.current.start("snapshot", anchor));
   act(() => result.current.change("Why is foo here?"));
   const ask = vi.fn().mockResolvedValue(undefined);
   await act(() => result.current.submit(ask));
   expect(result.current.draft?.anchor).toEqual(anchor);
-  expect(result.current.draft?.githubDraft).toBe(false);
+  expect(result.current.getDraft()?.githubDraft).toBe(false);
   const second = {
     ...anchor,
     textSelection: {
@@ -79,14 +78,14 @@ it("keeps exact text context on follow-up drafts and distinguishes two words on 
   await act(() => result.current.start("snapshot", second));
   expect(result.current.draft?.anchor).toEqual(second);
 });
-it("converts an autosaved private note to one unpublished draft without sending to AI", async () => {
+it("converts a saved private note to one unpublished draft without sending to AI", async () => {
   const notes = new Map<string, Note>();
   vi.spyOn(api, "note").mockImplementation(async (n) => {
     const saved = { ...n, id: n.id || "one" };
     notes.set(saved.id, saved);
     return saved;
   });
-  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  const { result } = renderHook(() => useNoteComposer(vi.fn()));
   await act(() => result.current.start("s", null));
   act(() => result.current.change("Please add a migration test."));
   await act(() => result.current.flush());
@@ -96,12 +95,12 @@ it("converts an autosaved private note to one unpublished draft without sending 
     githubDraft: true,
     publishedUrl: null,
   });
-  expect(result.current.draft?.body).toBe("");
+  expect(result.current.getDraft()?.body).toBe("");
 });
 
 it("can reveal an existing conversation without stealing focus from its indexed message", async () => {
   const save = vi.spyOn(api, "note").mockImplementation(async (n) => n);
-  const { result } = renderHook(() => useNoteComposer(vi.fn(), vi.fn()));
+  const { result } = renderHook(() => useNoteComposer(vi.fn()));
   await act(() => result.current.start("s", null));
   expect(result.current.focus).toBeGreaterThan(0);
   await act(() => result.current.start("s", null, undefined, false));

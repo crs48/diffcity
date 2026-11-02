@@ -2,7 +2,14 @@ import { useConversation } from "./conversation";
 import { AgentAccessSelector } from "./AgentAccess";
 import { useTranslation } from "react-i18next";
 import "../i18n";
-import { useEffect, useId, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import { Button } from "react-aria-components";
 import {
   ArrowUp,
@@ -34,19 +41,23 @@ export function NoteComposer({
 }) {
   const { t } = useTranslation();
   const conversation = useConversation();
+  const draft = useSyncExternalStore(state.subscribeDraft, state.getDraft);
   const input = useRef<HTMLTextAreaElement>(null);
   const helpId = useId();
+  const hasDraft = !!draft;
   useEffect(() => {
     if (state.focus) input.current?.focus();
   }, [state.focus]);
+  const resize = useCallback(() => {
+    const element = input.current;
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${element.scrollHeight + 2}px`;
+  }, []);
+  useLayoutEffect(resize, [draft?.body, resize]);
   useLayoutEffect(() => {
     const element = input.current;
     if (!element) return;
-    const resize = () => {
-      element.style.height = "auto";
-      element.style.height = `${element.scrollHeight + 2}px`;
-    };
-    resize();
     let width = element.getBoundingClientRect().width;
     const observer = new ResizeObserver(() => {
       const next = element.getBoundingClientRect().width;
@@ -57,10 +68,10 @@ export function NoteComposer({
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [state.draft?.body]);
-  if (!state.draft) return null;
-  const editing = state.draft.githubDraft;
-  const textOnly = !!state.draft.anchor?.textSelection;
+  }, [hasDraft, resize]);
+  if (!draft) return null;
+  const editing = draft.githubDraft;
+  const textOnly = !!draft.anchor?.textSelection;
   return (
     <div className="composer">
       <textarea
@@ -84,7 +95,7 @@ export function NoteComposer({
                 ? t("Ask AI about this code, or ask it to draft feedback…")
                 : t("Discuss this PR with AI…")
         }
-        value={state.draft.body}
+        value={draft.body}
         onChange={(e) => state.change(e.target.value)}
         onKeyDown={(event) => {
           if (
@@ -99,7 +110,7 @@ export function NoteComposer({
           )
             return;
           event.preventDefault();
-          if (state.draft?.body.trim()) void state.submit(onAsk).catch(onError);
+          if (draft.body.trim()) void state.submit(onAsk).catch(onError);
         }}
       />
       <div className="sr-only" id={helpId}>
@@ -148,7 +159,7 @@ export function NoteComposer({
             (editing ? (
               <Button
                 className="secondary"
-                isDisabled={!state.draft.body.trim()}
+                isDisabled={!draft.body.trim()}
                 onPress={() => void state.submit().catch(onError)}
               >
                 {t("Save draft")}
@@ -156,7 +167,7 @@ export function NoteComposer({
             ) : (
               <IconAction
                 label={t("Save private note")}
-                isDisabled={!state.draft.body.trim()}
+                isDisabled={!draft.body.trim()}
                 onPress={() => void state.submit().catch(onError)}
               >
                 <StickyNote size={15} aria-hidden />
@@ -165,7 +176,7 @@ export function NoteComposer({
           {!textOnly && !editing && (
             <IconAction
               label={t("Save GitHub draft")}
-              isDisabled={!state.draft.body.trim()}
+              isDisabled={!draft.body.trim()}
               onPress={() => void state.submit(undefined, true).catch(onError)}
             >
               <Github size={15} aria-hidden />
@@ -175,7 +186,7 @@ export function NoteComposer({
             <IconAction
               label={t(busy ? "Queue question" : "Ask AI")}
               className="composer-send"
-              isDisabled={!state.draft.body.trim()}
+              isDisabled={!draft.body.trim()}
               onPress={() => void state.submit(onAsk).catch(onError)}
             >
               {busy ? (
