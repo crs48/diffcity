@@ -299,7 +299,7 @@ export default function App() {
       event.preventDefault();
       try {
         await flush();
-        await getCurrentWindow().destroy();
+        await getCurrentWindow().hide();
       } catch (e) {
         onError(e);
       }

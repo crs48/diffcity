@@ -447,3 +447,15 @@ pub fn respond_agent(
         .respond(&run_id, &request_id, answer)
         .map_err(error)
 }
+
+#[tauri::command]
+pub fn install_browser_companion() -> Output<Vec<String>> {
+    #[cfg(unix)]
+    {
+        crate::native_messaging::install().map_err(error)
+    }
+    #[cfg(not(unix))]
+    {
+        Err("The browser companion currently supports macOS and Linux".into())
+    }
+}

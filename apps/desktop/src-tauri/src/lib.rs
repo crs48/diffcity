@@ -1,5 +1,7 @@
 pub mod agent_access;
 mod ai_runs;
+#[cfg(unix)]
+pub mod browser_bridge;
 pub mod claude;
 pub mod codex;
 mod commands;
@@ -20,6 +22,8 @@ mod guide_prompt;
 mod local_repositories;
 pub mod migrations;
 mod models;
+#[cfg(unix)]
+pub mod native_messaging;
 mod pins;
 mod providers;
 mod reply_draft;
@@ -31,7 +35,7 @@ mod text_selection;
 mod thread_title;
 
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 pub mod storage;
 
 pub fn run() {
@@ -42,10 +46,37 @@ pub fn run() {
             let directory = std::env::var_os("DIFFCITY_DATA_DIR")
                 .map(std::path::PathBuf::from)
                 .unwrap_or(app.path().app_data_dir()?);
-            app.manage(Arc::new(service::Service::new(&directory)?));
+            let service = Arc::new(service::Service::new(&directory)?);
+            #[cfg(unix)]
+            {
+                let listener = browser_bridge::bind(&directory)?;
+                let shared = service.clone();
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(error) = browser_bridge::serve(
+                        listener,
+                        shared,
+                        Arc::new(move |event| {
+                            let _ = handle.emit("codex-run", event);
+                        }),
+                    )
+                    .await
+                    {
+                        eprintln!("Browser companion: {error:#}");
+                    }
+                });
+                // Registration is explicit from Connections, never enables page RPC.
+                if std::env::args().any(|arg| arg == "--browser-companion")
+                    && let Some(window) = app.get_webview_window("main")
+                {
+                    window.hide()?;
+                }
+            }
+            app.manage(service);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::install_browser_companion,
             commands::bootstrap,
             commands::local_repositories,
             commands::save_code_roots,
@@ -89,6 +120,20 @@ pub fn run() {
     #[cfg(feature = "e2e")]
     let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
     builder
-        .run(tauri::generate_context!())
-        .expect("could not start diffcity");
+        .build(tauri::generate_context!())
+        .expect("could not start diffcity")
+        .run(|app, event| match event {
+            // Keep the local service available when the last window closes.
+            tauri::RunEvent::ExitRequested {
+                code: None, api, ..
+            } => api.prevent_exit(),
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            _ => {}
+        });
 }
