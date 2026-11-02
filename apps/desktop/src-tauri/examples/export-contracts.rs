@@ -51,6 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         GuideEnrichment,
         GuideSection,
         Guide,
+        GuideRevision,
         GuideVersion,
         PullGuide,
         Note,

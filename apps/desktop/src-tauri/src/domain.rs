@@ -222,6 +222,7 @@ pub fn rank(a: &Attention) -> u8 {
 pub fn provisional(snapshot: &Snapshot) -> Guide {
     let sections = crate::guide::provisional_sections(snapshot, &HashSet::new());
     Guide {
+        previous_revision: None,
         enrichment: None,
         id: None,
         reasoning_effort: None,
@@ -362,6 +363,7 @@ pub fn validate_guide(
         ));
     }
     Ok(Guide {
+        previous_revision: None,
         enrichment: None,
         id: None,
         reasoning_effort: None,

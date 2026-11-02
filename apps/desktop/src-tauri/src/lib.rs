@@ -12,6 +12,7 @@ pub mod github;
 mod github_lists;
 pub mod guide;
 mod guide_annotations;
+mod guide_carry;
 mod guide_enrichment;
 mod guide_history;
 mod guide_naming;

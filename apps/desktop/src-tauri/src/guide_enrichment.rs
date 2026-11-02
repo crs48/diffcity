@@ -31,6 +31,7 @@ impl Store {
         }
         let snapshot: Snapshot = self
             .get("snapshot", &guide.snapshot_id)?
+            .or(self.get("comparison-snapshot", &guide.snapshot_id)?)
             .context("Missing captured code")?;
         let mut state = notes::plan(&snapshot, guide);
         for file in &mut state.files {
