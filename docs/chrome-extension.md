@@ -26,6 +26,24 @@ pnpm desktop:build
 
 The unpacked extension is in `apps/extension/dist`; the zip is in `.local/extension`. Load the unpacked directory for development and reload it in Chrome after rebuilding. The public manifest key stabilizes the extension ID; it is not a secret or signing credential. Native host registration must match this ID.
 
+### Verify the native side panel
+
+Use a headed browser with its native viewport when checking the side panel. In a Playwright CLI configuration, set:
+
+```json
+{
+  "browser": {
+    "contextOptions": {
+      "viewport": null
+    }
+  }
+}
+```
+
+Set the window size with the browser window controls or the `--window-size` launch argument. Avoid a fixed emulated viewport or the CLI's `resize` command for this check: in Chrome for Testing on macOS, emulation can leave GitHub painting underneath the native side-panel header and edge shadow after the panel opens. Restart the test browser after changing the viewport configuration.
+
+Verify the complete browser window, including Chrome's panel title and divider, with the panel open and after resizing it. The GitHub page should reflow into the space left beside the panel. Page-only screenshots do not include the native header or shadow.
+
 ## Architecture
 
 ```mermaid
