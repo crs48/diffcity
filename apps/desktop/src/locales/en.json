@@ -678,5 +678,7 @@
   "Routine section · collapsed automatically": "Routine section · collapsed automatically",
   "{{count}} findings": "{{count}} findings",
   "{{count}} findings_one": "{{count}} finding",
-  "{{count}} findings_other": "{{count}} findings"
+  "{{count}} findings_other": "{{count}} findings",
+  "Guide position": "Guide position",
+  "Hover to browse locations. Click a preview to jump there. Click or drag the rail to scroll. Use arrow keys to move between markers.": "Hover to browse locations. Click a preview to jump there. Click or drag the rail to scroll. Use arrow keys to move between markers."
 }

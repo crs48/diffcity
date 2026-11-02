@@ -1,10 +1,11 @@
-import { useMemo, useState, type RefObject } from "react";
+import { useEffect, useMemo, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
   Button,
   Dialog,
   DialogTrigger,
   Popover,
+  PreviewTrigger,
   Tooltip,
   TooltipTrigger,
 } from "react-aria-components";
@@ -34,6 +35,7 @@ import {
 } from "../lib/guideIndex";
 import { IconAction } from "../ui/IconAction";
 import { useGuideIndexLayout } from "./useGuideIndexLayout";
+import { useGuideIndexScrub } from "./useGuideIndexScrub";
 
 const kinds = {
   overview: { label: "Overview", Icon: BookOpen },
@@ -205,6 +207,8 @@ function IndexMarker({
   onFocus,
   onJump,
   onGroupJump,
+  scrubbing,
+  didDrag,
 }: {
   group: IndexGroup;
   active: boolean;
@@ -212,8 +216,14 @@ function IndexMarker({
   onFocus: () => void;
   onJump: (entry: GuideIndexEntry) => void;
   onGroupJump: (group: IndexGroup) => void;
+  scrubbing: boolean;
+  didDrag: RefObject<boolean>;
 }) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (scrubbing) setOpen(false);
+  }, [scrubbing]);
   const { items } = group;
   const mixed = new Set(items.map((e) => e.kind)).size > 1;
   const first = items[0];
@@ -230,47 +240,84 @@ function IndexMarker({
           })
         : `${t(kinds[first.kind].label)}: ${first.title}`;
   return (
-    <TooltipTrigger delay={220}>
-      <Button
-        className={`guide-index-marker ${group.lane} index-${mixed ? "mixed" : first.kind}`}
-        style={{ top: group.top }}
-        aria-label={
-          items.length === 1 && first.reviewed
-            ? `${label} · ${t("Code reviewed")}`
-            : label
-        }
-        aria-current={active ? "location" : undefined}
-        data-index-marker={group.id}
-        excludeFromTabOrder={tabIndex < 0}
-        onFocus={onFocus}
-        onPress={() => (items.length > 1 ? onGroupJump(group) : onJump(first))}
+    <div className="guide-index-marker-position" style={{ top: group.top }}>
+      <PreviewTrigger
+        delay={220}
+        closeDelay={250}
+        isDisabled={scrubbing}
+        isOpen={open && !scrubbing}
+        onOpenChange={setOpen}
       >
-        {group.lane === "sections" ? (
-          <span className="guide-index-chapter-dot" aria-hidden />
-        ) : mixed ? (
-          <Layers size={15} aria-hidden />
-        ) : (
-          <EntryIcon entry={first} />
+        <Button
+          className={`guide-index-marker ${group.lane} index-${mixed ? "mixed" : first.kind}`}
+          aria-label={
+            items.length === 1 && first.reviewed
+              ? `${label} · ${t("Code reviewed")}`
+              : label
+          }
+          aria-current={active ? "location" : undefined}
+          data-index-marker={group.id}
+          excludeFromTabOrder={tabIndex < 0}
+          onFocus={onFocus}
+          onPress={(event) => {
+            if (
+              didDrag.current &&
+              event.pointerType !== "keyboard" &&
+              event.pointerType !== "virtual"
+            )
+              return;
+            setOpen(false);
+            if (items.length > 1) onGroupJump(group);
+            else onJump(first);
+          }}
+        >
+          {group.lane === "sections" ? (
+            <span className="guide-index-chapter-dot" aria-hidden />
+          ) : mixed ? (
+            <Layers size={15} aria-hidden />
+          ) : (
+            <EntryIcon entry={first} />
+          )}
+          {items.length > 1 && group.lane === "activity" && (
+            <span className="guide-index-count">
+              {items.length > 99 ? "99+" : items.length}
+            </span>
+          )}
+        </Button>
+        {open && !scrubbing && (
+          <Popover
+            placement="right"
+            offset={8}
+            containerPadding={12}
+            className="guide-index-preview-popover"
+            aria-label={t("Guide locations")}
+          >
+            <div
+              className="guide-index-results"
+              role="list"
+              aria-label={t("Guide locations")}
+            >
+              {items.map((entry) => (
+                <div key={entry.id} role="listitem">
+                  <Button
+                    aria-label={t("Jump to {{title}}", {
+                      title: entry.title || t(kinds[entry.kind].label),
+                    })}
+                    onPress={() => {
+                      setOpen(false);
+                      // Close the preview before moving focus into the guide.
+                      requestAnimationFrame(() => onJump(entry));
+                    }}
+                  >
+                    <EntryPreview entry={entry} compact={items.length > 1} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Popover>
         )}
-        {items.length > 1 && group.lane === "activity" && (
-          <span className="guide-index-count">
-            {items.length > 99 ? "99+" : items.length}
-          </span>
-        )}
-      </Button>
-      <Tooltip placement="right" offset={10} className="guide-index-tooltip">
-        {items.map((entry) => (
-          <EntryPreview
-            key={entry.id}
-            entry={entry}
-            compact={items.length > 1}
-          />
-        ))}
-        {items.length > 1 && (
-          <p className="muted">{t("Click to scroll to this area")}</p>
-        )}
-      </Tooltip>
-    </TooltipTrigger>
+      </PreviewTrigger>
+    </div>
   );
 }
 
@@ -291,10 +338,9 @@ export function GuideIndex({
     () => buildGuideIndex({ snapshot, guide, notes, comments, progress }),
     [snapshot, guide, notes, comments, progress],
   );
-  const { host, groups, sectionRanges, track, indicator } = useGuideIndexLayout(
-    root,
-    entries,
-  );
+  const { host, groups, sectionRanges, track, indicator, scrubber } =
+    useGuideIndexLayout(root, entries);
+  const scrub = useGuideIndexScrub(root, track, scrubber);
   const reviewed = new Set(
     entries.filter((entry) => entry.reviewed).map((entry) => entry.sectionId),
   );
@@ -306,6 +352,7 @@ export function GuideIndex({
     const element = root.current;
     const viewport = element?.closest<HTMLElement>("[data-review-scroll]");
     if (!element || !viewport) return;
+    viewport.dispatchEvent(new Event("review-scroll-intent"));
     const bounds = element.getBoundingClientRect();
     viewport.scrollTo({
       top: Math.max(
@@ -351,6 +398,8 @@ export function GuideIndex({
       <div
         ref={track}
         className="guide-index-track"
+        data-scrubbing={scrub.scrubbing || undefined}
+        {...scrub.pointerHandlers}
         onKeyDown={(event) => {
           if (
             !(event.target instanceof HTMLElement) ||
@@ -380,6 +429,18 @@ export function GuideIndex({
           buttons[next]?.focus();
         }}
       >
+        <div
+          ref={scrubber}
+          className="guide-index-scrubber"
+          role="slider"
+          tabIndex={0}
+          aria-label={t("Guide position")}
+          aria-orientation="vertical"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={0}
+          onKeyDown={scrub.onKeyDown}
+        />
         {sectionRanges
           .filter((range) => reviewed.has(range.id))
           .map((range) => (
@@ -405,6 +466,8 @@ export function GuideIndex({
             onFocus={() => setFocused(group.id)}
             onJump={onJump}
             onGroupJump={jumpToGroup}
+            scrubbing={scrub.scrubbing}
+            didDrag={scrub.didDrag}
           />
         ))}
       </div>
@@ -432,7 +495,7 @@ export function GuideIndex({
           })}
           <p className="muted">
             {t(
-              "Hover to preview. Click to jump. Use arrow keys to move between markers.",
+              "Hover to browse locations. Click a preview to jump there. Click or drag the rail to scroll. Use arrow keys to move between markers.",
             )}
           </p>
         </Tooltip>

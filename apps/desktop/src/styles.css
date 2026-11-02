@@ -4436,6 +4436,17 @@
     flex: 1;
     width: 100%;
     min-height: 30px;
+    touch-action: none;
+    user-select: none;
+    cursor: ns-resize;
+  }
+  .guide-index-scrubber {
+    position: absolute;
+    inset: 0;
+    border-radius: 4px;
+  }
+  .guide-index-track[data-scrubbing] .guide-index-marker {
+    cursor: ns-resize;
   }
   .guide-index-viewport {
     position: absolute;
@@ -4467,8 +4478,17 @@
     color: var(--green);
     font-size: 11px;
   }
+  .guide-index-marker-position {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 28px;
+    pointer-events: none;
+  }
   .guide-index-marker {
     position: absolute;
+    top: 0;
+    pointer-events: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4586,6 +4606,7 @@
     color: var(--green);
   }
   .guide-index-popover,
+  .guide-index-preview-popover,
   .guide-index-tooltip {
     z-index: 60;
     border: 1px solid var(--border);
@@ -4601,10 +4622,18 @@
     padding: 14px;
     font-size: 12px;
   }
-  .guide-index-tooltip > .guide-index-preview + .guide-index-preview {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
+  .guide-index-preview-popover {
+    width: min(340px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 6px;
+    scrollbar-width: thin;
+  }
+  .guide-index-preview-popover .guide-index-results {
+    overflow: visible;
+    margin: 0;
+    padding: 0;
   }
   .guide-index-tooltip > p {
     margin: 10px 0 0;

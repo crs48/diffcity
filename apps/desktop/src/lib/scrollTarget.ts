@@ -25,7 +25,13 @@ export function followScrollOffset(
   let frame = 0;
   let remaining = 8;
   let stopped = false;
-  const events = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
+  const events = [
+    "wheel",
+    "touchstart",
+    "pointerdown",
+    "keydown",
+    "review-scroll-intent",
+  ] as const;
   const stop = () => {
     if (stopped) return;
     stopped = true;
