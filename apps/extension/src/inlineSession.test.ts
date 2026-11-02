@@ -162,3 +162,82 @@ it("never allows selected text to become a GitHub draft", async () => {
     }),
   ).rejects.toThrow("AI-only");
 });
+
+it("keeps unsent drafts private and restores them when the UI remounts", async () => {
+  const { rpc } = setup();
+  const persist = vi.fn().mockResolvedValue(undefined);
+  const session = inlineSession(context, rpc, { persist });
+  expect(await session.invoke("inline_context", {})).toMatchObject({
+    resuming: false,
+  });
+  const view = {
+    draft: { noteId: null, body: "Unsent question — final keystroke" },
+    collapsed: true,
+  };
+  await session.invoke("save_inline_view", { view });
+  expect(persist).toHaveBeenCalledWith(view);
+  expect(rpc.mock.calls.some(([name]) => name === "save_note")).toBe(false);
+  expect(await session.invoke("inline_context", {})).toMatchObject({
+    view,
+    resuming: true,
+  });
+  const restarted = inlineSession(context, rpc, { view });
+  expect(await restarted.invoke("inline_context", {})).toMatchObject({
+    view,
+    resuming: true,
+  });
+  await expect(
+    session.invoke("save_inline_view", {
+      view: { ...view, draft: { noteId: "another-thread", body: "changed" } },
+    }),
+  ).rejects.toThrow("Invalid inline draft");
+});
+it("keeps a streaming job alive with no mounted UI and restores its completion exactly once", async () => {
+  const { rpc } = setup();
+  let complete!: (value: unknown) => void;
+  const call = vi.fn((command: string, args: Record<string, unknown>) =>
+    command === "ask_codex"
+      ? new Promise((resolve) => {
+          complete = resolve;
+        })
+      : rpc(command, args),
+  );
+  const changed = vi.fn();
+  const session = inlineSession(context, call, { changed });
+  await session.invoke("inline_context", {});
+  await session.invoke("save_note", {
+    note: newNote("snapshot", anchor, "Explain this"),
+  });
+  const pending = session.invoke("ask_codex", {
+    snapshotId: "snapshot",
+    noteId: "question",
+    runId: "active",
+    preference: { provider: "claude", model: "test" },
+  });
+  await vi.waitFor(() => expect(complete).toBeTypeOf("function"));
+  session.event({
+    runId: "active",
+    snapshotId: "snapshot",
+    phase: "stream",
+    text: "Partial response",
+  });
+  expect(await session.invoke("inline_context", {})).toMatchObject({
+    resuming: true,
+    runs: [{ id: "active", stream: "Partial response" }],
+  });
+  const answer = {
+    ...newNote("snapshot", anchor, "Full response"),
+    id: "answer",
+    role: "assistant",
+    parentId: "question",
+  };
+  complete({ answer, draft: null });
+  await pending;
+  expect(await session.invoke("inline_context", {})).toMatchObject({
+    runs: [],
+    workspace: { notes: expect.arrayContaining([answer]) },
+  });
+  expect(call.mock.calls.filter(([name]) => name === "ask_codex")).toHaveLength(
+    1,
+  );
+});

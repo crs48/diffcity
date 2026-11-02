@@ -24,10 +24,17 @@ let browser: {
     onMessage: ReturnType<typeof event>;
     onInstalled: ReturnType<typeof event>;
   };
-  tabs: { create: ReturnType<typeof vi.fn> };
+  tabs: {
+    create: ReturnType<typeof vi.fn>;
+    onRemoved: ReturnType<typeof event>;
+  };
   sidePanel: { open: ReturnType<typeof vi.fn> };
   storage: {
-    session: { set: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
+    session: {
+      set: ReturnType<typeof vi.fn>;
+      get: ReturnType<typeof vi.fn>;
+      remove: ReturnType<typeof vi.fn>;
+    };
   };
   action: { onClicked: ReturnType<typeof event> };
   contextMenus: {
@@ -46,12 +53,13 @@ beforeEach(async () => {
       onMessage: event(),
       onInstalled: event(),
     },
-    tabs: { create: vi.fn().mockResolvedValue({}) },
+    tabs: { create: vi.fn().mockResolvedValue({}), onRemoved: event() },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined) },
     storage: {
       session: {
         set: vi.fn().mockResolvedValue(undefined),
         get: vi.fn().mockResolvedValue({}),
+        remove: vi.fn().mockResolvedValue(undefined),
       },
     },
     action: { onClicked: event() },
@@ -205,5 +213,20 @@ it("restricts embedded frames to a saved grant on the same tab and PR", async ()
     }),
   );
   expect(valid.disconnect).not.toHaveBeenCalled();
+  expect(browser.runtime.connectNative).not.toHaveBeenCalled();
+});
+
+it("releases closed-tab inline state without clearing other tabs or saved conversations", async () => {
+  browser.storage.session.get.mockResolvedValue({
+    "inline:closed": { tabId: 7 },
+    "inline:other": { tabId: 8 },
+    reviewContext: { tabId: 7 },
+  });
+  browser.tabs.onRemoved.addListener.mock.calls[0][0](7);
+  await vi.waitFor(() =>
+    expect(browser.storage.session.remove).toHaveBeenCalledWith([
+      "inline:closed",
+    ]),
+  );
   expect(browser.runtime.connectNative).not.toHaveBeenCalled();
 });

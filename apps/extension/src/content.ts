@@ -1,4 +1,6 @@
 import { pullFromUrl, type PullContext } from "./protocol";
+import { inlineViewport } from "./inlineViewport";
+import { viewportActions } from "./viewportActions";
 
 let toolbar: HTMLElement | undefined;
 let selectionAction: HTMLElement | undefined;
@@ -7,19 +9,15 @@ let selectedCode: { context: PullContext; target: Element } | undefined;
 let currentUrl = "";
 const extensionOrigin = chrome.runtime.getURL("/").replace(/\/$/, "");
 const openingInline = new Set<string>();
-const inlineFrames = new Map<
-  string,
-  { host: HTMLElement; frame: HTMLIFrameElement; id: string }
->();
+const inlineThreads = inlineViewport(extensionOrigin);
+const actionsInView = viewportActions();
 const codeSelector =
   ".blob-code, [data-code-marker], [data-testid='diff-line-content'], [data-testid='code-cell']";
 
 async function openInline(context: PullContext, target: Element) {
   const key = JSON.stringify(context);
-  const existing = inlineFrames.get(key);
-  if (existing?.host.isConnected) {
-    existing.host.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    existing.frame.focus();
+  if (inlineThreads.has(key)) {
+    inlineThreads.reveal(key);
     return;
   }
   if (openingInline.has(key)) return;
@@ -36,63 +34,17 @@ async function openInline(context: PullContext, target: Element) {
       context.number !== pullFromUrl(location.href)?.number
     )
       return;
-    const row = target.closest("tr");
-    const host = document.createElement(row ? "tr" : "div");
-    host.dataset.diffcity = "inline";
-    const container = row ? document.createElement("td") : host;
-    if (row) {
-      (container as HTMLTableCellElement).colSpan =
-        Array.from(row.cells).reduce((sum, cell) => sum + cell.colSpan, 0) || 4;
-      host.append(container);
-      container.style.padding = "0";
-      // A table must not let the intrinsic width of a frame widen the diff.
-      container.style.whiteSpace = "normal";
-    }
-    const frame = document.createElement("iframe");
-    frame.src = result.url;
-    frame.title = `Diff City inline conversation${context.selection?.path ? ` · ${context.selection.path}` : ""}`;
-    frame.allow = "clipboard-write";
-    Object.assign(frame.style, {
-      display: "block",
-      border: "0",
-      width: "100%",
-      maxWidth: "1000px",
-      height: "230px",
-      colorScheme: "normal",
-    });
-    container.append(frame);
-    (row ?? target).after(host);
-    inlineFrames.set(key, { host, frame, id: result.id });
+    inlineThreads.open(key, context, target, result);
     selectionAction?.remove();
     selectionAction = undefined;
     lineAction?.remove();
     lineAction = undefined;
-    frame.focus();
   } catch (error) {
     announce(String(error));
   } finally {
     openingInline.delete(key);
   }
 }
-window.addEventListener("message", (event) => {
-  if (event.origin !== extensionOrigin) return;
-  for (const [key, entry] of inlineFrames) {
-    if (
-      event.source !== entry.frame.contentWindow ||
-      event.data?.id !== entry.id
-    )
-      continue;
-    if (
-      event.data.type === "diffcity-inline-size" &&
-      Number.isFinite(event.data.height)
-    ) {
-      entry.frame.style.height = `${Math.max(80, Math.min(1000000, event.data.height))}px`;
-    } else if (event.data.type === "diffcity-inline-close") {
-      entry.host.remove();
-      inlineFrames.delete(key);
-    }
-  }
-});
 function button(
   label: string,
   action: () => void,
@@ -219,9 +171,11 @@ function announce(text: string) {
 }
 function scan() {
   const pull = pullFromUrl(location.href);
-  if (currentUrl !== location.pathname) {
-    currentUrl = location.pathname;
-    inlineFrames.clear();
+  const pullKey = pull ? `${pull.repository}#${pull.number}` : "";
+  if (currentUrl !== pullKey) {
+    currentUrl = pullKey;
+    inlineThreads.clear();
+    actionsInView.clear();
     lineAction?.remove();
     selectedCode = undefined;
     toolbar?.remove();
@@ -233,6 +187,8 @@ function scan() {
       .forEach((node) => node.remove());
   }
   if (!pull) return;
+  inlineThreads.reconcile();
+  actionsInView.prune();
   if (!toolbar?.isConnected) {
     const target = document.querySelector(
       ".gh-header-actions, [data-testid='pull-request-header'] h1, .gh-header-title, #partial-discussion-header h1, h1[data-component='Heading']",
@@ -266,14 +222,15 @@ function scan() {
   for (const header of document.querySelectorAll<HTMLElement>(
     ".file-header[data-path]",
   )) {
-    if (header.querySelector("[data-diffcity]")) continue;
     const path = header.dataset.path;
     if (path)
-      header.append(
-        button("Ask Diff City about this file", () =>
+      actionsInView.register(header, `file:${path}`, () => {
+        const action = button("Ask Diff City about this file", () =>
           send("ask", { ...pull, path }),
-        ),
-      );
+        );
+        header.append(action);
+        return action;
+      });
   }
   // Permalinks are identifiers only: actual comment bodies come from GitHub's API.
   for (const link of document.querySelectorAll<HTMLAnchorElement>(
@@ -282,7 +239,7 @@ function scan() {
     const area = link.closest(
       ".timeline-comment-header, .review-comment, [data-testid='comment-header'], .comment-header",
     );
-    if (!area || area.querySelector("[data-diffcity]")) continue;
+    if (!area) continue;
     const url = new URL(link.href, location.href);
     const linked = pullFromUrl(url.href);
     if (linked?.repository !== pull.repository || linked.number !== pull.number)
@@ -291,8 +248,8 @@ function scan() {
       area.querySelector(
         ".timeline-comment-actions, [data-testid='comment-actions']",
       ) ?? area;
-    actions.append(
-      button("Ask Diff City", () => {
+    actionsInView.register(area, url.href, () => {
+      const action = button("Ask Diff City", () => {
         const context = { ...pull, commentUrl: url.href };
         if (url.hash.startsWith("#discussion_r")) {
           const thread =
@@ -301,19 +258,46 @@ function scan() {
             ) ?? area;
           void openInline(context, thread);
         } else send("ask", context);
-      }),
-    );
+      });
+      actions.append(action);
+      return action;
+    });
   }
 }
 let scheduled = false;
-new MutationObserver(() => {
-  if (scheduled) return;
+new MutationObserver((records) => {
+  const external = records.some((record) => {
+    const element =
+      record.target instanceof Element
+        ? record.target
+        : record.target.parentElement;
+    if (element?.closest("[data-diffcity]")) return false;
+    if (record.type !== "childList") return true;
+    return [...record.addedNodes, ...record.removedNodes].some(
+      (node) =>
+        !(node instanceof Element && node.hasAttribute("data-diffcity")),
+    );
+  });
+  if (scheduled || !external) return;
   scheduled = true;
   setTimeout(() => {
     scheduled = false;
     scan();
   }, 200);
-}).observe(document.documentElement, { childList: true, subtree: true });
+}).observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  characterData: true,
+  attributes: true,
+  attributeFilter: [
+    "data-line-number",
+    "data-path",
+    "data-tagsearch-path",
+    "data-file-path",
+    "data-code-marker",
+    "id",
+  ],
+});
 scan();
 document.addEventListener("mouseup", (event) => {
   if (

@@ -1,5 +1,5 @@
 import identity from "../identity.json";
-import { inlineSession } from "./inlineSession";
+import { inlineSession, type InlineView } from "./inlineSession";
 import {
   pullFromUrl,
   safeContext,
@@ -14,7 +14,14 @@ const inlineClients = new Map<
   chrome.runtime.Port,
   ReturnType<typeof inlineSession>
 >();
-type InlineGrant = { context: PullContext; tabId: number; createdAt: number };
+const inlineSessions = new Map<string, ReturnType<typeof inlineSession>>();
+const inlineTabs = new Map<string, number>();
+type InlineGrant = {
+  context: PullContext;
+  tabId: number;
+  createdAt: number;
+  view?: InlineView;
+};
 async function inlineGrant(
   sender: chrome.runtime.MessageSender | undefined,
   id: string,
@@ -88,6 +95,9 @@ function connect() {
       return;
     }
     if (message.event) {
+      if (message.event === "codex-run")
+        for (const session of inlineSessions.values())
+          session.event(message.payload);
       for (const client of clients) {
         const scope = inlineClients.get(client);
         if (!scope || scope.acceptsEvent(message)) client.postMessage(message);
@@ -122,7 +132,25 @@ chrome.runtime.onConnect.addListener((client) => {
   if (client.name.startsWith("diffcity-inline:")) {
     const id = client.name.slice("diffcity-inline:".length);
     const scope = inlineGrant(client.sender, id).then((grant) => {
-      const session = inlineSession(grant.context, rpc);
+      let session = inlineSessions.get(id);
+      if (!session) {
+        session = inlineSession(grant.context, rpc, {
+          view: grant.view,
+          persist: async (view) => {
+            if (!inlineTabs.has(id)) return;
+            await chrome.storage.session.set({
+              [`inline:${id}`]: { ...grant, view },
+            });
+          },
+          changed: (payload) => {
+            for (const [port, scope] of inlineClients)
+              if (scope === inlineSessions.get(id))
+                port.postMessage({ event: "inline-state", payload });
+          },
+        });
+        inlineSessions.set(id, session);
+        inlineTabs.set(id, grant.tabId);
+      }
       inlineClients.set(client, session);
       clients.add(client);
       return session;
@@ -182,6 +210,35 @@ chrome.runtime.onConnect.addListener((client) => {
           client.postMessage({ id: message.id, error: String(error) });
       },
     );
+  });
+});
+// Frames disappear on scroll, but their sessions live until the tab closes.
+// Native jobs finish independently and keep their results in the desktop DB.
+chrome.tabs.onRemoved.addListener((tabId) => {
+  for (const [id, owner] of inlineTabs) {
+    if (owner !== tabId) continue;
+    const session = inlineSessions.get(id);
+    for (const [port, scope] of inlineClients) {
+      if (scope !== session) continue;
+      inlineClients.delete(port);
+      clients.delete(port);
+      port.disconnect();
+    }
+    inlineSessions.delete(id);
+    inlineTabs.delete(id);
+  }
+  void chrome.storage.session.get(null).then((stored) => {
+    const keys = Object.entries(stored)
+      .filter(
+        ([key, value]) =>
+          key.startsWith("inline:") &&
+          typeof value === "object" &&
+          value !== null &&
+          "tabId" in value &&
+          value.tabId === tabId,
+      )
+      .map(([key]) => key);
+    if (keys.length) return chrome.storage.session.remove(keys);
   });
 });
 function guideUrl(context: PullContext) {

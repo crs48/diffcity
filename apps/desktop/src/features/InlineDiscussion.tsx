@@ -25,9 +25,13 @@ import { CopyConversation } from "./CopyConversation";
 export function InlineDiscussion({
   thread,
   onClose,
+  initiallyCollapsed = false,
+  onCollapsedChange,
 }: {
   thread: InlineThread;
   onClose?: () => void;
+  initiallyCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }) {
   const { t } = useTranslation();
   const c = useConversation();
@@ -35,8 +39,10 @@ export function InlineDiscussion({
   const header = useRef<HTMLElement>(null);
   const keepHeader = useRef(false);
   const jump = useGuideJump([thread.anchor.hunkId]);
-  const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
   const focus = `${c?.inline.focus ?? 0}/${jump?.entry.target === threadTarget(thread.anchor) ? jump.sequence : 0}`;
+  const [collapsedAt, setCollapsedAt] = useState<string | null>(() =>
+    initiallyCollapsed ? focus : null,
+  );
   const collapsed = collapsedAt === focus;
   useLayoutEffect(() => {
     if (!collapsed || !keepHeader.current) return;
@@ -83,6 +89,7 @@ export function InlineDiscussion({
                 viewport.getBoundingClientRect().top +
                   parseFloat(getComputedStyle(header.current).top);
             setCollapsedAt(collapsed ? null : focus);
+            onCollapsedChange?.(!collapsed);
           }}
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "react-aria-components";
 import {
   api,
@@ -15,13 +21,13 @@ import {
 import { InlineDiscussion } from "../../desktop/src/features/InlineDiscussion";
 import { useNoteComposer } from "../../desktop/src/features/useNoteComposer";
 import {
-  useAiRuns,
+  type AiRun,
   isActiveRun,
   threadRuns,
   threadModel,
 } from "../../desktop/src/features/useAiRuns";
 import { transport } from "./transport";
-import type { InlineContext } from "./inlineSession";
+import type { InlineContext, InlineState, InlineView } from "./inlineSession";
 
 const id = new URLSearchParams(location.search).get("id");
 const notifyParent = (type: string, extra = {}) =>
@@ -45,7 +51,58 @@ export function InlineReview() {
   const composer = useNoteComposer(onNote);
   const currentComposer = useRef(composer);
   currentComposer.current = composer;
-  const ai = useAiRuns();
+  const [runs, setRuns] = useState<AiRun[]>([]);
+  const [initialized, setInitialized] = useState(false);
+  const live = useRef(false);
+  const collapsed = useRef(false);
+  const persistView = useCallback(async () => {
+    if (!live.current) return;
+    const draft = currentComposer.current.getDraft();
+    const view: InlineView = {
+      collapsed: collapsed.current,
+      draft: draft ? { noteId: draft.id || null, body: draft.body } : null,
+    };
+    await transport.invoke("save_inline_view", { view });
+  }, []);
+  useEffect(() => {
+    const stop = currentComposer.current.subscribeDraft(() => {
+      void persistView().catch(onError);
+    });
+    const subscription = transport.listen<InlineState>(
+      "inline-state",
+      ({ payload }) => {
+        setRuns(payload.runs);
+        setWorkspace((w) => (w ? { ...w, notes: payload.notes } : w));
+      },
+    );
+    const suspend = async (event: MessageEvent) => {
+      if (
+        event.source !== parent ||
+        event.origin !== "https://github.com" ||
+        event.data?.type !== "diffcity-inline-suspend" ||
+        event.data.id !== id ||
+        typeof event.data.token !== "string"
+      )
+        return;
+      try {
+        if (live.current) {
+          // A disconnected desktop must not keep an offscreen UI alive.
+          // The private worker draft below preserves text if native saving fails.
+          await currentComposer.current.flush().catch(() => undefined);
+          await persistView();
+        }
+        notifyParent("diffcity-inline-suspended", { token: event.data.token });
+      } catch (error) {
+        onError(error);
+      }
+    };
+    window.addEventListener("message", suspend);
+    return () => {
+      stop();
+      void subscription.then((stop) => stop());
+      window.removeEventListener("message", suspend);
+    };
+  }, [persistView, onError]);
   useEffect(() => {
     let disposed = false;
     setError("");
@@ -55,28 +112,51 @@ export function InlineReview() {
         if (disposed) return;
         setInfo(result);
         setWorkspace(result.workspace);
+        const savedDraft = result.view?.draft;
+        const editing = savedDraft?.noteId
+          ? result.workspace.notes.find((n) => n.id === savedDraft.noteId)
+          : undefined;
         await currentComposer.current.start(
           result.workspace.snapshot.id,
           result.anchor,
+          editing,
+          !result.resuming,
         );
-        if (result.context.commentUrl)
+        collapsed.current = result.view?.collapsed ?? false;
+        setRuns(result.runs);
+        if (savedDraft) currentComposer.current.change(savedDraft.body);
+        else if (!result.resuming && result.context.commentUrl)
           currentComposer.current.change(
             "What does this comment mean, and is it a concern?",
           );
+        live.current = true;
+        setInitialized(true);
       })
       .catch((error) => {
-        if (!disposed) onError(error);
+        if (!disposed) {
+          onError(error);
+          setInitialized(true);
+        }
       });
     return () => {
       disposed = true;
     };
   }, [version, onError]);
+  useLayoutEffect(() => {
+    if (!initialized) return;
+    notifyParent("diffcity-inline-ready", {
+      height:
+        Math.ceil(
+          document.getElementById("root")!.getBoundingClientRect().height,
+        ) + 2,
+    });
+  }, [initialized]);
   useEffect(() => {
     const root = document.getElementById("root")!;
     let previous = 0;
     const observer = new ResizeObserver(() => {
       const height = Math.ceil(root.getBoundingClientRect().height) + 2;
-      if (height !== previous) {
+      if (live.current && height !== previous) {
         previous = height;
         notifyParent("diffcity-inline-size", { height });
       }
@@ -144,15 +224,17 @@ export function InlineReview() {
           workspace,
           inline: composer,
           chat: composer,
-          runs: ai.runs,
+          runs,
           isBusy: (anchor) =>
-            threadRuns(ai.runs, workspace.snapshot.id, anchor).some(
-              isActiveRun,
-            ),
+            threadRuns(runs, workspace.snapshot.id, anchor).some(isActiveRun),
           modelFor: (anchor) =>
             threadModel(workspace.notes, anchor, info.preference),
-          cancel: ai.cancel,
-          dismiss: ai.dismiss,
+          cancel: api.cancel,
+          dismiss: (runId) => {
+            void transport
+              .invoke("dismiss_inline_run", { runId })
+              .catch(onError);
+          },
           onError,
           openChat: openPanel,
           openInline: (anchor) =>
@@ -186,16 +268,12 @@ export function InlineReview() {
               note.anchor,
               info.preference,
             );
-            const reply = await ai.start(
-              {
-                kind: "question",
-                snapshotId: note.snapshotId,
-                question,
-                preference,
-                access: "limited",
-              },
-              (runId) =>
-                api.ask(note.snapshotId, note.id, runId, preference, "limited"),
+            const reply = await api.ask(
+              note.snapshotId,
+              note.id,
+              crypto.randomUUID(),
+              preference,
+              "limited",
             );
             if (reply) {
               onNote(reply.answer);
@@ -222,9 +300,14 @@ export function InlineReview() {
           Opening inline conversation…
         </p>
       )}
-      {conversation && info && workspace ? (
+      {conversation && info && workspace && initialized ? (
         <ConversationContext.Provider value={conversation}>
           <InlineDiscussion
+            initiallyCollapsed={info.view?.collapsed}
+            onCollapsedChange={(value) => {
+              collapsed.current = value;
+              void persistView().catch(onError);
+            }}
             onClose={() => void close().catch(onError)}
             thread={{
               anchor: info.anchor,
