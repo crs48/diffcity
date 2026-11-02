@@ -24,6 +24,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm contracts && git diff --exit-code -- packages/contracts
       - run: cargo fmt --all -- --check
+      - run: pnpm extension:check && pnpm extension:test && pnpm extension:package
       - run: pnpm check
       - run: pnpm lint
       - run: cargo test --workspace --locked

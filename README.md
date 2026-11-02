@@ -8,6 +8,12 @@ AI code review for GitHub pull requests with your existing **Claude Code** or **
 
 Apple silicon (M1 or newer), macOS 14+. Download the DMG from Releases and drag Diff City into Applications. Early unsigned alphas are **not notarized** and require macOS approval on first launch; the release notes state the signing status. Bring your GitHub CLI login and a local Codex or Claude Code installation. No Diff City account is required. Updates are manual for now.
 
+## Chrome companion
+
+Review directly from a GitHub PR with your local Claude or Codex agent. Ask about comments and selected code in a side panel, or open the full Diff City guide in a browser tab. Guides and completed conversations use the same local storage as the desktop app.
+
+The extension is available as an unpacked alpha; see the [Chrome companion setup and architecture](docs/chrome-extension.md).
+
 ## See the review workflow
 
 These are full-window captures of the real macOS app reviewing the [mixed-edit demo PR](https://github.com/crs48/diffcity/pull/18): 20 files and more than 16,000 changed lines covering migrations, access policies, API contracts, localization, and renames. The guide and replies were generated with **Claude Code · Fable 5 · High**. The sample deliberately contains review issues and is not intended to be merged. Other account avatars are hidden for privacy. The guide surfaces its coverage limits for oversized or omitted changes.
