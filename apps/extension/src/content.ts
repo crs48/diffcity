@@ -32,6 +32,11 @@ function button(
       border: 1px solid var(--borderColor-default, #d1d9e0);
       box-shadow: 0 2px 8px #0002;
     }
+    .floating:hover, .floating:focus-visible {
+      background: var(--bgColor-muted, #f6f8fa);
+      border-color: var(--borderColor-emphasis, #818b98);
+      box-shadow: 0 2px 10px #0003;
+    }
     @media (prefers-color-scheme: dark) {
       :host { --dc-red: #f85149; --dc-green: #3fb950; --dc-purple: #ab7df8; }
     }
@@ -239,7 +244,18 @@ document.addEventListener("mouseup", (event) => {
   const line = number?.dataset.lineNumber
     ? Number(number.dataset.lineNumber)
     : undefined;
-  const rect = range.getBoundingClientRect();
+  // A multi-line range's union includes the full width of intervening table
+  // cells. Anchor to the focus caret (the drag endpoint), not that union.
+  const endpoint = range.cloneRange();
+  if (selection.focusNode)
+    endpoint.setStart(selection.focusNode, selection.focusOffset);
+  endpoint.collapse(true);
+  const caret = Array.from(endpoint.getClientRects()).find((r) => r.height > 0);
+  // Element-boundary carets may have no rect; the pointer still identifies
+  // the endpoint without falling back to the whole file's bounding box.
+  const x = caret?.right ?? event.clientX;
+  const bottom = caret?.bottom ?? event.clientY;
+  const top = caret?.top ?? event.clientY;
   selectionAction = button(
     "Ask Diff City about this selection",
     () => send("ask", { ...pull, selection: { text, path, line, side } }),
@@ -248,8 +264,8 @@ document.addEventListener("mouseup", (event) => {
   Object.assign(selectionAction.style, {
     position: "fixed",
     zIndex: "2147483647",
-    left: `${Math.max(8, Math.min(rect.right, innerWidth - 36))}px`,
-    top: `${Math.max(8, Math.min(rect.bottom + 6, innerHeight - 40))}px`,
+    left: `${Math.max(8, Math.min(x + 6, innerWidth - 36))}px`,
+    top: `${Math.max(8, Math.min(bottom + 34 <= innerHeight ? bottom + 6 : top - 34, innerHeight - 36))}px`,
   });
   document.body.append(selectionAction);
 });
