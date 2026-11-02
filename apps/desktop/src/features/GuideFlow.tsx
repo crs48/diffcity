@@ -78,6 +78,7 @@ export function GuideFlow(props: Props) {
     setNavigationHost(
       (
         root.current?.closest(".review-tabs") ??
+        root.current?.closest("[data-review-workspace]") ??
         root.current?.closest(".review-document")
       )?.querySelector<HTMLElement>("#review-guide-navigation") ?? null,
     );

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./transport";
 import type {
   AgentAccess,
   AgentAnswer,
@@ -30,6 +30,7 @@ import type {
 } from "../../../../packages/contracts/src";
 export type * from "../../../../packages/contracts/src";
 export const api = {
+  installBrowser: () => invoke<string[]>("install_browser_companion"),
   localRepositories: (refresh = false) =>
     invoke<LocalCodeDirectory>("local_repositories", { refresh }),
   saveCodeRoots: (roots: string[]) =>

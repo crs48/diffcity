@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "minimum_chrome_version": "120",
+  "name": "Diff City — coding agent code review",
+  "version": "0.1.0",
+  "description": "Review GitHub pull requests with your local Claude and Codex agents. Shared guides, code conversations, and review progress.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlfGbrsfg026EzIuF6CyVIr1QfFI8shERCIJQNqGpw+z5VLDTKqIrbGxzcG210YrBc47oj5qZXh6s8M0Mz1LsuWLqcUgntJSpIDaHFoaUrWtbpNPMyxavOBROgdYAKhFzjGXeiIVVzoQXn5Blf6HOqE7xp/wV0D168OhsnGLmYqKhYriT72hYEY1Gutfs4nrCs8TL2152LNoVPItsAwg1iDE/FrA87Tq4b/QOJ+ldNTuSkGIHJd2hDJk2iz7XqYkiu3GrfpugxzkWwTYs7edSA07eddfdMEDRg7ms4Eqp1IOvFNzuJWv4oy07yYFi71PMyfJvykZUCDXLh/2YhWKQVQIDAQAB",
+  "permissions": [
+    "nativeMessaging",
+    "sidePanel",
+    "storage",
+    "contextMenus",
+    "clipboardWrite"
+  ],
+  "host_permissions": ["https://github.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open Diff City"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "128": "icon.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
+  }
+}

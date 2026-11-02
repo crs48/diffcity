@@ -8,11 +8,17 @@ import { commentsForAnchor } from "../lib/commentContext";
 import { useConversation } from "./conversation";
 import { NoteComposer } from "./NoteComposer";
 import { ReviewMessages } from "./ReviewMessages";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { SelectionQuote } from "./SelectionQuote";
 import { CopyConversation } from "./CopyConversation";
 
-export function Discussion({ onClose }: { onClose: () => void }) {
+export function Discussion({
+  onClose,
+  replyContext,
+}: {
+  onClose: () => void;
+  replyContext?: ReactNode;
+}) {
   const { t } = useTranslation();
   const c = useConversation();
   const messages = useRef<HTMLDivElement>(null);
@@ -84,6 +90,7 @@ export function Discussion({ onClose }: { onClose: () => void }) {
         />
       </div>
       <div className="discussion-compose">
+        {replyContext}
         <div
           id="pr-chat-reply-context"
           className="discussion-context"

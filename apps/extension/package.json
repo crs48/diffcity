@@ -1,0 +1,28 @@
+{
+  "name": "@diffcity/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build && vite build --config vite.content.config.ts",
+    "check": "tsc --noEmit",
+    "test": "vitest run --maxWorkers=2"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-aria-components": "^1.22.1",
+    "lucide-react": "^0.577.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "latest",
+    "@tailwindcss/vite": "^4.3.3",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "latest",
+    "jsdom": "^30.1.3"
+  }
+}
