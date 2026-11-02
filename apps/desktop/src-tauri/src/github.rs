@@ -26,6 +26,14 @@ fn integer(v: &Value, key: &str) -> u32 {
     v[key].as_u64().unwrap_or(0).min(u32::MAX as u64) as u32
 }
 
+fn apply_thread_states(comments: &mut [RemoteComment], states: &HashMap<String, bool>) {
+    for comment in comments {
+        comment.resolved = states
+            .get(comment.in_reply_to_id.as_ref().unwrap_or(&comment.id))
+            .copied();
+    }
+}
+
 pub fn executable(configured: Option<&str>, name: &str, candidates: &[&str]) -> Result<String> {
     if let Some(path) = configured.filter(|s| !s.is_empty()) {
         if Path::new(path).is_file() {
@@ -595,6 +603,7 @@ impl GitHub {
         ] {
             for v in self.pages(&path).await? {
                 result.push(RemoteComment {
+                    resolved: None,
                     id: v["id"].to_string(),
                     in_reply_to_id: v["in_reply_to_id"].as_u64().map(|id| id.to_string()),
                     author: string(&v["user"], "login"),
@@ -615,6 +624,7 @@ impl GitHub {
                 continue;
             }
             result.push(RemoteComment {
+                resolved: None,
                 id: format!("review-{}", review["id"]),
                 in_reply_to_id: None,
                 author: string(&review["user"], "login"),
@@ -627,8 +637,52 @@ impl GitHub {
                 created_at: string(&review, "submitted_at"),
             });
         }
+        if result.iter().any(|comment| comment.path.is_some()) {
+            // REST comments omit thread resolution. Failure must keep comments visible.
+            if let Ok(states) = self.review_thread_states(pull).await {
+                apply_thread_states(&mut result, &states);
+            }
+        }
         result.sort_by(|a, b| a.created_at.cmp(&b.created_at));
         Ok(result)
+    }
+    async fn review_thread_states(&self, pull: &PullRequest) -> Result<HashMap<String, bool>> {
+        let (owner, name) = pull
+            .repository
+            .split_once('/')
+            .context("Invalid repository")?;
+        let query = "query($owner:String!,$name:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100,after:$cursor){nodes{isResolved comments(first:1){nodes{databaseId}}} pageInfo{hasNextPage endCursor}}}}}";
+        let mut cursor = None::<String>;
+        let mut states = HashMap::new();
+        for _ in 0..100 {
+            let value = self.request(Method::POST, "/graphql", Some(&json!({"query":query,"variables":{"owner":owner,"name":name,"number":pull.number,"cursor":cursor}})), false).await?;
+            anyhow::ensure!(
+                value.get("errors").is_none(),
+                "GitHub thread state query failed"
+            );
+            let connection = &value["data"]["repository"]["pullRequest"]["reviewThreads"];
+            for thread in connection["nodes"]
+                .as_array()
+                .context("Missing review threads")?
+            {
+                if let (Some(id), Some(resolved)) = (
+                    thread["comments"]["nodes"][0]["databaseId"].as_u64(),
+                    thread["isResolved"].as_bool(),
+                ) {
+                    states.insert(id.to_string(), resolved);
+                }
+            }
+            if connection["pageInfo"]["hasNextPage"] == false {
+                return Ok(states);
+            }
+            let next = connection["pageInfo"]["endCursor"]
+                .as_str()
+                .context("Missing thread cursor")?
+                .to_owned();
+            anyhow::ensure!(cursor.as_ref() != Some(&next), "Repeated thread cursor");
+            cursor = Some(next);
+        }
+        bail!("Too many review threads")
     }
     pub async fn checks(&self, pull: &PullRequest) -> Result<String> {
         let base = format!("/repos/{}/commits/{}", pull.repository, pull.head);
@@ -888,6 +942,26 @@ pub fn payload(
 #[cfg(test)]
 mod inbox_tests {
     use super::*;
+    #[test]
+    fn resolution_is_shared_with_replies_and_legacy_comments_remain_visible() {
+        let mut comments: Vec<RemoteComment> = serde_json::from_value(json!([
+            {"id":"1","author":"a","body":"Root","path":"a.ts","line":1,"side":"RIGHT","commit":"head","url":"u","createdAt":"t"},
+            {"id":"2","inReplyToId":"1","author":"b","body":"Reply","path":null,"line":null,"side":null,"commit":"head","url":"u","createdAt":"t"},
+            {"id":"3","author":"c","body":"Other","path":"a.ts","line":1,"side":"RIGHT","commit":"head","url":"u","createdAt":"t"}
+        ])).unwrap();
+        assert!(comments.iter().all(|comment| comment.resolved.is_none()));
+        apply_thread_states(
+            &mut comments,
+            &HashMap::from([("1".into(), true), ("3".into(), false)]),
+        );
+        assert_eq!(
+            comments
+                .iter()
+                .map(|comment| comment.resolved)
+                .collect::<Vec<_>>(),
+            vec![Some(true), Some(true), Some(false)]
+        );
+    }
     #[test]
     fn review_metadata_excludes_pending_and_dismissed_submissions() {
         let mut pull = parse_pull("a/b", &json!({"number": 1}));

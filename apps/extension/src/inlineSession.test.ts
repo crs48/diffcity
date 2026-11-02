@@ -192,6 +192,22 @@ it("keeps unsent drafts private and restores them when the UI remounts", async (
     }),
   ).rejects.toThrow("Invalid inline draft");
 });
+
+it("expands an unresolved conversation on reload while preserving its unsent draft", async () => {
+  const { rpc } = setup();
+  const session = inlineSession(context, rpc, {
+    view: { collapsed: true, draft: { noteId: null, body: "Still typing" } },
+  });
+  session.restore(false);
+  expect(await session.invoke("inline_context", {})).toMatchObject({
+    resuming: true,
+    view: { collapsed: false, draft: { body: "Still typing" } },
+  });
+  session.restore(true);
+  expect(await session.invoke("inline_context", {})).toMatchObject({
+    view: { collapsed: true, draft: { body: "Still typing" } },
+  });
+});
 it("keeps a streaming job alive with no mounted UI and restores its completion exactly once", async () => {
   const { rpc } = setup();
   let complete!: (value: unknown) => void;

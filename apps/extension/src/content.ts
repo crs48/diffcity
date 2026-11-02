@@ -1,12 +1,16 @@
 import { pullFromUrl, type PullContext } from "./protocol";
 import { inlineViewport } from "./inlineViewport";
 import { viewportActions } from "./viewportActions";
+import type { RestoredInline } from "./inlineRestore";
 
 let toolbar: HTMLElement | undefined;
 let selectionAction: HTMLElement | undefined;
 let lineAction: HTMLElement | undefined;
 let selectedCode: { context: PullContext; target: Element } | undefined;
 let currentUrl = "";
+let restoredUrl = "";
+let restoringUrl = "";
+let restoreAfter = 0;
 const extensionOrigin = chrome.runtime.getURL("/").replace(/\/$/, "");
 const openingInline = new Set<string>();
 const inlineThreads = inlineViewport(extensionOrigin);
@@ -34,7 +38,9 @@ async function openInline(context: PullContext, target: Element) {
       context.number !== pullFromUrl(location.href)?.number
     )
       return;
-    inlineThreads.open(key, context, target, result);
+    const threadKey = result.key ?? key;
+    if (inlineThreads.has(threadKey)) inlineThreads.reveal(threadKey);
+    else inlineThreads.open(threadKey, context, target, result);
     selectionAction?.remove();
     selectionAction = undefined;
     lineAction?.remove();
@@ -174,6 +180,8 @@ function scan() {
   const pullKey = pull ? `${pull.repository}#${pull.number}` : "";
   if (currentUrl !== pullKey) {
     currentUrl = pullKey;
+    restoredUrl = "";
+    restoreAfter = 0;
     inlineThreads.clear();
     actionsInView.clear();
     lineAction?.remove();
@@ -187,6 +195,27 @@ function scan() {
       .forEach((node) => node.remove());
   }
   if (!pull) return;
+  if (
+    restoredUrl !== pullKey &&
+    restoringUrl !== pullKey &&
+    Date.now() >= restoreAfter
+  ) {
+    restoringUrl = pullKey;
+    void chrome.runtime
+      .sendMessage({ type: "restore-inline", context: pull })
+      .then((result) => {
+        if (currentUrl !== pullKey) return;
+        if (result?.error) throw new Error(result.error);
+        inlineThreads.restore((result?.threads ?? []) as RestoredInline[]);
+        restoredUrl = pullKey;
+      })
+      .catch(() => {
+        restoreAfter = Date.now() + 30000;
+      })
+      .finally(() => {
+        if (restoringUrl === pullKey) restoringUrl = "";
+      });
+  }
   inlineThreads.reconcile();
   actionsInView.prune();
   if (!toolbar?.isConnected) {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import identity from "../identity.json";
+import { indexedWorkspace } from "../../desktop/src/lib/guideIndex.fixture";
 
 const origin = `chrome-extension://${identity.id}`;
 const event = () => ({ addListener: vi.fn() });
@@ -229,4 +230,109 @@ it("releases closed-tab inline state without clearing other tabs or saved conver
     ]),
   );
   expect(browser.runtime.connectNative).not.toHaveBeenCalled();
+});
+
+it("restores only this PR's saved inline locations, reusing drafts without leaking chat content to GitHub", async () => {
+  const w = indexedWorkspace();
+  const context = {
+    repository: w.snapshot.pull.repository,
+    number: w.snapshot.pull.number,
+  };
+  const url = `https://github.com/${context.repository}/pull/${context.number}/files`;
+  const id = "12345678-1234-1234-1234-123456789abc";
+  const anchor = w.notes[0].anchor!;
+  const grant = {
+    context: {
+      ...context,
+      line: { path: anchor.path, side: anchor.side, line: anchor.line },
+    },
+    anchor,
+    tabId: 1,
+    createdAt: Date.now(),
+    view: {
+      collapsed: true,
+      draft: { noteId: null, body: "Unsent private text" },
+    },
+  };
+  browser.storage.session.get.mockResolvedValue({ [`inline:${id}`]: grant });
+  const send = browser.runtime.onMessage.addListener.mock.calls[0][0];
+  const respond = vi.fn();
+  const sender = { url, frameId: 0, tab: { id: 1, url } };
+  send(
+    {
+      type: "restore-inline",
+      context: { ...context, repository: "other/repo" },
+    },
+    sender,
+    respond,
+  );
+  expect(browser.runtime.connectNative).not.toHaveBeenCalled();
+  respond.mockClear();
+  send({ type: "restore-inline", context }, sender, respond);
+  const request = native.postMessage.mock.calls[0][0];
+  expect(request).toMatchObject({
+    command: "open_pull",
+    args: { ...context, refresh: false },
+  });
+  native.onMessage.addListener.mock.calls[0][0]({
+    message: "response",
+    chunk: JSON.stringify({ id: request.id, result: w }),
+    last: true,
+  });
+  await vi.waitFor(() => expect(respond).toHaveBeenCalled());
+  expect(respond.mock.calls[0][0].threads).toHaveLength(1);
+  expect(respond.mock.calls[0][0].threads[0]).toMatchObject({
+    id,
+    placement: { kind: "code", line: anchor.line },
+  });
+  expect(JSON.stringify(respond.mock.calls)).not.toContain("private text");
+  expect(JSON.stringify(respond.mock.calls)).not.toContain(w.notes[0].body);
+  expect(browser.storage.session.set).toHaveBeenCalledWith({
+    [`inline:${id}`]: expect.objectContaining({
+      view: { collapsed: false, draft: grant.view.draft },
+    }),
+  });
+});
+
+it("restores resolved threads compactly and reuses them when the user clicks their line", async () => {
+  const w = indexedWorkspace();
+  w.comments.forEach((c) => {
+    c.resolved = true;
+  });
+  const context = {
+    repository: w.snapshot.pull.repository,
+    number: w.snapshot.pull.number,
+  };
+  const url = `https://github.com/${context.repository}/pull/${context.number}/files`;
+  const sender = { url, frameId: 0, tab: { id: 1, url } };
+  const send = browser.runtime.onMessage.addListener.mock.calls[0][0];
+  const respond = vi.fn();
+  send({ type: "restore-inline", context }, sender, respond);
+  const reply = () => {
+    const request = native.postMessage.mock.calls.at(-1)![0];
+    native.onMessage.addListener.mock.calls[0][0]({
+      message: crypto.randomUUID(),
+      chunk: JSON.stringify({ id: request.id, result: w }),
+      last: true,
+    });
+  };
+  reply();
+  await vi.waitFor(() => expect(respond).toHaveBeenCalled());
+  const stored = browser.storage.session.set.mock.calls[0][0];
+  const grant = Object.values(stored)[0] as {
+    view: { collapsed: boolean };
+    context: unknown;
+  };
+  expect(grant.view.collapsed).toBe(true);
+  browser.storage.session.get.mockResolvedValue(stored);
+  const restored = respond.mock.calls[0][0].threads[0];
+  respond.mockClear();
+  send({ type: "create-inline", context: grant.context }, sender, respond);
+  reply();
+  await vi.waitFor(() => expect(respond).toHaveBeenCalled());
+  expect(respond.mock.calls[0][0]).toMatchObject({
+    id: restored.id,
+    key: restored.key,
+  });
+  expect(browser.storage.session.set).toHaveBeenCalledTimes(1);
 });

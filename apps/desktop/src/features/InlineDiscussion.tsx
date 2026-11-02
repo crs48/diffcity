@@ -4,6 +4,7 @@ import { Button } from "react-aria-components";
 import {
   ChevronDown,
   ChevronRight,
+  CheckCircle2,
   PanelRightOpen,
   Sparkles,
   X,
@@ -21,11 +22,12 @@ import { IconAction } from "../ui/IconAction";
 import { threadTarget } from "../lib/guideIndex";
 import { useGuideJump } from "./guideJump";
 import { CopyConversation } from "./CopyConversation";
+import { resolvedThread } from "../lib/commentContext";
 
 export function InlineDiscussion({
   thread,
   onClose,
-  initiallyCollapsed = false,
+  initiallyCollapsed,
   onCollapsedChange,
 }: {
   thread: InlineThread;
@@ -39,9 +41,14 @@ export function InlineDiscussion({
   const header = useRef<HTMLElement>(null);
   const keepHeader = useRef(false);
   const jump = useGuideJump([thread.anchor.hunkId]);
-  const focus = `${c?.inline.focus ?? 0}/${jump?.entry.target === threadTarget(thread.anchor) ? jump.sequence : 0}`;
+  const resolved = resolvedThread(thread.remote);
+  const active =
+    !!c &&
+    c.inline.draft?.snapshotId === c.workspace.snapshot.id &&
+    sameAnchor(c.inline.draft.anchor, thread.anchor);
+  const focus = `${active ? (c?.inline.focus ?? 0) : 0}/${jump?.entry.target === threadTarget(thread.anchor) ? jump.sequence : 0}`;
   const [collapsedAt, setCollapsedAt] = useState<string | null>(() =>
-    initiallyCollapsed ? focus : null,
+    (initiallyCollapsed ?? resolved) ? focus : null,
   );
   const collapsed = collapsedAt === focus;
   useLayoutEffect(() => {
@@ -55,9 +62,6 @@ export function InlineDiscussion({
       );
   }, [collapsed]);
   if (!c) return null;
-  const active =
-    c.inline.draft?.snapshotId === c.workspace.snapshot.id &&
-    sameAnchor(c.inline.draft.anchor, thread.anchor);
   const label = `${thread.anchor.side === "LEFT" ? "Old" : "New"} ${lineRange(thread.anchor)}`;
   const title = threadTitle(thread.notes, thread.remote, thread.anchor);
   return (
@@ -94,12 +98,17 @@ export function InlineDiscussion({
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </Button>
-        <Sparkles size={14} aria-hidden />
+        {resolved ? (
+          <CheckCircle2 size={14} className="positive" aria-hidden />
+        ) : (
+          <Sparkles size={14} aria-hidden />
+        )}
         <div className="inline-thread-heading">
           <strong title={title || label}>{title || label}</strong>
           <span className="muted">
             {title ? `${label} · ` : ""}
             {t("Private AI conversation")}
+            {resolved && ` · ${t("Resolved")}`}
           </span>
         </div>
         <CopyConversation

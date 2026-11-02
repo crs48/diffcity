@@ -1,5 +1,24 @@
 import type { Anchor, ReviewWorkspace } from "../../desktop/src/lib/api";
 import type { PullContext } from "./protocol";
+import { sameAnchor } from "../../desktop/src/lib/selection";
+
+export function inlineAnchor(
+  workspace: ReviewWorkspace,
+  context: PullContext,
+  saved?: Anchor,
+): Anchor | null {
+  // Only the extension worker supplies saved anchors; the page never chooses one.
+  if (saved && workspace.notes.some((note) => sameAnchor(note.anchor, saved)))
+    return saved;
+  const captured = context.selection
+    ? selectionAnchor(workspace, context.selection)
+    : context.line
+      ? lineAnchor(workspace, context.line)
+      : context.commentUrl
+        ? commentAnchor(workspace, context.commentUrl)
+        : null;
+  return saved && !sameAnchor(saved, captured) ? null : captured;
+}
 
 /** DOM text is only a hint. Anchors must resolve to the captured PR code. */
 export function selectionAnchor(

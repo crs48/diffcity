@@ -4,6 +4,7 @@ import {
   type DiffPlacement,
 } from "./diffPlacement";
 import type { PullContext } from "./protocol";
+import type { RestoredInline } from "./inlineRestore";
 
 type Entry = {
   id: string;
@@ -153,6 +154,19 @@ export function inlineViewport(origin: string) {
   document.addEventListener("visibilitychange", visibility);
   return {
     has: (key: string) => entries.has(key),
+    restore(threads: RestoredInline[]) {
+      for (const thread of threads) {
+        if (entries.has(thread.key)) continue;
+        entries.set(thread.key, {
+          ...thread,
+          height: 230,
+          visible: false,
+          ready: false,
+        });
+      }
+      // Restoring never moves the reader. Missing rows attach on a later scan.
+      reconcile();
+    },
     reveal(key: string) {
       reconcile();
       const entry = entries.get(key);

@@ -1,5 +1,14 @@
 import identity from "../identity.json";
 import { inlineSession, type InlineView } from "./inlineSession";
+import type { Anchor, ReviewWorkspace } from "../../desktop/src/lib/api";
+import { sameAnchor } from "../../desktop/src/lib/selection";
+import {
+  commentsForAnchor,
+  resolvedThread,
+} from "../../desktop/src/lib/commentContext";
+import { savedInlineThreads } from "./inlineRestore";
+import { anchorKey } from "../../desktop/src/lib/diffRows";
+import { inlineAnchor } from "./context";
 import {
   pullFromUrl,
   safeContext,
@@ -21,6 +30,7 @@ type InlineGrant = {
   tabId: number;
   createdAt: number;
   view?: InlineView;
+  anchor?: Anchor;
 };
 async function inlineGrant(
   sender: chrome.runtime.MessageSender | undefined,
@@ -135,6 +145,7 @@ chrome.runtime.onConnect.addListener((client) => {
       let session = inlineSessions.get(id);
       if (!session) {
         session = inlineSession(grant.context, rpc, {
+          anchor: grant.anchor,
           view: grant.view,
           persist: async (view) => {
             if (!inlineTabs.has(id)) return;
@@ -286,6 +297,59 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       respond({ error: "Invalid GitHub pull request context" });
       return;
     }
+    if (message.type === "restore-inline") {
+      void (async () => {
+        const workspace = (await rpc("open_pull", {
+          repository: context.repository,
+          number: context.number,
+          refresh: false,
+        })) as ReviewWorkspace;
+        const stored = await chrome.storage.session.get(null);
+        const threads = await Promise.all(
+          savedInlineThreads(workspace).map(async (thread) => {
+            const existing = Object.entries(stored).find(([key, value]) => {
+              const grant = value as InlineGrant;
+              if (
+                !key.startsWith("inline:") ||
+                grant.tabId !== tabId ||
+                !safeContext(grant.context, sender.url!) ||
+                Date.now() - grant.createdAt > 24 * 60 * 60 * 1000
+              )
+                return false;
+              const anchor = inlineAnchor(
+                workspace,
+                grant.context,
+                grant.anchor,
+              );
+              return sameAnchor(anchor, thread.anchor);
+            });
+            const id =
+              existing?.[0].slice("inline:".length) ?? crypto.randomUUID();
+            const previous = existing?.[1] as InlineGrant | undefined;
+            const collapsed = resolvedThread(
+              commentsForAnchor(workspace.comments, thread.anchor),
+            );
+            const grant: InlineGrant = {
+              context: thread.context,
+              anchor: thread.anchor,
+              tabId,
+              createdAt: Date.now(),
+              view: { draft: previous?.view?.draft ?? null, collapsed },
+            };
+            inlineSessions.get(id)?.restore(collapsed);
+            await chrome.storage.session.set({ [`inline:${id}`]: grant });
+            return {
+              key: thread.key,
+              placement: thread.placement,
+              id,
+              url: chrome.runtime.getURL(`inline.html?id=${id}`),
+            };
+          }),
+        );
+        respond({ threads });
+      })().catch((error) => respond({ error: String(error) }));
+      return true;
+    }
     if (message.type === "create-inline") {
       if (
         !context.selection &&
@@ -295,14 +359,39 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         respond({ error: "Inline conversations need code context" });
         return;
       }
-      const id = crypto.randomUUID();
-      void chrome.storage.session
-        .set({ [`inline:${id}`]: { context, tabId, createdAt: Date.now() } })
-        .then(
-          () =>
-            respond({ id, url: chrome.runtime.getURL(`inline.html?id=${id}`) }),
-          (error) => respond({ error: String(error) }),
-        );
+      void (async () => {
+        const workspace = (await rpc("open_pull", {
+          repository: context.repository,
+          number: context.number,
+          refresh: !!context.commentUrl,
+        })) as ReviewWorkspace;
+        const anchor = inlineAnchor(workspace, context);
+        if (!anchor)
+          throw new Error(
+            "This code could not be matched to the current PR. Refresh GitHub or open the full guide.",
+          );
+        const stored = await chrome.storage.session.get(null);
+        const existing = Object.entries(stored).find(([key, value]) => {
+          const grant = value as InlineGrant;
+          return (
+            key.startsWith("inline:") &&
+            grant.tabId === tabId &&
+            !!safeContext(grant.context, sender.url!) &&
+            Date.now() - grant.createdAt <= 24 * 60 * 60 * 1000 &&
+            sameAnchor(grant.anchor ?? null, anchor)
+          );
+        });
+        const id = existing?.[0].slice("inline:".length) ?? crypto.randomUUID();
+        if (!existing)
+          await chrome.storage.session.set({
+            [`inline:${id}`]: { context, tabId, createdAt: Date.now(), anchor },
+          });
+        respond({
+          id,
+          key: anchorKey(anchor),
+          url: chrome.runtime.getURL(`inline.html?id=${id}`),
+        });
+      })().catch((error) => respond({ error: String(error) }));
       return true;
     }
     if (message.type === "open-guide") {

@@ -9,7 +9,7 @@ import type {
 import type { AiRun } from "../../desktop/src/features/useAiRuns";
 import { sameAnchor } from "../../desktop/src/lib/selection";
 import { commentsForAnchor } from "../../desktop/src/lib/commentContext";
-import { commentAnchor, lineAnchor, selectionAnchor } from "./context";
+import { inlineAnchor } from "./context";
 import type { PullContext } from "./protocol";
 
 export type InlineView = {
@@ -29,6 +29,7 @@ export type InlineContext = {
 };
 type Rpc = (command: string, args: Record<string, unknown>) => Promise<unknown>;
 type Options = {
+  anchor?: Anchor;
   view?: InlineView;
   persist?: (view: InlineView) => Promise<void>;
   changed?: (state: InlineState) => void;
@@ -92,13 +93,7 @@ export function inlineSession(
         }) as Promise<ReviewWorkspace>,
         rpc("bootstrap", {}) as Promise<Bootstrap>,
       ]);
-      const anchor = context.selection
-        ? selectionAnchor(workspace, context.selection)
-        : context.line
-          ? lineAnchor(workspace, context.line)
-          : context.commentUrl
-            ? commentAnchor(workspace, context.commentUrl)
-            : null;
+      const anchor = inlineAnchor(workspace, context, options.anchor);
       if (!anchor)
         throw new Error(
           "This code could not be matched to the current PR. Refresh GitHub or open the full guide; no question was sent.",
@@ -117,6 +112,11 @@ export function inlineSession(
       throw error;
     }));
   return {
+    restore(collapsed: boolean) {
+      // A page reload restores the default, while virtualization keeps manual folds.
+      view = { draft: view?.draft ?? null, collapsed };
+      opened = true;
+    },
     acceptsEvent: (event: { event?: string; payload?: { runId?: string } }) =>
       event.event === "bridge-disconnected" ||
       (event.event === "codex-run" && runIds.has(event.payload?.runId ?? "")),

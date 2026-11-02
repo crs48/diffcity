@@ -165,3 +165,55 @@ it("refuses ambiguous duplicate code anchors and distinguishes split diff sides"
   expect(right).toMatchObject({ side: "RIGHT", text: "new" });
   expect(findPlacement(right)).toBe(row);
 });
+
+it("restores after a page reload without scrolling or eagerly mounting offscreen conversations", () => {
+  const { viewport, host } = setup();
+  const placement = capturePlacement(
+    context,
+    document.querySelector(".blob-code")!,
+  )!;
+  viewport.dispose();
+  expect(host.isConnected).toBe(false);
+  vi.mocked(HTMLElement.prototype.scrollIntoView).mockClear();
+  const reopened = inlineViewport(origin);
+  const entry = {
+    key: "thread",
+    id: "restored",
+    url: `${origin}/inline.html?id=restored`,
+    placement,
+  };
+  reopened.restore([entry]);
+  reopened.restore([entry]);
+  const restored = document.querySelector<HTMLElement>(
+    "[data-diffcity='inline']",
+  )!;
+  expect(document.querySelectorAll("[data-diffcity='inline']")).toHaveLength(1);
+  expect(restored.querySelector("iframe")).toBeNull();
+  expect(HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
+  observer.emit(restored, true);
+  expect(restored.querySelector("iframe")?.src).toBe(entry.url);
+  reopened.dispose();
+});
+
+it("waits for GitHub to load the correct row before restoring a conversation", () => {
+  const placement = capturePlacement(
+    context,
+    document.querySelector(".blob-code")!,
+  )!;
+  const row = document.querySelector("tr")!;
+  row.remove();
+  const viewport = inlineViewport(origin);
+  viewport.restore([
+    {
+      key: "thread",
+      id: "restored",
+      url: `${origin}/inline.html?id=restored`,
+      placement,
+    },
+  ]);
+  expect(document.querySelector("[data-diffcity='inline']")).toBeNull();
+  document.querySelector("tbody")!.append(row);
+  viewport.reconcile();
+  expect(row.nextElementSibling?.getAttribute("data-diffcity")).toBe("inline");
+  viewport.dispose();
+});

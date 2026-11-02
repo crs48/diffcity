@@ -1,5 +1,8 @@
 import type { Anchor, RemoteComment } from "./api";
 
+export const resolvedThread = (comments: RemoteComment[]) =>
+  comments.length > 0 && comments.every((comment) => comment.resolved === true);
+
 /** Same thread selection as the agent prompt in discussion_context.rs. */
 export function commentsForAnchor(
   comments: RemoteComment[],
