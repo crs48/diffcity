@@ -278,8 +278,8 @@ export default function App() {
       ),
     [],
   );
-  const inline = useNoteComposer(onNote, onError);
-  const chat = useNoteComposer(onNote, onError);
+  const inline = useNoteComposer(onNote);
+  const chat = useNoteComposer(onNote);
   const startingTextQuestion = useRef(false);
   const flushInline = inline.flush;
   const flushChat = chat.flush;

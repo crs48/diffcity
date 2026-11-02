@@ -32,13 +32,14 @@ const anchor: Anchor = {
 };
 const composer = {
   draft: newNote("snapshot", anchor, "What does it do?"),
-  saved: false,
   focus: 0,
   start: vi.fn(),
   change: vi.fn(),
   submit: vi.fn().mockResolvedValue(undefined),
   close: vi.fn(),
   flush: vi.fn(),
+  subscribeDraft: () => () => {},
+  getDraft: () => composer.draft,
 };
 const conversation: Conversation = {
   workspace,
