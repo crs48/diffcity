@@ -311,43 +311,61 @@ it("starts with a rich overview and returns to it from the first code chapter", 
   expect(screen.getByRole("menuitem", { name: /^PR overview/ })).toBeTruthy();
 });
 
-it("renders scannable Markdown and diagrams inside a chapter's full walkthrough", async () => {
+it("renders escaped line breaks in an existing saved overview as Markdown and a diagram", () => {
   const w = structuredClone(fixture) as ReviewWorkspace;
-  w.guide.sections[0].explanation = [
-    "#### What changes",
-    "",
-    "- **Existing rows.** Backfill before enforcing the constraint.",
-    "- **New writes.** Supply `expires_at` during creation.",
-    "",
-    "| Before | After |",
-    "| --- | --- |",
-    "| No deadline | Required expiry |",
-    "",
-    "```mermaid",
-    "flowchart TD",
-    "  A[Create invitation] --> B[Store deadline]",
-    "```",
-  ].join("\n");
-  w.guide.sections[0].questions = ["Does the upgrade preserve existing rows?"];
+  w.guide.summary = w.guide.summary.replaceAll("\n", "\\n");
   mount(w);
-  const full = within(
-    screen.getByRole("region", { name: w.guide.sections[0].title }),
-  ).getByRole("region", { name: "Full section context" });
-  expect(
-    within(full).getByRole("heading", { name: "What changes", level: 4 }),
-  ).toBeTruthy();
-  expect(within(full).getByRole("table").textContent).toContain(
-    "Required expiry",
-  );
-  expect(within(full).getAllByRole("list")).toHaveLength(2);
-  expect(within(full).getAllByRole("listitem")).toHaveLength(3);
-  expect(
-    within(full).getByRole("figure", { name: "Code diagram" }).textContent,
-  ).toContain("A[Create invitation] --> B[Store deadline]");
-  expect(
-    within(full).getByText("Does the upgrade preserve existing rows?"),
-  ).toBeTruthy();
+  const overview = screen.getByRole("region", { name: "PR overview" });
+  const diagram = within(overview).getByRole("figure", {
+    name: "Code diagram",
+  });
+  expect(diagram.textContent).toContain("flowchart TD\n");
+  expect(within(overview).getByRole("table")).toBeTruthy();
+  expect(overview.textContent).not.toContain("\\n");
 });
+
+it.each(["\n", "\\n"])(
+  "renders scannable Markdown and diagrams inside a chapter with %j breaks",
+  async (separator) => {
+    const w = structuredClone(fixture) as ReviewWorkspace;
+    w.guide.sections[0].explanation = [
+      "#### What changes",
+      "",
+      "- **Existing rows.** Backfill before enforcing the constraint.",
+      "- **New writes.** Supply `expires_at` during creation.",
+      "",
+      "| Before | After |",
+      "| --- | --- |",
+      "| No deadline | Required expiry |",
+      "",
+      "```mermaid",
+      "flowchart TD",
+      "  A[Create invitation] --> B[Store deadline]",
+      "```",
+    ].join(separator);
+    w.guide.sections[0].questions = [
+      "Does the upgrade preserve existing rows?",
+    ];
+    mount(w);
+    const full = within(
+      screen.getByRole("region", { name: w.guide.sections[0].title }),
+    ).getByRole("region", { name: "Full section context" });
+    expect(
+      within(full).getByRole("heading", { name: "What changes", level: 4 }),
+    ).toBeTruthy();
+    expect(within(full).getByRole("table").textContent).toContain(
+      "Required expiry",
+    );
+    expect(within(full).getAllByRole("list")).toHaveLength(2);
+    expect(within(full).getAllByRole("listitem")).toHaveLength(3);
+    expect(
+      within(full).getByRole("figure", { name: "Code diagram" }).textContent,
+    ).toContain("A[Create invitation] --> B[Store deadline]");
+    expect(
+      within(full).getByText("Does the upgrade preserve existing rows?"),
+    ).toBeTruthy();
+  },
+);
 
 it("retains an overview for guides with no text chapters", () => {
   const w = structuredClone(fixture) as ReviewWorkspace;

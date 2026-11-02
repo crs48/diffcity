@@ -3,6 +3,7 @@ import { BookOpen, ListChecks } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GuideSection } from "../lib/api";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
+import { normalizeGuideMarkdown } from "../lib/guideMarkdown";
 
 /** Full explanations share the document scroll, with separate reading and review cues. */
 export const Walkthrough = memo(function Walkthrough({
@@ -24,7 +25,9 @@ export const Walkthrough = memo(function Walkthrough({
         <h3>{t("Walkthrough")}</h3>
       </header>
       <div className="walkthrough-explanation">
-        <CommentMarkdown body={section.explanation || section.summary} />
+        <CommentMarkdown
+          body={normalizeGuideMarkdown(section.explanation || section.summary)}
+        />
       </div>
       <div className="walkthrough-review">
         <div className="walkthrough-impact">

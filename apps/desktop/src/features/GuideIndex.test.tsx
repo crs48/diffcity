@@ -177,6 +177,40 @@ it("fills the reviewed chapter's rail segment immediately and exposes its status
   expect(within(dialog).getByText("Code reviewed")).toBeTruthy();
 });
 
+it("previews every comment in a five-location group and still jumps directly", async () => {
+  const w = indexedWorkspace();
+  w.notes = [];
+  w.guide.sections.forEach((section) => {
+    section.annotations = [];
+    section.findings = [];
+    section.namingDecisions = [];
+  });
+  const comment = w.comments.find((item) => item.id === "root")!;
+  w.comments = Array.from({ length: 5 }, (_, index) => ({
+    ...comment,
+    id: `preview-${index}`,
+    path: w.snapshot.files[1].path,
+    line: index + 1,
+    body: `Review detail ${index + 1}`,
+  }));
+  render(<Example initial={w} />);
+  const marker = await screen.findByRole("button", {
+    name: /5 guide locations near/,
+  });
+  await userEvent.setup().hover(marker);
+  const preview = await screen.findByRole("tooltip");
+  for (let i = 1; i <= 5; i++)
+    expect(within(preview).getByText(`Review detail ${i}`)).toBeTruthy();
+  expect(preview.querySelectorAll(".guide-index-preview")).toHaveLength(5);
+  expect(
+    within(preview).getByText("Click to scroll to this area"),
+  ).toBeTruthy();
+  vi.mocked(Element.prototype.scrollTo).mockClear();
+  await userEvent.setup().click(marker);
+  expect(Element.prototype.scrollTo).toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
 it("keeps the map outside the scrolling document and supports hover, keyboard and searchable categories", async () => {
   render(<Example />);
   const rail = screen.getByRole("navigation", { name: "Guide index" });
