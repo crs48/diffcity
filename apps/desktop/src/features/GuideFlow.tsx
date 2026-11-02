@@ -19,6 +19,7 @@ import {
   ArrowUp,
   BookOpen,
   Check,
+  Clock3,
   ChevronDown,
   ChevronsUpDown,
   Eye,
@@ -58,6 +59,8 @@ type Props = {
   onDiscuss: (anchor: Anchor) => void;
   onProgress: (progress: ReviewProgress) => void;
   onFinish: () => void;
+  onOriginalGuide?: () => void;
+  onNewGuide?: () => void;
   renderHunks: (ids: string[]) => ReactNode;
   split: boolean;
   onSplit: () => void;
@@ -273,6 +276,52 @@ export function GuideFlow(props: Props) {
           <h2 id="guide-overview-heading" tabIndex={-1}>
             {t("PR overview")}
           </h2>
+          {w.guide.previousRevision && (
+            <aside
+              className="guide-revision-notice"
+              aria-label={t("Saved guide from an earlier revision")}
+            >
+              <strong>
+                <Clock3 size={16} aria-hidden />
+                {t("Your saved guide, with current code")}
+              </strong>
+              <p>
+                {t(
+                  "Generated for {{commit}}. The overview and explanations reflect that revision; the diffs below show the current PR.",
+                  { commit: w.guide.previousRevision.head.slice(0, 8) },
+                )}
+              </p>
+              <p>
+                {t("{{count}} outdated sections", {
+                  count: w.guide.previousRevision.outdatedSections.length,
+                })}{" "}
+                ·{" "}
+                {t("{{count}} updated hunks awaiting analysis", {
+                  count: w.guide.previousRevision.unassessedHunks,
+                })}
+              </p>
+              <p>
+                {t(
+                  "Notes on unchanged code are retained. Notes on changed or removed code remain in the original guide.",
+                )}
+              </p>
+              <div>
+                {props.onNewGuide && (
+                  <Button className="secondary" onPress={props.onNewGuide}>
+                    {t("Generate updated guide")}
+                  </Button>
+                )}
+                {props.onOriginalGuide && (
+                  <Button
+                    className="text-button"
+                    onPress={props.onOriginalGuide}
+                  >
+                    {t("View original guide")}
+                  </Button>
+                )}
+              </div>
+            </aside>
+          )}
           <NamingOverview sections={sections} onNavigate={navigate} />
           {w.guide.source === "provisional" ? (
             <>
@@ -404,6 +453,7 @@ function GuideChapter({
   renderHunks,
   split,
   onSplit,
+  onOriginalGuide,
 }: Props & {
   section: GuideSection;
   index: number;
@@ -469,6 +519,7 @@ function GuideChapter({
     [s, w.snapshot.files],
   );
   const titleId = `guide-title-${s.id}`;
+  const outdated = w.guide.previousRevision?.outdatedSections.includes(s.id);
   const contextId = `guide-context-${s.id}`;
   const mark = (kind: "reviewed" | "acknowledged" | "deferred") =>
     onProgress({
@@ -499,11 +550,13 @@ function GuideChapter({
             {t(labels[s.attention])}
           </span>
           <span>
-            {s.assessed
-              ? w.guide.source === "sample"
-                ? t("Sample assessment")
-                : t("Assessed by AI")
-              : t("Provisional")}
+            {outdated
+              ? t("Outdated explanation")
+              : s.assessed
+                ? w.guide.source === "sample"
+                  ? t("Sample assessment")
+                  : t("Assessed by AI")
+                : t("Provisional")}
           </span>
         </div>
         <h2 id={titleId} className="section-title" tabIndex={-1}>
@@ -545,6 +598,21 @@ function GuideChapter({
         </Button>
       </GuideMargin>
       <div className="guide-code">
+        {outdated && (
+          <div className="guide-section-outdated">
+            <Clock3 size={15} aria-hidden />
+            <span>
+              {t(
+                "Code in this section has changed. Its saved explanation may be outdated; updated code appears in the unassessed sections below.",
+              )}
+            </span>
+            {onOriginalGuide && (
+              <Button className="text-button" onPress={onOriginalGuide}>
+                {t("View original guide")}
+              </Button>
+            )}
+          </div>
+        )}
         <NamingDecisions section={s} onDiscuss={onDiscuss} />
         {contextOpen && <Walkthrough id={contextId} section={s} />}
         {annotations.length > 0 && (

@@ -24,6 +24,8 @@ export function GuideView({
   onDiscuss,
   onProgress,
   onFinish,
+  onOriginalGuide,
+  onNewGuide,
   mode,
 }: {
   workspace: ReviewWorkspace;
@@ -32,6 +34,8 @@ export function GuideView({
   onDiscuss: (a: Anchor) => void;
   onProgress: (p: ReviewProgress) => void;
   onFinish: () => void;
+  onOriginalGuide?: () => void;
+  onNewGuide?: () => void;
   mode: "guide" | "files" | "overview";
 }) {
   const { t } = useTranslation();
@@ -208,6 +212,8 @@ export function GuideView({
         onDiscuss={onDiscuss}
         onProgress={onProgress}
         onFinish={onFinish}
+        onOriginalGuide={onOriginalGuide}
+        onNewGuide={onNewGuide}
         renderHunks={renderHunks}
         split={split}
         onSplit={() => setSplit(!split)}

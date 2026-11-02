@@ -456,3 +456,49 @@ it("distinguishes older guides from a naming review with no decisions", () => {
     screen.queryByText(/Choose New guide to highlight database names/),
   ).toBeNull();
 });
+
+it("keeps saved explanations visible while marking changed sections and offering the original guide", async () => {
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  w.guide.previousRevision = {
+    snapshotId: "previous",
+    head: "1234567890",
+    outdatedSections: [w.guide.sections[0].id],
+    unassessedHunks: 2,
+  };
+  const onOriginalGuide = vi.fn();
+  const onNewGuide = vi.fn();
+  render(
+    <div data-review-scroll>
+      <GuideView
+        workspace={w}
+        mode="guide"
+        selection={null}
+        onSelect={vi.fn()}
+        onDiscuss={vi.fn()}
+        onProgress={vi.fn()}
+        onFinish={vi.fn()}
+        onOriginalGuide={onOriginalGuide}
+        onNewGuide={onNewGuide}
+      />
+    </div>,
+  );
+  const notice = screen.getByRole("complementary", {
+    name: "Saved guide from an earlier revision",
+  });
+  expect(notice.textContent).toContain("12345678");
+  expect(notice.textContent).toContain("2 updated hunks awaiting analysis");
+  expect(screen.getByText("Outdated explanation")).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: w.guide.sections[0].title }),
+  ).toBeTruthy();
+  await userEvent
+    .setup()
+    .click(within(notice).getByRole("button", { name: "View original guide" }));
+  expect(onOriginalGuide).toHaveBeenCalledOnce();
+  await userEvent
+    .setup()
+    .click(
+      within(notice).getByRole("button", { name: "Generate updated guide" }),
+    );
+  expect(onNewGuide).toHaveBeenCalledOnce();
+});
