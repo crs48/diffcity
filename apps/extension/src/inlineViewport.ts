@@ -5,6 +5,7 @@ import {
 } from "./diffPlacement";
 import type { PullContext } from "./protocol";
 import type { RestoredInline } from "./inlineRestore";
+import type { pageWork } from "./pageWork";
 
 type Entry = {
   id: string;
@@ -20,7 +21,13 @@ type Entry = {
 };
 
 /** Only spacers live offscreen. Drafts and agent jobs belong to the worker. */
-export function inlineViewport(origin: string) {
+export function inlineViewport(
+  origin: string,
+  options: {
+    find?: typeof findPlacement;
+    work?: ReturnType<typeof pageWork>;
+  } = {},
+) {
   const entries = new Map<string, Entry>();
   const byHost = new WeakMap<Element, Entry>();
   const unmount = (entry: Entry) => {
@@ -101,17 +108,37 @@ export function inlineViewport(origin: string) {
     byHost.set(host, entry);
     observer.observe(host);
   };
-  const reconcile = () => {
-    for (const entry of entries.values()) {
-      const target = findPlacement(entry.placement);
-      let previous = entry.host?.previousElementSibling;
-      while (previous?.getAttribute("data-diffcity") === "inline")
-        previous = previous.previousElementSibling;
-      if (!target || !entry.host?.isConnected || previous !== target) {
-        detach(entry);
-        if (target) attach(entry, target);
-      }
+  const reconcileEntry = (entry: Entry) => {
+    const target = (options.find ?? findPlacement)(entry.placement);
+    let previous = entry.host?.previousElementSibling;
+    while (previous?.getAttribute("data-diffcity") === "inline")
+      previous = previous.previousElementSibling;
+    if (!target || !entry.host?.isConnected || previous !== target) {
+      detach(entry);
+      if (target) attach(entry, target);
     }
+  };
+  function* reconcileSteps() {
+    for (const entry of entries.values()) {
+      reconcileEntry(entry);
+      yield;
+    }
+  }
+  let revision = 0;
+  function* reconcileLatest() {
+    let processed: number;
+    do {
+      processed = revision;
+      yield* reconcileSteps();
+    } while (processed !== revision);
+  }
+  const reconcile = () => {
+    revision++;
+    if (options.work) options.work.add("inline-placement", reconcileLatest());
+    else
+      for (const _ of reconcileSteps()) {
+        void _;
+      }
   };
   const message = (event: MessageEvent) => {
     if (event.origin !== origin) return;
@@ -168,8 +195,8 @@ export function inlineViewport(origin: string) {
       reconcile();
     },
     reveal(key: string) {
-      reconcile();
       const entry = entries.get(key);
+      if (entry) reconcileEntry(entry);
       entry?.host?.scrollIntoView({ block: "nearest" });
       entry?.frame?.focus();
     },
@@ -191,8 +218,9 @@ export function inlineViewport(origin: string) {
         visible: false,
         ready: false,
       });
-      reconcile();
-      entries.get(key)?.host?.scrollIntoView({ block: "nearest" });
+      const entry = entries.get(key)!;
+      reconcileEntry(entry);
+      entry.host?.scrollIntoView({ block: "nearest" });
     },
     reconcile,
     clear() {

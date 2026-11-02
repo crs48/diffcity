@@ -1,4 +1,5 @@
 import identity from "../identity.json";
+import { sharedReads } from "./sharedReads";
 import { inlineSession, type InlineView } from "./inlineSession";
 import type { Anchor, ReviewWorkspace } from "../../desktop/src/lib/api";
 import { sameAnchor } from "../../desktop/src/lib/selection";
@@ -122,7 +123,10 @@ function connect() {
   });
   return port;
 }
-function rpc(command: string, args: Record<string, unknown>) {
+const rpc = sharedReads(function rpc(
+  command: string,
+  args: Record<string, unknown>,
+) {
   return new Promise((resolve, reject) => {
     if (!RPC_COMMANDS.has(command)) {
       reject(new Error("Unsupported companion command"));
@@ -137,7 +141,7 @@ function rpc(command: string, args: Record<string, unknown>) {
       reject(error);
     }
   });
-}
+});
 chrome.runtime.onConnect.addListener((client) => {
   if (client.name.startsWith("diffcity-inline:")) {
     const id = client.name.slice("diffcity-inline:".length);

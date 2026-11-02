@@ -85,7 +85,11 @@ export function findPlacement(
   }
   const matches = new Set<Element>();
   // Query only numbered rows in the required file, not every code token.
-  for (const file of root.querySelectorAll<HTMLElement>(fileSelector)) {
+  const files =
+    root instanceof Element && root.matches(fileSelector)
+      ? [root as HTMLElement]
+      : root.querySelectorAll<HTMLElement>(fileSelector);
+  for (const file of files) {
     if (
       (file.dataset.path ??
         file.dataset.tagsearchPath ??

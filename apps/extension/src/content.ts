@@ -2,6 +2,8 @@ import { pullFromUrl, type PullContext } from "./protocol";
 import { inlineViewport } from "./inlineViewport";
 import { viewportActions } from "./viewportActions";
 import type { RestoredInline } from "./inlineRestore";
+import { pageWork, pageElements } from "./pageWork";
+import { placementIndex, commentLinkSelector } from "./placementIndex";
 
 let toolbar: HTMLElement | undefined;
 let selectionAction: HTMLElement | undefined;
@@ -13,7 +15,13 @@ let restoringUrl = "";
 let restoreAfter = 0;
 const extensionOrigin = chrome.runtime.getURL("/").replace(/\/$/, "");
 const openingInline = new Set<string>();
-const inlineThreads = inlineViewport(extensionOrigin);
+const work = pageWork();
+const placements = placementIndex();
+const inlineThreads = inlineViewport(extensionOrigin, {
+  find: placements.find,
+  work,
+});
+const roots = new Set<Element>();
 const actionsInView = viewportActions();
 const codeSelector =
   ".blob-code, [data-code-marker], [data-testid='diff-line-content'], [data-testid='code-cell']";
@@ -175,13 +183,16 @@ function announce(text: string) {
   document.body.append(status);
   setTimeout(() => status.remove(), 7000);
 }
-function scan() {
+function refreshPage() {
   const pull = pullFromUrl(location.href);
   const pullKey = pull ? `${pull.repository}#${pull.number}` : "";
   if (currentUrl !== pullKey) {
     currentUrl = pullKey;
     restoredUrl = "";
     restoreAfter = 0;
+    work.clear();
+    roots.clear();
+    placements.clear();
     inlineThreads.clear();
     actionsInView.clear();
     lineAction?.remove();
@@ -193,6 +204,7 @@ function scan() {
     document
       .querySelectorAll("[data-diffcity]")
       .forEach((node) => node.remove());
+    if (pull) queueRoot(document.documentElement);
   }
   if (!pull) return;
   if (
@@ -216,8 +228,7 @@ function scan() {
         if (restoringUrl === pullKey) restoringUrl = "";
       });
   }
-  inlineThreads.reconcile();
-  actionsInView.prune();
+
   if (!toolbar?.isConnected) {
     const target = document.querySelector(
       ".gh-header-actions, [data-testid='pull-request-header'] h1, .gh-header-title, #partial-discussion-header h1, h1[data-component='Heading']",
@@ -248,9 +259,12 @@ function scan() {
       } else target.append(toolbar);
     }
   }
-  for (const header of document.querySelectorAll<HTMLElement>(
-    ".file-header[data-path]",
-  )) {
+  return pull;
+}
+function visit(element: Element, pull: PullContext) {
+  placements.visit(element);
+  if (element.matches(".file-header[data-path]")) {
+    const header = element as HTMLElement;
     const path = header.dataset.path;
     if (path)
       actionsInView.register(header, `file:${path}`, () => {
@@ -261,58 +275,104 @@ function scan() {
         return action;
       });
   }
-  // Permalinks are identifiers only: actual comment bodies come from GitHub's API.
-  for (const link of document.querySelectorAll<HTMLAnchorElement>(
-    'a[href*="#discussion_r"], a[href*="#issuecomment-"], a[href*="#pullrequestreview-"]',
-  )) {
-    const area = link.closest(
-      ".timeline-comment-header, .review-comment, [data-testid='comment-header'], .comment-header",
-    );
-    if (!area) continue;
-    const url = new URL(link.href, location.href);
-    const linked = pullFromUrl(url.href);
-    if (linked?.repository !== pull.repository || linked.number !== pull.number)
-      continue;
-    const actions =
-      area.querySelector(
-        ".timeline-comment-actions, [data-testid='comment-actions']",
-      ) ?? area;
-    actionsInView.register(area, url.href, () => {
-      const action = button("Ask Diff City", () => {
-        const context = { ...pull, commentUrl: url.href };
-        if (url.hash.startsWith("#discussion_r")) {
-          const thread =
-            area.closest(
-              ".review-comment, [data-testid='review-thread'], .timeline-comment",
-            ) ?? area;
-          void openInline(context, thread);
-        } else send("ask", context);
-      });
-      actions.append(action);
-      return action;
+  // Permalinks are identifiers only: actual bodies come from GitHub's API.
+  if (
+    !(element instanceof HTMLAnchorElement) ||
+    !element.matches(commentLinkSelector)
+  )
+    return;
+  const area = element.closest(
+    ".timeline-comment-header, .review-comment, [data-testid='comment-header'], .comment-header",
+  );
+  if (!area) return;
+  const url = new URL(element.href, location.href);
+  const linked = pullFromUrl(url.href);
+  if (linked?.repository !== pull.repository || linked.number !== pull.number)
+    return;
+  const actions =
+    area.querySelector(
+      ".timeline-comment-actions, [data-testid='comment-actions']",
+    ) ?? area;
+  actionsInView.register(area, url.href, () => {
+    const action = button("Ask Diff City", () => {
+      const context = { ...pull, commentUrl: url.href };
+      if (url.hash.startsWith("#discussion_r")) {
+        const thread =
+          area.closest(
+            ".review-comment, [data-testid='review-thread'], .timeline-comment",
+          ) ?? area;
+        void openInline(context, thread);
+      } else send("ask", context);
     });
+    actions.append(action);
+    return action;
+  });
+}
+function* discover() {
+  while (roots.size) {
+    const root = roots.values().next().value!;
+    roots.delete(root);
+    if (!root.isConnected) continue;
+    const pull = pullFromUrl(location.href);
+    if (!pull) continue;
+    for (const element of pageElements(root)) {
+      if (element.isConnected) visit(element, pull);
+      yield;
+    }
+  }
+  yield* placements.prune();
+  yield* actionsInView.pruneSteps();
+  inlineThreads.reconcile();
+}
+function queueRoot(root: Element) {
+  if (root.closest("[data-diffcity]")) return;
+  for (const queued of roots) {
+    if (queued.contains(root)) return;
+    if (root.contains(queued)) roots.delete(queued);
+  }
+  roots.add(root);
+  work.add("discover", discover());
+}
+
+const mutations: MutationRecord[][] = [];
+function* applyMutations() {
+  while (mutations.length) {
+    const records = mutations.shift()!;
+    const pull = refreshPage();
+    if (!pull) continue;
+    let changed = false;
+    for (const record of records) {
+      yield;
+      const element =
+        record.target instanceof Element
+          ? record.target
+          : record.target.parentElement;
+      if (!element || element.closest("[data-diffcity]")) continue;
+      if (record.type === "childList") {
+        const external = [...record.addedNodes, ...record.removedNodes].some(
+          (node) =>
+            !(node instanceof Element && node.hasAttribute("data-diffcity")),
+        );
+        if (!external) continue;
+        // Visit only the changed subtrees, never rescan the whole PR for a clock,
+        // streamed comment, or sidebar layout mutation.
+        if (record.addedNodes.length > 8) queueRoot(element);
+        else
+          for (const node of record.addedNodes)
+            if (node instanceof Element) queueRoot(node);
+        const header = element.closest(
+          ".timeline-comment-header, .review-comment, [data-testid='comment-header'], .comment-header, .file-header",
+        );
+        if (header) queueRoot(header);
+      } else queueRoot(element);
+      changed = true;
+    }
+    if (changed) work.add("discover", discover());
   }
 }
-let scheduled = false;
 new MutationObserver((records) => {
-  const external = records.some((record) => {
-    const element =
-      record.target instanceof Element
-        ? record.target
-        : record.target.parentElement;
-    if (element?.closest("[data-diffcity]")) return false;
-    if (record.type !== "childList") return true;
-    return [...record.addedNodes, ...record.removedNodes].some(
-      (node) =>
-        !(node instanceof Element && node.hasAttribute("data-diffcity")),
-    );
-  });
-  if (scheduled || !external) return;
-  scheduled = true;
-  setTimeout(() => {
-    scheduled = false;
-    scan();
-  }, 200);
+  mutations.push(records);
+  work.add("mutations", applyMutations());
 }).observe(document.documentElement, {
   childList: true,
   subtree: true,
@@ -325,9 +385,10 @@ new MutationObserver((records) => {
     "data-file-path",
     "data-code-marker",
     "id",
+    "href",
   ],
 });
-scan();
+if (refreshPage()) queueRoot(document.documentElement);
 document.addEventListener("mouseup", (event) => {
   if (
     !event.isTrusted ||

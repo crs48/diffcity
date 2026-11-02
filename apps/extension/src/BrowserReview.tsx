@@ -237,21 +237,33 @@ export function BrowserReview() {
   useEffect(() => {
     const snapshotId = workspace?.snapshot.id;
     if (!snapshotId) return;
+    let disposed = false;
+    let pending = false;
     // Reconnect to completed browser jobs and edits made in the desktop app.
     const timer = setInterval(() => {
-      if (document.hidden) return;
+      if (document.hidden || pending) return;
+      pending = true;
       void api
         .saved(snapshotId)
-        .then((saved) =>
+        .then((saved) => {
+          if (disposed) return;
           setWorkspace((w) =>
             w?.snapshot.id === snapshotId
               ? { ...w, notes: saved.notes, comments: saved.comments }
               : w,
-          ),
-        )
-        .catch(onError);
+          );
+        })
+        .catch((error) => {
+          if (!disposed) onError(error);
+        })
+        .finally(() => {
+          pending = false;
+        });
     }, 5000);
-    return () => clearInterval(timer);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
   }, [workspace?.snapshot.id, onError]);
   const modelFor = (anchor: Anchor | null) =>
     threadModel(workspace?.notes ?? [], anchor, preference);

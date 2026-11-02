@@ -39,13 +39,20 @@ export function viewportActions() {
       observer.observe(target);
       if (existing?.visible) entries.get(target)!.node = create();
     },
-    prune() {
-      for (const [target, entry] of entries)
+    *pruneSteps() {
+      for (const [target, entry] of entries) {
         if (!target.isConnected) {
           entry.node?.remove();
           observer.unobserve(target);
           entries.delete(target);
         }
+        yield;
+      }
+    },
+    prune() {
+      for (const _ of this.pruneSteps()) {
+        void _;
+      }
     },
     clear() {
       for (const [target, entry] of entries) {

@@ -87,6 +87,8 @@ export function Discussion({
           notes={c.workspace.notes}
           remote={c.workspace.comments}
           conversation={c}
+          scrollElementRef={messages}
+          followReplies={followReplies}
         />
       </div>
       <div className="discussion-compose">
