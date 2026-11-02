@@ -19,8 +19,20 @@ const id = [
   .join("");
 if (id !== identity.id)
   throw new Error("Extension ID does not match the registered native host");
-if (manifest.externally_connectable || manifest.web_accessible_resources)
-  throw new Error("Review UI must remain private to the extension");
+const embedded = manifest.web_accessible_resources;
+if (
+  manifest.externally_connectable ||
+  JSON.stringify(embedded) !==
+    JSON.stringify([
+      {
+        resources: ["inline.html", "inline.js", "assets/*"],
+        matches: ["https://github.com/*"],
+      },
+    ])
+)
+  throw new Error(
+    "Only the scoped inline frame and its assets may be exposed to GitHub",
+  );
 const output = resolve(process.argv[2] || join(root, ".local/extension"));
 mkdirSync(output, { recursive: true });
 const zip = join(output, `diffcity-chrome-${manifest.version}.zip`);

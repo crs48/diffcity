@@ -9,6 +9,7 @@ export default defineConfig({
       input: {
         guide: "index.html",
         sidepanel: "sidepanel.html",
+        inline: "inline.html",
         background: "src/background.ts",
       },
       output: { entryFileNames: "[name].js" },

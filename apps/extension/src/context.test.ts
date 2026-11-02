@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { ReviewWorkspace } from "../../desktop/src/lib/api";
-import { selectionAnchor, commentAnchor } from "./context";
+import { selectionAnchor, commentAnchor, lineAnchor } from "./context";
 
 const workspace = {
   snapshot: {
@@ -73,5 +73,24 @@ it("anchors only canonical current-revision comments", () => {
       { ...workspace, comments: [{ ...workspace.comments[0], commit: "old" }] },
       workspace.comments[0].url,
     ),
+  ).toBeNull();
+});
+
+it("rejects a line whose displayed code no longer matches the snapshot", () => {
+  expect(
+    lineAnchor(workspace, {
+      path: "a.ts",
+      line: 3,
+      side: "RIGHT",
+      text: "return title;",
+    }),
+  ).toMatchObject({ line: 3, hunkId: "hunk" });
+  expect(
+    lineAnchor(workspace, {
+      path: "a.ts",
+      line: 3,
+      side: "RIGHT",
+      text: "return changed;",
+    }),
   ).toBeNull();
 });

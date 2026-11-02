@@ -22,7 +22,13 @@ import { threadTarget } from "../lib/guideIndex";
 import { useGuideJump } from "./guideJump";
 import { CopyConversation } from "./CopyConversation";
 
-export function InlineDiscussion({ thread }: { thread: InlineThread }) {
+export function InlineDiscussion({
+  thread,
+  onClose,
+}: {
+  thread: InlineThread;
+  onClose?: () => void;
+}) {
   const { t } = useTranslation();
   const c = useConversation();
   const root = useRef<HTMLElement>(null);
@@ -100,11 +106,15 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
         >
           <PanelRightOpen size={15} aria-hidden />
         </IconAction>
-        {active && (
+        {(active || onClose) && (
           <Button
             className="icon-button"
-            aria-label={t("Close inline composer")}
-            onPress={() => void c.inline.close().catch(c.onError)}
+            aria-label={t(
+              onClose ? "Close inline conversation" : "Close inline composer",
+            )}
+            onPress={() =>
+              onClose ? onClose() : void c.inline.close().catch(c.onError)
+            }
           >
             <X size={15} />
           </Button>

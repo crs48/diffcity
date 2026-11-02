@@ -1,4 +1,5 @@
 import identity from "../identity.json";
+import { inlineSession } from "./inlineSession";
 import {
   pullFromUrl,
   safeContext,
@@ -9,6 +10,37 @@ import {
 
 const origin = chrome.runtime.getURL("/").replace(/\/$/, "");
 const clients = new Set<chrome.runtime.Port>();
+const inlineClients = new Map<
+  chrome.runtime.Port,
+  ReturnType<typeof inlineSession>
+>();
+type InlineGrant = { context: PullContext; tabId: number; createdAt: number };
+async function inlineGrant(
+  sender: chrome.runtime.MessageSender | undefined,
+  id: string,
+): Promise<InlineGrant> {
+  if (
+    !/^[\da-f-]{36}$/.test(id) ||
+    sender?.url !== `${origin}/inline.html?id=${id}` ||
+    !sender.tab?.id ||
+    !sender.frameId ||
+    !sender.tab.url
+  )
+    throw new Error("Invalid inline frame");
+  const key = `inline:${id}`;
+  const stored = (await chrome.storage.session.get(key))[key] as
+    InlineGrant | undefined;
+  if (
+    !stored ||
+    stored.tabId !== sender.tab.id ||
+    Date.now() - stored.createdAt > 24 * 60 * 60 * 1000 ||
+    !safeContext(stored.context, sender.tab.url)
+  )
+    throw new Error(
+      "This inline conversation has expired. Open it again from GitHub.",
+    );
+  return stored;
+}
 const pending = new Map<
   string,
   { resolve: (value: unknown) => void; reject: (error: Error) => void }
@@ -56,7 +88,10 @@ function connect() {
       return;
     }
     if (message.event) {
-      for (const client of clients) client.postMessage(message);
+      for (const client of clients) {
+        const scope = inlineClients.get(client);
+        if (!scope || scope.acceptsEvent(message)) client.postMessage(message);
+      }
       return;
     }
     const task = pending.get(message.id);
@@ -84,6 +119,46 @@ function rpc(command: string, args: Record<string, unknown>) {
   });
 }
 chrome.runtime.onConnect.addListener((client) => {
+  if (client.name.startsWith("diffcity-inline:")) {
+    const id = client.name.slice("diffcity-inline:".length);
+    const scope = inlineGrant(client.sender, id).then((grant) => {
+      const session = inlineSession(grant.context, rpc);
+      inlineClients.set(client, session);
+      clients.add(client);
+      return session;
+    });
+    let disconnected = false;
+    void scope.then(
+      () => {
+        if (disconnected) {
+          clients.delete(client);
+          inlineClients.delete(client);
+        }
+      },
+      () => client.disconnect(),
+    );
+    client.onDisconnect.addListener(() => {
+      disconnected = true;
+      clients.delete(client);
+      inlineClients.delete(client);
+    });
+    client.onMessage.addListener((message) => {
+      if (typeof message.id !== "string" || typeof message.command !== "string")
+        return;
+      void scope
+        .then((session) => session.invoke(message.command, message.args ?? {}))
+        .then(
+          (result) => {
+            if (!disconnected) client.postMessage({ id: message.id, result });
+          },
+          (error) => {
+            if (!disconnected)
+              client.postMessage({ id: message.id, error: String(error) });
+          },
+        );
+    });
+    return;
+  }
   // Content scripts can request navigation/context only. Never forward their RPC.
   if (
     client.name !== "diffcity-ui" ||
@@ -119,9 +194,29 @@ async function remember(context: PullContext, tabId: number) {
   const entry = { context, tabId, nonce: crypto.randomUUID() };
   await chrome.storage.session.set({ reviewContext: entry });
   for (const client of clients)
-    client.postMessage({ event: "review-context", payload: entry });
+    if (!inlineClients.has(client))
+      client.postMessage({ event: "review-context", payload: entry });
 }
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
+  if (message?.type === "inline-panel" && typeof message.id === "string") {
+    // Open while the extension-frame click still carries its user gesture.
+    if (
+      sender.url !== `${origin}/inline.html?id=${message.id}` ||
+      !sender.tab?.id ||
+      !sender.frameId
+    ) {
+      respond({ error: "Invalid inline frame" });
+      return;
+    }
+    const opening = chrome.sidePanel.open({ tabId: sender.tab.id });
+    void Promise.all([inlineGrant(sender, message.id), opening])
+      .then(async ([grant]) => {
+        await remember(grant.context, grant.tabId);
+        respond({ ok: true });
+      })
+      .catch((error) => respond({ error: String(error) }));
+    return true;
+  }
   const tabId = sender.tab?.id;
   if (
     tabId !== undefined &&
@@ -133,6 +228,25 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (!context) {
       respond({ error: "Invalid GitHub pull request context" });
       return;
+    }
+    if (message.type === "create-inline") {
+      if (
+        !context.selection &&
+        !context.line &&
+        !context.commentUrl?.includes("#discussion_r")
+      ) {
+        respond({ error: "Inline conversations need code context" });
+        return;
+      }
+      const id = crypto.randomUUID();
+      void chrome.storage.session
+        .set({ [`inline:${id}`]: { context, tabId, createdAt: Date.now() } })
+        .then(
+          () =>
+            respond({ id, url: chrome.runtime.getURL(`inline.html?id=${id}`) }),
+          (error) => respond({ error: String(error) }),
+        );
+      return true;
     }
     if (message.type === "open-guide") {
       void chrome.tabs.create({ url: guideUrl(context) });
@@ -167,11 +281,10 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== "diffcity-ask" || tab?.id === undefined) return;
-  const pull = pullFromUrl(tab.url ?? "");
-  const context =
-    pull &&
-    safeContext({ ...pull, selection: { text: info.selectionText } }, tab.url!);
-  if (!context) return;
-  void chrome.sidePanel.open({ tabId: tab.id });
-  void remember(context, tab.id);
+  void chrome.tabs
+    .sendMessage(tab.id, {
+      type: "open-inline-selection",
+      text: info.selectionText,
+    })
+    .catch(() => undefined);
 });

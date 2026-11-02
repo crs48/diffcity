@@ -8,7 +8,12 @@ const pending = new Map<
 let port: chrome.runtime.Port | undefined;
 function connect() {
   if (port) return port;
-  port = chrome.runtime.connect({ name: "diffcity-ui" });
+  const inlineId = location.pathname.endsWith("inline.html")
+    ? new URLSearchParams(location.search).get("id")
+    : null;
+  port = chrome.runtime.connect({
+    name: inlineId ? `diffcity-inline:${inlineId}` : "diffcity-ui",
+  });
   port.onMessage.addListener((message) => {
     if (message.event) {
       for (const receive of callbacks.get(message.event) ?? [])

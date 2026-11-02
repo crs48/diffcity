@@ -2,11 +2,101 @@ import { pullFromUrl, type PullContext } from "./protocol";
 
 let toolbar: HTMLElement | undefined;
 let selectionAction: HTMLElement | undefined;
+let lineAction: HTMLElement | undefined;
+let selectedCode: { context: PullContext; target: Element } | undefined;
 let currentUrl = "";
+const extensionOrigin = chrome.runtime.getURL("/").replace(/\/$/, "");
+const openingInline = new Set<string>();
+const inlineFrames = new Map<
+  string,
+  { host: HTMLElement; frame: HTMLIFrameElement; id: string }
+>();
+const codeSelector =
+  ".blob-code, [data-code-marker], [data-testid='diff-line-content'], [data-testid='code-cell']";
+
+async function openInline(context: PullContext, target: Element) {
+  const key = JSON.stringify(context);
+  const existing = inlineFrames.get(key);
+  if (existing?.host.isConnected) {
+    existing.host.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    existing.frame.focus();
+    return;
+  }
+  if (openingInline.has(key)) return;
+  openingInline.add(key);
+  try {
+    const result = await chrome.runtime.sendMessage({
+      type: "create-inline",
+      context,
+    });
+    if (result?.error) throw new Error(result.error);
+    if (
+      !target.isConnected ||
+      context.repository !== pullFromUrl(location.href)?.repository ||
+      context.number !== pullFromUrl(location.href)?.number
+    )
+      return;
+    const row = target.closest("tr");
+    const host = document.createElement(row ? "tr" : "div");
+    host.dataset.diffcity = "inline";
+    const container = row ? document.createElement("td") : host;
+    if (row) {
+      (container as HTMLTableCellElement).colSpan =
+        Array.from(row.cells).reduce((sum, cell) => sum + cell.colSpan, 0) || 4;
+      host.append(container);
+      container.style.padding = "0";
+      // A table must not let the intrinsic width of a frame widen the diff.
+      container.style.whiteSpace = "normal";
+    }
+    const frame = document.createElement("iframe");
+    frame.src = result.url;
+    frame.title = `Diff City inline conversation${context.selection?.path ? ` · ${context.selection.path}` : ""}`;
+    frame.allow = "clipboard-write";
+    Object.assign(frame.style, {
+      display: "block",
+      border: "0",
+      width: "100%",
+      maxWidth: "1000px",
+      height: "230px",
+      colorScheme: "normal",
+    });
+    container.append(frame);
+    (row ?? target).after(host);
+    inlineFrames.set(key, { host, frame, id: result.id });
+    selectionAction?.remove();
+    selectionAction = undefined;
+    lineAction?.remove();
+    lineAction = undefined;
+    frame.focus();
+  } catch (error) {
+    announce(String(error));
+  } finally {
+    openingInline.delete(key);
+  }
+}
+window.addEventListener("message", (event) => {
+  if (event.origin !== extensionOrigin) return;
+  for (const [key, entry] of inlineFrames) {
+    if (
+      event.source !== entry.frame.contentWindow ||
+      event.data?.id !== entry.id
+    )
+      continue;
+    if (
+      event.data.type === "diffcity-inline-size" &&
+      Number.isFinite(event.data.height)
+    ) {
+      entry.frame.style.height = `${Math.max(80, Math.min(1000000, event.data.height))}px`;
+    } else if (event.data.type === "diffcity-inline-close") {
+      entry.host.remove();
+      inlineFrames.delete(key);
+    }
+  }
+});
 function button(
   label: string,
   action: () => void,
-  { guide = false, floating = false } = {},
+  { guide = false, floating = false, compact = false } = {},
 ) {
   const host = document.createElement("span");
   host.dataset.diffcity = "true";
@@ -52,6 +142,12 @@ function button(
   control.title = label;
   control.setAttribute("aria-label", label);
   if (floating) control.className = "floating";
+  if (compact)
+    Object.assign(control.style, {
+      width: "20px",
+      height: "20px",
+      padding: "2px",
+    });
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 32 32");
   svg.setAttribute("aria-hidden", "true");
@@ -125,6 +221,9 @@ function scan() {
   const pull = pullFromUrl(location.href);
   if (currentUrl !== location.pathname) {
     currentUrl = location.pathname;
+    inlineFrames.clear();
+    lineAction?.remove();
+    selectedCode = undefined;
     toolbar?.remove();
     toolbar = undefined;
     selectionAction?.remove();
@@ -193,9 +292,16 @@ function scan() {
         ".timeline-comment-actions, [data-testid='comment-actions']",
       ) ?? area;
     actions.append(
-      button("Ask Diff City", () =>
-        send("ask", { ...pull, commentUrl: url.href }),
-      ),
+      button("Ask Diff City", () => {
+        const context = { ...pull, commentUrl: url.href };
+        if (url.hash.startsWith("#discussion_r")) {
+          const thread =
+            area.closest(
+              ".review-comment, [data-testid='review-thread'], .timeline-comment",
+            ) ?? area;
+          void openInline(context, thread);
+        } else send("ask", context);
+      }),
     );
   }
 }
@@ -217,6 +323,9 @@ document.addEventListener("mouseup", (event) => {
     return;
   selectionAction?.remove();
   selectionAction = undefined;
+  lineAction?.remove();
+  lineAction = undefined;
+  selectedCode = undefined;
   const pull = pullFromUrl(location.href);
   const selection = getSelection();
   const text = selection?.toString();
@@ -224,9 +333,7 @@ document.addEventListener("mouseup", (event) => {
     return;
   const range = selection.getRangeAt(0);
   const element = range.startContainer.parentElement;
-  const code = element?.closest(
-    ".blob-code, [data-code-marker], [data-testid='diff-line-content'], [data-testid='code-cell']",
-  );
+  const code = element?.closest(codeSelector);
   if (!code) return;
   const file = code.closest<HTMLElement>(
     "[data-path], [data-tagsearch-path], [data-file-path]",
@@ -256,9 +363,18 @@ document.addEventListener("mouseup", (event) => {
   const x = caret?.right ?? event.clientX;
   const bottom = caret?.bottom ?? event.clientY;
   const top = caret?.top ?? event.clientY;
+  const end =
+    range.endContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.endContainer as Element)
+      : range.endContainer.parentElement;
+  const captured = {
+    context: { ...pull, selection: { text, path, line, side } } as PullContext,
+    target: end?.closest(codeSelector) ?? code,
+  };
+  selectedCode = captured;
   selectionAction = button(
     "Ask Diff City about this selection",
-    () => send("ask", { ...pull, selection: { text, path, line, side } }),
+    () => void openInline(captured.context, captured.target),
     { floating: true },
   );
   Object.assign(selectionAction.style, {
@@ -274,6 +390,75 @@ document.addEventListener(
   () => {
     selectionAction?.remove();
     selectionAction = undefined;
+    lineAction?.remove();
+    lineAction = undefined;
   },
   { passive: true, capture: true },
 );
+
+// A single gutter control follows the hovered line; no buttons are added to
+// thousands of rows and keyboard users can select code or use the context menu.
+document.addEventListener("pointerover", (event) => {
+  if (
+    !event.isTrusted ||
+    (event.target as Element)?.closest?.("[data-diffcity]")
+  )
+    return;
+  lineAction?.remove();
+  lineAction = undefined;
+  if (selectionAction?.isConnected) return;
+  const pull = pullFromUrl(location.href);
+  const element = event.target as Element;
+  const code =
+    element?.closest?.(
+      ".blob-code, [data-testid='diff-line-content'], [data-testid='code-cell']",
+    ) ?? element?.closest?.("[data-code-marker]");
+  const row = code?.closest("tr");
+  if (!pull || !code || !row) return;
+  const file = code.closest<HTMLElement>(
+    "[data-path], [data-tagsearch-path], [data-file-path]",
+  );
+  const path =
+    file?.dataset.path ?? file?.dataset.tagsearchPath ?? file?.dataset.filePath;
+  const side =
+    code.matches(".blob-code-deletion") ||
+    code.getAttribute("data-code-marker") === "-"
+      ? "LEFT"
+      : "RIGHT";
+  const numbers = row.querySelectorAll<HTMLElement>("[data-line-number]");
+  const number = numbers[side === "LEFT" ? 0 : numbers.length - 1];
+  const line = Number(number?.dataset.lineNumber);
+  if (!path || !line) return;
+  const text =
+    (code.querySelector(".blob-code-inner") ?? code).textContent ?? undefined;
+  lineAction = button(
+    "Ask Diff City about this line",
+    () => void openInline({ ...pull, line: { path, line, side, text } }, code),
+    { floating: true, compact: true },
+  );
+  const rect = code.getBoundingClientRect();
+  Object.assign(lineAction.style, {
+    position: "fixed",
+    zIndex: "100",
+    left: `${Math.max(0, rect.left - 22)}px`,
+    top: `${rect.top}px`,
+  });
+  document.body.append(lineAction);
+});
+chrome.runtime.onMessage.addListener((message, sender, respond) => {
+  if (
+    sender.id !== chrome.runtime.id ||
+    message?.type !== "open-inline-selection"
+  )
+    return;
+  if (
+    !selectedCode ||
+    selectedCode.context.selection?.text !== message.text ||
+    !selectedCode.target.isConnected
+  ) {
+    respond({ inline: false });
+    return;
+  }
+  void openInline(selectedCode.context, selectedCode.target);
+  respond({ inline: true });
+});

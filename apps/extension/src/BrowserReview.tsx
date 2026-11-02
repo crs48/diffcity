@@ -48,7 +48,7 @@ import { sameAnchor } from "../../desktop/src/lib/selection";
 import { newNote } from "../../desktop/src/lib/review";
 import { mergeEnrichment } from "../../desktop/src/lib/enrichment";
 import { listen } from "../../desktop/src/lib/transport";
-import { commentAnchor, selectionAnchor } from "./context";
+import { commentAnchor, lineAnchor, selectionAnchor } from "./context";
 import { pullFromUrl, type PullContext } from "./protocol";
 
 const panel = location.pathname.endsWith("sidepanel.html");
@@ -197,6 +197,13 @@ export function BrowserReview() {
         if (!anchor)
           throw new Error(
             "This selection could not be matched uniquely to the current PR code. Open the guide and select the code there; no question was sent.",
+          );
+      }
+      if (context.line) {
+        anchor = lineAnchor(w, context.line);
+        if (!anchor)
+          throw new Error(
+            "This line is not part of the captured PR. Refresh and try again.",
           );
       }
       if (context.commentUrl) {

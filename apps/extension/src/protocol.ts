@@ -3,6 +3,7 @@ export type PullContext = {
   number: number;
   path?: string;
   commentUrl?: string;
+  line?: { path: string; line: number; side: "LEFT" | "RIGHT"; text?: string };
   selection?: {
     text: string;
     path?: string;
@@ -74,6 +75,21 @@ export function safeContext(raw: unknown, tabUrl: string): PullContext | null {
       return null;
     if (side !== undefined && side !== "LEFT" && side !== "RIGHT") return null;
     pull.selection = { text, path, line, side };
+  }
+  if (input.line) {
+    const { path, line, side, text } = input.line;
+    if (
+      typeof path !== "string" ||
+      !path ||
+      path.length > 1024 ||
+      path.includes("\0") ||
+      !Number.isSafeInteger(line) ||
+      line < 1 ||
+      (side !== "LEFT" && side !== "RIGHT") ||
+      (text !== undefined && (typeof text !== "string" || text.length > 16000))
+    )
+      return null;
+    pull.line = { path, line, side, text };
   }
   return pull;
 }

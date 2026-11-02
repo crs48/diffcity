@@ -5,7 +5,11 @@ const origin = `chrome-extension://${identity.id}`;
 const event = () => ({ addListener: vi.fn() });
 const port = (url: string) => ({
   name: "diffcity-ui",
-  sender: { url, frameId: 0 },
+  sender: {
+    url,
+    frameId: 0,
+    tab: undefined as { id: number; url: string } | undefined,
+  },
   onDisconnect: event(),
   onMessage: event(),
   disconnect: vi.fn(),
@@ -22,7 +26,9 @@ let browser: {
   };
   tabs: { create: ReturnType<typeof vi.fn> };
   sidePanel: { open: ReturnType<typeof vi.fn> };
-  storage: { session: { set: ReturnType<typeof vi.fn> } };
+  storage: {
+    session: { set: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
+  };
   action: { onClicked: ReturnType<typeof event> };
   contextMenus: {
     create: ReturnType<typeof vi.fn>;
@@ -42,7 +48,12 @@ beforeEach(async () => {
     },
     tabs: { create: vi.fn().mockResolvedValue({}) },
     sidePanel: { open: vi.fn().mockResolvedValue(undefined) },
-    storage: { session: { set: vi.fn().mockResolvedValue(undefined) } },
+    storage: {
+      session: {
+        set: vi.fn().mockResolvedValue(undefined),
+        get: vi.fn().mockResolvedValue({}),
+      },
+    },
     action: { onClicked: event() },
     contextMenus: { create: vi.fn(), onClicked: event() },
   };
@@ -145,5 +156,54 @@ it("page messages can only navigate to the same PR and never dispatch an agent c
   expect(browser.tabs.create).toHaveBeenCalledWith({
     url: `${origin}/index.html?repo=example%2Frepo&number=1`,
   });
+  expect(browser.runtime.connectNative).not.toHaveBeenCalled();
+});
+
+it("restricts embedded frames to a saved grant on the same tab and PR", async () => {
+  const id = "12345678-1234-1234-1234-123456789abc";
+  const url = "https://github.com/example/repo/pull/1/files";
+  browser.storage.session.get.mockResolvedValue({
+    [`inline:${id}`]: {
+      tabId: 1,
+      createdAt: Date.now(),
+      context: {
+        repository: "example/repo",
+        number: 1,
+        line: { path: "a.ts", line: 1, side: "RIGHT" },
+      },
+    },
+  });
+  for (const [tabId, tabUrl, frameId] of [
+    [2, url, 1],
+    [1, url.replace("/1/files", "/2/files"), 1],
+    [1, url, 0],
+  ] as const) {
+    const client = port(`${origin}/inline.html?id=${id}`);
+    client.name = `diffcity-inline:${id}`;
+    client.sender = {
+      url: client.sender.url,
+      frameId,
+      tab: { id: tabId, url: tabUrl },
+    };
+    browser.runtime.onConnect.addListener.mock.calls[0][0](client);
+    await vi.waitFor(() => expect(client.disconnect).toHaveBeenCalled());
+  }
+  const valid = port(`${origin}/inline.html?id=${id}`);
+  valid.name = `diffcity-inline:${id}`;
+  valid.sender = { url: valid.sender.url, frameId: 1, tab: { id: 1, url } };
+  browser.runtime.onConnect.addListener.mock.calls[0][0](valid);
+  valid.onMessage.addListener.mock.calls[0][0]({
+    id: "1",
+    command: "publish_review",
+    args: {},
+  });
+  await vi.waitFor(() =>
+    expect(valid.postMessage).toHaveBeenCalledWith({
+      id: "1",
+      error:
+        "Error: This action is only available in the full Diff City review.",
+    }),
+  );
+  expect(valid.disconnect).not.toHaveBeenCalled();
   expect(browser.runtime.connectNative).not.toHaveBeenCalled();
 });

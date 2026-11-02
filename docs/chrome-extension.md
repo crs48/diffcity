@@ -10,6 +10,10 @@ Diff City's Chrome extension brings local Codex and Claude conversations to GitH
 4. In Chrome 120 or later, open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the extracted directory containing `manifest.json`.
 5. Open a GitHub pull request. Use the book icon to **Open Diff City guide**, or the colored Diff City logo to ask about the PR, a file, a comment, or selected code. Hover over an icon for its tooltip; every button also has an accessible name. You can also use the extension toolbar button or right-click selected code and choose **Ask Diff City about this selection**.
 
+Code selections and code-line actions open a conversation directly below the code in GitHub's diff. Hover a line for the Diff City icon, or select text and click the icon beside the selection. Asking about an existing inline review comment opens a conversation at that thread. PR-wide and file-wide questions still open PR chat in Chrome's side panel.
+
+Inline conversations expand with replies, so GitHub's page handles vertical scrolling. You can queue follow-ups, collapse or close a thread, copy responses, and reopen the same code context to recover its saved conversation. Text selections are AI-only; line conversations can also save private notes or prepare unpublished GitHub drafts. Publish those explicitly from the full guide's **Finish review**.
+
 The extension has no separate API keys. It uses the desktop app's configured providers, GitHub CLI login, local repository mappings, and access controls. The native helper launches Diff City in the background if necessary. Closing the desktop window leaves the companion available; quitting Diff City disconnects it. Use **Retry** after restarting.
 
 Code selections must match the captured PR code uniquely. If GitHub doesn't expose enough context, Diff City asks you to select the code in its guide instead of silently sending the wrong code. GitHub comment bodies and replies come from the API, not scraped HTML. Review conversations remain private unless you explicitly prepare drafts and publish through **Finish review**.
@@ -49,6 +53,7 @@ Verify the complete browser window, including Chrome's panel title and divider, 
 ```mermaid
 flowchart LR
     G[GitHub content script] -->|Context and navigation only| E[Extension service worker]
+    I[Isolated inline conversation frame] <-->|One validated thread; limited agent access| E
     U[Extension chat and guide pages] <-->|Allowlisted review commands| E
     E <-->|Chrome native messaging| H[Installed Diff City helper]
     H <-->|Private Unix socket| S[Running Diff City service]
@@ -61,9 +66,9 @@ The installed app executable doubles as Chrome's native messaging host. The host
 
 Chrome messages are length-framed and bounded. Large responses are chunked below [Chrome's 1 MiB native-message limit](https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging). No local HTTP server is opened. Socket permissions restrict access to the current user, and the native host accepts only the registered extension origin.
 
-Content scripts cannot call the native host or review RPC. They send only validated GitHub PR identifiers, comment permalinks, and selection hints. Only top-level bundled extension UI pages can send review commands. There is no external messaging API, remotely hosted executable code, generic shell command endpoint, or arbitrary file-reading endpoint. PR content remains untrusted evidence, and the selected agent access mode still governs tool use.
+Content scripts cannot call the native host or review RPC. They send only validated GitHub PR identifiers, comment permalinks, and selection hints. Top-level bundled extension UI pages can send allowlisted review commands. An embedded conversation runs in a cross-origin extension frame, not in GitHub's DOM. Its short-lived grant is bound to the browser tab and PR; the worker resolves the supplied code hint against the captured diff and restricts RPC to that thread's notes and AI runs. Publishing, settings, and permission approvals are unavailable inside the frame. Inline agents use Limited access; choose **Continue in PR chat** for the full access controls. Only the inline entry point and its bundled assets are web-accessible, exclusively on GitHub.com. The full guide and side panel cannot be embedded. There is no external messaging API, remotely hosted executable code, generic shell command endpoint, or arbitrary file-reading endpoint. PR content remains untrusted evidence, and the selected agent access mode still governs tool use.
 
-The content script runs on GitHub.com so it can follow GitHub's navigation without a page reload; it only adds controls on pull request pages. GitHub pages receive no native responses, tokens, private chat history, or other repository data.
+The content script runs on GitHub.com so it can follow GitHub's navigation without a page reload; it only adds controls on pull request pages. GitHub pages receive no native responses, tokens, private chat history, or other repository data. The inline frame sends its parent only sizing and close messages; the page can observe frame dimensions and placement, but cannot read its conversation. A hostile page can overlay an embedded frame, which is why privileged actions remain in the top-level extension UI.
 
 ## Current scope
 

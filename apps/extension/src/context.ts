@@ -86,3 +86,27 @@ export function commentAnchor(
       }
     : null;
 }
+
+export function lineAnchor(
+  workspace: ReviewWorkspace,
+  line: NonNullable<PullContext["line"]>,
+): Anchor | null {
+  const hunk = workspace.snapshot.files
+    .find((f) => f.path === line.path)
+    ?.hunks.find((h) =>
+      h.lines.some(
+        (l) =>
+          (line.side === "RIGHT" ? l.new : l.old) === line.line &&
+          (line.text === undefined || l.text === line.text),
+      ),
+    );
+  return hunk
+    ? {
+        path: line.path,
+        side: line.side,
+        line: line.line,
+        startLine: line.line,
+        hunkId: hunk.id,
+      }
+    : null;
+}
