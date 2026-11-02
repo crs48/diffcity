@@ -8,7 +8,7 @@ Diff City's Chrome extension brings local Codex and Claude conversations to GitH
 2. In Diff City, open **Connections → Enable Chrome connection**. Keep the app installed at that location. If you move it, enable the connection again.
 3. Download and unzip the Chrome companion archive from the matching GitHub release (or build it below).
 4. In Chrome 120 or later, open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the extracted directory containing `manifest.json`.
-5. Open a GitHub pull request. Choose **Open Diff City guide**, **Ask AI**, or **Ask Diff City** beside a GitHub comment. You can also use the extension toolbar button or right-click selected code and choose **Ask Diff City about this selection**.
+5. Open a GitHub pull request. Use the book icon to **Open Diff City guide**, or the colored Diff City logo to ask about the PR, a file, a comment, or selected code. Hover over an icon for its tooltip; every button also has an accessible name. You can also use the extension toolbar button or right-click selected code and choose **Ask Diff City about this selection**.
 
 The extension has no separate API keys. It uses the desktop app's configured providers, GitHub CLI login, local repository mappings, and access controls. The native helper launches Diff City in the background if necessary. Closing the desktop window leaves the companion available; quitting Diff City disconnects it. Use **Retry** after restarting.
 
