@@ -37,6 +37,16 @@ export const sectionHasDiscussion = (s: GuideSection, w: ReviewWorkspace) =>
           f.path === c.path && f.hunks.some((h) => s.hunkIds.includes(h.id)),
       ),
   );
+export const sectionDefaultsCollapsed = (s: GuideSection, w: ReviewWorkspace) =>
+  s.foldable &&
+  s.assessed &&
+  s.attention === "routine" &&
+  !s.findings.length &&
+  !s.namingDecisions?.length &&
+  !s.annotations?.length &&
+  !s.unavailablePaths.length &&
+  !w.guide.previousRevision?.outdatedSections.includes(s.id) &&
+  !sectionHasDiscussion(s, w);
 export const countProgress = (w: ReviewWorkspace) => {
   const ids = w.snapshot.files.flatMap((f) => f.hunks.map((h) => h.id));
   return {

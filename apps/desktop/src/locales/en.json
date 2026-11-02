@@ -671,5 +671,12 @@
   "Generate updated guide": "Generate updated guide",
   "View original guide": "View original guide",
   "Outdated explanation": "Outdated explanation",
-  "Code in this section has changed. Its saved explanation may be outdated; updated code appears in the unassessed sections below.": "Code in this section has changed. Its saved explanation may be outdated; updated code appears in the unassessed sections below."
+  "Code in this section has changed. Its saved explanation may be outdated; updated code appears in the unassessed sections below.": "Code in this section has changed. Its saved explanation may be outdated; updated code appears in the unassessed sections below.",
+  "Expand section: {{title}}": "Expand section: {{title}}",
+  "Collapse section: {{title}}": "Collapse section: {{title}}",
+  "Collapse section": "Collapse section",
+  "Routine section · collapsed automatically": "Routine section · collapsed automatically",
+  "{{count}} findings": "{{count}} findings",
+  "{{count}} findings_one": "{{count}} finding",
+  "{{count}} findings_other": "{{count}} findings"
 }

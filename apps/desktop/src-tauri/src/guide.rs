@@ -178,6 +178,11 @@ pub fn compact_workspace(mut w: ReviewWorkspace) -> ReviewWorkspace {
         .iter()
         .filter_map(|id| replacement(id))
         .collect();
+    // Only preserve explicit collapse for unchanged sections. Combining a
+    // collapsed section with new content must not hide the new content.
+    w.progress
+        .collapsed
+        .retain(|id| w.guide.sections.iter().any(|s| &s.id == id));
     w
 }
 

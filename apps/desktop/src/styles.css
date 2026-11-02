@@ -3045,6 +3045,79 @@
     border-bottom: 1px solid var(--border);
     scroll-margin-top: var(--guide-inset);
   }
+  .guide-chapter-content {
+    display: contents;
+  }
+  .guide-chapter.is-collapsed {
+    display: block;
+    padding-block: 22px;
+  }
+  .collapsed-chapter {
+    max-width: 100ch;
+  }
+  .collapsed-chapter .section-meta {
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+  .collapsed-chapter h2 {
+    font-size: 17px;
+    line-height: 1.4;
+    margin: 0 0 10px;
+  }
+  .collapsed-chapter h2 button {
+    display: flex;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    font: inherit;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .collapsed-chapter h2 button > svg {
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .collapsed-chapter-summary {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .collapsed-chapter-details {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .collapsed-chapter-details .text-button {
+    font-size: 11px;
+    padding: 4px 0;
+  }
+  .collapsed-reviewed {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--green);
+  }
+  .chapter-number {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .chapter-number .section-collapse {
+    width: 26px;
+    height: 26px;
+  }
   .guide-annotation {
     position: sticky;
     top: var(--guide-inset);

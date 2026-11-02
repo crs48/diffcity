@@ -296,11 +296,13 @@ it("jumps to margin notes beside their code on wide layouts, including after col
     );
     await userEvent
       .setup()
-      .click(within(chapter).getByRole("button", { name: "Collapse changes" }));
-    await waitFor(() => expect(slot.hidden).toBe(true));
+      .click(within(chapter).getByRole("button", { name: "Collapse section" }));
+    await waitFor(() => expect(slot.isConnected).toBe(false));
     await jumpTo("Backfill existing invitations");
     await waitFor(() =>
-      expect(document.activeElement).toBe(slot.querySelector("h3")),
+      expect(document.activeElement).toBe(
+        chapter.querySelector('.guide-margin [data-note-id="backfill"] h3'),
+      ),
     );
     expect(
       chapter.querySelector<HTMLDetailsElement>(".chapter-code-notes")?.open,
@@ -343,7 +345,7 @@ it("reopens a collapsed conversation, file, and chapter when navigating back to 
   });
   await userEvent
     .setup()
-    .click(within(chapter).getByRole("button", { name: "Collapse changes" }));
+    .click(within(chapter).getByRole("button", { name: "Collapse section" }));
   expect(thread()).toBeUndefined();
   await jumpTo("Please add smoke coverage.");
   await waitFor(() => expect(document.activeElement).toBe(thread()));

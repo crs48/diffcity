@@ -117,6 +117,7 @@ impl Service {
         if old_id != selected_id {
             progress.active_section = view.active_section;
             progress.expanded = view.expanded;
+            progress.collapsed = view.collapsed;
         }
         self.store.batch(&[
             ("guide-view", &old_view_key, to_value(&workspace.progress)?),
@@ -227,6 +228,7 @@ mod tests {
             deferred: vec![snapshot.files[2].hunks[0].id.clone()],
             active_section: Some(original.sections[0].id.clone()),
             expanded: vec![original.sections[0].id.clone()],
+            collapsed: vec![original.sections[1].id.clone()],
         };
         service.progress(&snapshot.id, progress.clone()).unwrap();
         let selected = service.select_guide(&snapshot.id, "claude-run").unwrap();
@@ -234,6 +236,7 @@ mod tests {
         assert_eq!(selected.progress.acknowledged, progress.acknowledged);
         assert_eq!(selected.progress.deferred, progress.deferred);
         assert_eq!(selected.progress.active_section, None);
+        assert!(selected.progress.collapsed.is_empty());
         assert_eq!(selected.notes[0].id, note.id);
         drop(service);
         let restarted = Service::new(root.path()).unwrap();
@@ -246,6 +249,7 @@ mod tests {
             .unwrap();
         assert_eq!(restored.progress.active_section, progress.active_section);
         assert_eq!(restored.progress.expanded, progress.expanded);
+        assert_eq!(restored.progress.collapsed, progress.collapsed);
         assert_eq!(restarted.guide_versions(&snapshot.id).unwrap().len(), 2);
         other.summary = "Do not overwrite a saved run".into();
         assert!(restarted.store.retain_guide(other).is_err());

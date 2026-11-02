@@ -671,5 +671,12 @@
   "Generate updated guide": "Generar guía actualizada",
   "View original guide": "Ver guía original",
   "Outdated explanation": "Explicación desactualizada",
-  "Code in this section has changed. Its saved explanation may be outdated; updated code appears in the unassessed sections below.": "El código de esta sección ha cambiado. Su explicación guardada puede estar desactualizada; el código actualizado aparece en las secciones sin evaluar más abajo."
+  "Code in this section has changed. Its saved explanation may be outdated; updated code appears in the unassessed sections below.": "El código de esta sección ha cambiado. Su explicación guardada puede estar desactualizada; el código actualizado aparece en las secciones sin evaluar más abajo.",
+  "Expand section: {{title}}": "Expandir sección: {{title}}",
+  "Collapse section: {{title}}": "Contraer sección: {{title}}",
+  "Collapse section": "Contraer sección",
+  "Routine section · collapsed automatically": "Sección rutinaria · contraída automáticamente",
+  "{{count}} findings": "{{count}} hallazgos",
+  "{{count}} findings_one": "{{count}} hallazgo",
+  "{{count}} findings_other": "{{count}} hallazgos"
 }

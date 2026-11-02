@@ -72,8 +72,10 @@ afterEach(() => {
 function Example({
   initial = fixture as ReviewWorkspace,
   onDiscuss = () => {},
+  onProgress = () => {},
 }: {
   initial?: ReviewWorkspace;
+  onProgress?: (progress: ReviewWorkspace["progress"]) => void;
   onDiscuss?: (anchor: import("../lib/api").Anchor) => void;
 }) {
   const [w, setW] = useState(structuredClone(initial));
@@ -94,7 +96,10 @@ function Example({
         selection={null}
         onSelect={() => {}}
         onDiscuss={onDiscuss}
-        onProgress={(p) => setW((current) => ({ ...current, progress: p }))}
+        onProgress={(p) => {
+          onProgress(p);
+          setW((current) => ({ ...current, progress: p }));
+        }}
         onFinish={() => {}}
       />
     </div>
@@ -185,13 +190,13 @@ it("keeps every chapter mounted while jumping and preserves independent reviewed
     within(first).getByRole("button", { name: "Code reviewed" }),
   ).toBeTruthy();
   await user.click(
-    within(first).getByRole("button", { name: "Collapse changes" }),
+    within(first).getByRole("button", { name: "Collapse section" }),
   );
   await user.click(
-    within(second).getByRole("button", { name: "Collapse changes" }),
+    within(second).getByRole("button", { name: "Collapse section" }),
   );
   await user.click(
-    within(first).getByRole("button", { name: "Expand all changes" }),
+    within(first).getByRole("button", { name: /^Expand section:/ }),
   );
   expect(first.querySelector("[data-code-index]")).toBeTruthy();
   expect(second.querySelector("[data-code-index]")).toBeNull();
@@ -501,4 +506,69 @@ it("keeps saved explanations visible while marking changed sections and offering
       within(notice).getByRole("button", { name: "Generate updated guide" }),
     );
   expect(onNewGuide).toHaveBeenCalledOnce();
+});
+
+it("folds the whole routine section, preserves review status and restores the saved choice", async () => {
+  const user = userEvent.setup();
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  const routine = w.guide.sections[4];
+  const save = vi.fn();
+  render(<Example initial={w} onProgress={save} />);
+  let chapter = screen.getByRole("region", { name: routine.title });
+  expect(chapter.getAttribute("data-section-collapsed")).toBe("true");
+  expect(chapter.textContent).toContain("collapsed automatically");
+  expect(chapter.querySelector(".guide-margin")).toBeNull();
+  expect(chapter.querySelector(".chapter-context")).toBeNull();
+  expect(chapter.querySelector("[data-code-index]")).toBeNull();
+  await user.click(
+    within(chapter).getByRole("button", { name: /^Expand section:/ }),
+  );
+  expect(chapter.querySelector(".chapter-context")).toBeTruthy();
+  expect(chapter.querySelector("[data-code-index]")).toBeTruthy();
+  expect(document.activeElement?.getAttribute("aria-label")).toContain(
+    "Collapse section:",
+  );
+  await user.click(
+    within(chapter).getByRole("button", { name: "Mark code reviewed" }),
+  );
+  await user.click(
+    within(chapter).getByRole("button", { name: "Collapse section" }),
+  );
+  expect(chapter.textContent).toContain("Code reviewed");
+  expect(document.activeElement?.getAttribute("aria-label")).toContain(
+    "Expand section:",
+  );
+  w.progress = save.mock.calls.at(-1)![0];
+  expect(w.progress.collapsed).toContain(routine.id);
+  expect(w.progress.reviewed).toEqual(routine.hunkIds);
+  cleanup();
+  mount(w);
+  chapter = screen.getByRole("region", { name: routine.title });
+  expect(chapter.querySelector("[data-code-index]")).toBeNull();
+  expect(chapter.textContent).toContain("Code reviewed");
+});
+
+it("outline navigation reveals a collapsed chapter without reopening it on unrelated navigation", async () => {
+  const user = userEvent.setup();
+  const w = structuredClone(fixture) as ReviewWorkspace;
+  w.progress.collapsed = [w.guide.sections[0].id];
+  mount(w);
+  const chapter = screen.getByRole("region", {
+    name: w.guide.sections[0].title,
+  });
+  expect(chapter.querySelector("[data-code-index]")).toBeNull();
+  await user.click(
+    screen.getByRole("button", { name: "Start code walkthrough" }),
+  );
+  expect(chapter.querySelector("[data-code-index]")).toBeTruthy();
+  expect(document.activeElement).toBe(
+    within(chapter).getByRole("heading", { level: 2 }),
+  );
+  await user.click(
+    within(chapter).getByRole("button", { name: "Collapse section" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Next section" }));
+  expect(chapter.querySelector("[data-code-index]")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Previous section" }));
+  expect(chapter.querySelector("[data-code-index]")).toBeTruthy();
 });

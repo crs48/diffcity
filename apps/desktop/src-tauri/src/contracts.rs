@@ -590,6 +590,9 @@ pub struct ReviewProgress {
     pub acknowledged: Vec<String>,
     pub deferred: Vec<String>,
     pub expanded: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(optional, as = "Option<Vec<String>>")]
+    pub collapsed: Vec<String>,
     pub active_section: Option<String>,
 }
 
