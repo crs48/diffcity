@@ -19,14 +19,14 @@ flowchart LR
 
 The default is **Developer ID signing and notarization**. Configure these repository Actions secrets, using the names expected by Tauri:
 
-| Secret | Value |
-| --- | --- |
-| `APPLE_CERTIFICATE` | Base64-encoded Developer ID Application certificate and private key exported as `.p12` |
-| `APPLE_CERTIFICATE_PASSWORD` | Password protecting that exported `.p12` |
-| `APPLE_SIGNING_IDENTITY` | Full `Developer ID Application: …` identity from Keychain |
-| `APPLE_ID` | Apple developer account email |
-| `APPLE_PASSWORD` | Apple app-specific password for notarization; never the account password |
-| `APPLE_TEAM_ID` | Apple developer team ID |
+| Secret                       | Value                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------- |
+| `APPLE_CERTIFICATE`          | Base64-encoded Developer ID Application certificate and private key exported as `.p12` |
+| `APPLE_CERTIFICATE_PASSWORD` | Password protecting that exported `.p12`                                               |
+| `APPLE_SIGNING_IDENTITY`     | Full `Developer ID Application: …` identity from Keychain                              |
+| `APPLE_ID`                   | Apple developer account email                                                          |
+| `APPLE_PASSWORD`             | Apple app-specific password for notarization; never the account password               |
+| `APPLE_TEAM_ID`              | Apple developer team ID                                                                |
 
 Set the Actions variable `MACOS_SIGNING_MODE` to `developer-id` (or leave it unset). The workflow rejects incomplete signing configuration, validates stapling on the app and DMG, and requires Gatekeeper to accept the app before uploading.
 
@@ -36,7 +36,7 @@ Never commit or paste certificate/private-key material into issues. Store it dir
 
 ## Publish
 
-1. Update the version in root `package.json`, desktop/site `package.json`, `apps/desktop/src-tauri/Cargo.toml`, and `tauri.conf.json`. Refresh `Cargo.lock` with Cargo. Use `X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, `X.Y.Z-rc.N`, or `X.Y.Z`.
+1. Update the version in root `package.json`, desktop/site/extension `package.json`, `apps/desktop/src-tauri/Cargo.toml`, and `tauri.conf.json`. Refresh `Cargo.lock` with Cargo. Set the Chrome manifest `version_name` to the same release and increment its numeric `version` (up to four components; alpha.2 uses `0.1.0.2`). The release validator rejects mismatched labels, and packaging rejects a stale extension build. Use `X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, `X.Y.Z-rc.N`, or `X.Y.Z`.
 2. Merge the tested change into `main`. Audit new assets and fixtures for private data.
 3. Create and push the matching annotated tag, for example:
 
@@ -72,6 +72,6 @@ RELEASE_TAG=v0.1.0-alpha.1 MACOS_SIGNING_MODE=ad-hoc pnpm release:prepare
 pnpm release:build
 ```
 
-Output is in ignored `.local/release/assets/`. The app and release include generated dependency licenses, notices, and links to exact source versions. Clean old `target/aarch64-apple-darwin/release/bundle/dmg/` output before packaging a different version; the packager rejects ambiguous DMGs. Local packaging does not publish anything.
+Output is in ignored `.local/release/assets/`. Each release includes the matching `diffcity-chrome-VERSION.zip`, its checksum, installation notes, and dependency licenses. `release.json` records both desktop and Chrome versions. The app and release include generated dependency licenses, notices, and links to exact source versions. Clean old `target/aarch64-apple-darwin/release/bundle/dmg/` output before packaging a different version; the packager rejects ambiguous DMGs. Local packaging does not publish anything.
 
 This alpha does not have an automatic update channel. Follow [installation and recovery](installation.md) for manual upgrades. Developer ID certificates, notarization, and release publication are distinct from the MIT license.

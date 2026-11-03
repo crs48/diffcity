@@ -71,8 +71,13 @@ writeFileSync(
 const extensionVersion = JSON.parse(
   readFileSync("apps/extension/public/manifest.json", "utf8"),
 ).version;
+if (extensionVersion !== metadata.extension?.version)
+  throw new Error(
+    "Extension version changed after release metadata was prepared.",
+  );
 const files = [
   `diffcity-chrome-${extensionVersion}.zip`,
+  `diffcity-chrome-${extensionVersion}.zip.sha256`,
   "diffcity-macos-arm64.dmg",
   "diffcity-macos-arm64.zip",
   "LICENSE.txt",

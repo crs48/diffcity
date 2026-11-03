@@ -1,6 +1,6 @@
 {
   "name": "diffcity",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "private": true,
   "license": "MIT",
   "packageManager": "pnpm@10.11.1",
@@ -23,7 +23,7 @@
     "extension:build": "pnpm --filter @diffcity/extension build",
     "extension:check": "pnpm --filter @diffcity/extension check",
     "extension:test": "pnpm --filter @diffcity/extension test",
-    "extension:package": "pnpm extension:build && node scripts/package-extension.mjs"
+    "extension:package": "pnpm extension:build && node scripts/third-party-notices.mjs && node scripts/package-extension.mjs"
   },
   "devDependencies": {
     "prettier": "^3.8.0"

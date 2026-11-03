@@ -31,6 +31,8 @@ const licenseFiles = (root) =>
 const npm = jsonCommand("pnpm", [
   "--filter",
   "@diffcity/desktop",
+  "--filter",
+  "@diffcity/extension",
   "licenses",
   "list",
   "--prod",
@@ -75,9 +77,11 @@ const rustPackages = cargo.packages
     source: `https://crates.io/api/v1/crates/${pkg.name}/${pkg.version}/download`,
     licenseFile: pkg.license_file,
   }));
-const packages = [...npmPackages, ...rustPackages].sort((a, b) =>
-  a.name.localeCompare(b.name),
-);
+const packages = [
+  ...new Map(
+    [...npmPackages, ...rustPackages].map((pkg) => [pkg.name, pkg]),
+  ).values(),
+].sort((a, b) => a.name.localeCompare(b.name));
 const notices = packages.map((pkg) => {
   const paths = [
     ...new Set([
@@ -116,7 +120,7 @@ const assets = [
   "apps/desktop/src/assets/providers/LICENSE",
   "packages/brand/PRIMER-LICENSE",
 ];
-const header = `Diff City — third-party notices\n\n${readFileSync("LICENSE", "utf8")}\n\nThe following unmodified packages support the desktop app and its build.\nTheir original licenses remain in force; Diff City's MIT license does not\nreplace them. Source archives are linked at exact versions. This includes\nsource availability for EPL/MPL components. Rebuild instructions are in\nhttps://github.com/crs48/diffcity/blob/main/CONTRIBUTING.md.\n`;
+const header = `Diff City — third-party notices\n\n${readFileSync("LICENSE", "utf8")}\n\nThe following unmodified packages support the desktop app, Chrome companion, and their builds.\nTheir original licenses remain in force; Diff City's MIT license does not\nreplace them. Source archives are linked at exact versions. This includes\nsource availability for EPL/MPL components. Rebuild instructions are in\nhttps://github.com/crs48/diffcity/blob/main/CONTRIBUTING.md.\n`;
 mkdirSync(".local/release", { recursive: true });
 writeFileSync(
   ".local/release/THIRD_PARTY_NOTICES.txt",
