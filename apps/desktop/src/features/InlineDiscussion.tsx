@@ -4,6 +4,7 @@ import { Button } from "react-aria-components";
 import {
   ChevronDown,
   ChevronRight,
+  CheckCircle2,
   PanelRightOpen,
   Sparkles,
   X,
@@ -21,16 +22,48 @@ import { IconAction } from "../ui/IconAction";
 import { threadTarget } from "../lib/guideIndex";
 import { useGuideJump } from "./guideJump";
 import { CopyConversation } from "./CopyConversation";
+import { resolvedThread } from "../lib/commentContext";
+import { replyScope } from "../lib/readReplies";
+import {
+  emptyActivity,
+  replyActivity,
+  replyThreadKey,
+  useReadReplies,
+} from "./useReplyActivity";
+import { ReplyActivity } from "./ReplyActivity";
 
-export function InlineDiscussion({ thread }: { thread: InlineThread }) {
+export function InlineDiscussion({
+  thread,
+  onClose,
+  initiallyCollapsed,
+  onCollapsedChange,
+}: {
+  thread: InlineThread;
+  onClose?: () => void;
+  initiallyCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+}) {
   const { t } = useTranslation();
   const c = useConversation();
+  const read = useReadReplies(c ? replyScope(c.workspace.snapshot.pull) : "");
+  const activity = c
+    ? (replyActivity(thread.notes, c.runs, c.workspace.snapshot.id, read).get(
+        replyThreadKey(thread.anchor),
+      ) ?? emptyActivity)
+    : emptyActivity;
   const root = useRef<HTMLElement>(null);
   const header = useRef<HTMLElement>(null);
   const keepHeader = useRef(false);
   const jump = useGuideJump([thread.anchor.hunkId]);
-  const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
-  const focus = `${c?.inline.focus ?? 0}/${jump?.entry.target === threadTarget(thread.anchor) ? jump.sequence : 0}`;
+  const resolved = resolvedThread(thread.remote);
+  const active =
+    !!c &&
+    c.inline.draft?.snapshotId === c.workspace.snapshot.id &&
+    sameAnchor(c.inline.draft.anchor, thread.anchor);
+  const focus = `${active ? (c?.inline.focus ?? 0) : 0}/${jump?.entry.target === threadTarget(thread.anchor) ? jump.sequence : 0}`;
+  const [collapsedAt, setCollapsedAt] = useState<string | null>(() =>
+    (initiallyCollapsed ?? resolved) ? focus : null,
+  );
   const collapsed = collapsedAt === focus;
   useLayoutEffect(() => {
     if (!collapsed || !keepHeader.current) return;
@@ -43,9 +76,6 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
       );
   }, [collapsed]);
   if (!c) return null;
-  const active =
-    c.inline.draft?.snapshotId === c.workspace.snapshot.id &&
-    sameAnchor(c.inline.draft.anchor, thread.anchor);
   const label = `${thread.anchor.side === "LEFT" ? "Old" : "New"} ${lineRange(thread.anchor)}`;
   const title = threadTitle(thread.notes, thread.remote, thread.anchor);
   return (
@@ -77,17 +107,24 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
                 viewport.getBoundingClientRect().top +
                   parseFloat(getComputedStyle(header.current).top);
             setCollapsedAt(collapsed ? null : focus);
+            onCollapsedChange?.(!collapsed);
           }}
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </Button>
-        <Sparkles size={14} aria-hidden />
+        {resolved ? (
+          <CheckCircle2 size={14} className="positive" aria-hidden />
+        ) : (
+          <Sparkles size={14} aria-hidden />
+        )}
         <div className="inline-thread-heading">
           <strong title={title || label}>{title || label}</strong>
           <span className="muted">
             {title ? `${label} · ` : ""}
             {t("Private AI conversation")}
+            {resolved && ` · ${t("Resolved")}`}
           </span>
+          <ReplyActivity activity={activity} />
         </div>
         <CopyConversation
           conversation={c}
@@ -100,11 +137,15 @@ export function InlineDiscussion({ thread }: { thread: InlineThread }) {
         >
           <PanelRightOpen size={15} aria-hidden />
         </IconAction>
-        {active && (
+        {(active || onClose) && (
           <Button
             className="icon-button"
-            aria-label={t("Close inline composer")}
-            onPress={() => void c.inline.close().catch(c.onError)}
+            aria-label={t(
+              onClose ? "Close inline conversation" : "Close inline composer",
+            )}
+            onPress={() =>
+              onClose ? onClose() : void c.inline.close().catch(c.onError)
+            }
           >
             <X size={15} />
           </Button>

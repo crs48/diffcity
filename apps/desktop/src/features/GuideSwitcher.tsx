@@ -75,7 +75,7 @@ export function GuideSwitcher({
           value={guide.id ?? ""}
           disabled={disabled || busy || versions.length < 2}
           title={t(
-            "Switch guides for this revision. Comments and reviewed code are shared.",
+            "Switch saved guides. Earlier guides are shown against current code with outdated sections marked.",
           )}
           onChange={async (event) => {
             setBusy(true);
@@ -102,6 +102,9 @@ export function GuideSwitcher({
           {versions.map((v) => (
             <option key={v.id} value={v.id}>
               {t(guideLabel(v))}
+              {v.snapshotId !== guide.snapshotId
+                ? ` · ${t("Earlier revision")} ${v.head.slice(0, 8)}`
+                : ""}
               {v.id === pendingId ? ` · ${t("New")}` : ""}
             </option>
           ))}

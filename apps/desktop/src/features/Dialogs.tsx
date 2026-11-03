@@ -35,6 +35,7 @@ export function Connections({
 }) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState(data.settings);
+  const [browserInstalled, setBrowserInstalled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
@@ -156,6 +157,34 @@ export function Connections({
             "Reviews use your Codex login. Selected source is sent to its configured service. Notes stay on this computer until you explicitly publish them.",
           )}{" "}
         </p>
+        <section className="connection-card">
+          <div>
+            <h3>Chrome companion</h3>
+            <p>Use your local agents and saved guides inside GitHub.</p>
+            <button
+              type="button"
+              className="secondary"
+              onClick={async () => {
+                try {
+                  await api.installBrowser();
+                  setBrowserInstalled(true);
+                } catch (e) {
+                  setError(String(e));
+                }
+              }}
+            >
+              {browserInstalled
+                ? "Browser connection enabled"
+                : "Enable Chrome connection"}
+            </button>
+            {browserInstalled && (
+              <p role="status">
+                Load the Diff City extension in Chrome, then open a GitHub pull
+                request.
+              </p>
+            )}
+          </div>
+        </section>
         <details>
           <summary>{t("Local storage")} </summary>
           <code>{data.dataDirectory}</code>

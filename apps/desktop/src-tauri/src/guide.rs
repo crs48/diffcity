@@ -149,7 +149,11 @@ pub fn compact_sections(mut sections: Vec<GuideSection>) -> Vec<GuideSection> {
 
 pub fn compact_workspace(mut w: ReviewWorkspace) -> ReviewWorkspace {
     let old = w.guide.sections.clone();
-    w.guide.sections = compact_sections(w.guide.sections);
+    // Carried sections already have stable IDs and freshness labels. Do not merge
+    // outdated explanations with new, unassessed changes.
+    if w.guide.previous_revision.is_none() {
+        w.guide.sections = compact_sections(w.guide.sections);
+    }
     let replacement = |id: &str| {
         let old = old.iter().find(|s| s.id == id);
         w.guide
@@ -174,6 +178,11 @@ pub fn compact_workspace(mut w: ReviewWorkspace) -> ReviewWorkspace {
         .iter()
         .filter_map(|id| replacement(id))
         .collect();
+    // Only preserve explicit collapse for unchanged sections. Combining a
+    // collapsed section with new content must not hide the new content.
+    w.progress
+        .collapsed
+        .retain(|id| w.guide.sections.iter().any(|s| &s.id == id));
     w
 }
 

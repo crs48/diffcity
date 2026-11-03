@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { listen, usesBackendQueue } from "../lib/transport";
 import {
   api,
   type AgentAccess,
@@ -170,15 +170,16 @@ export function useAiRuns() {
     )
       return;
     const id = crypto.randomUUID();
-    const previous = details.question
-      ? [...pending.current.values()]
-          .reverse()
-          .find(
-            (entry) =>
-              entry.question?.snapshotId === details.snapshotId &&
-              sameAnchor(entry.question.anchor, details.question!.anchor),
-          )
-      : undefined;
+    const previous =
+      details.question && !usesBackendQueue()
+        ? [...pending.current.values()]
+            .reverse()
+            .find(
+              (entry) =>
+                entry.question?.snapshotId === details.snapshotId &&
+                sameAnchor(entry.question.anchor, details.question!.anchor),
+            )
+        : undefined;
     let release!: () => void;
     const completed = new Promise<void>((resolve) => {
       release = resolve;

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -19,9 +20,9 @@ import {
   ArrowUp,
   BookOpen,
   Check,
+  Clock3,
   ChevronDown,
-  ChevronsUpDown,
-  Eye,
+  ChevronRight,
   FileCode2,
   Flag,
   Sparkles,
@@ -33,12 +34,13 @@ import type {
   ReviewProgress,
   ReviewWorkspace,
 } from "../lib/api";
-import { countProgress, labels, sectionHasDiscussion } from "../lib/review";
+import { countProgress, labels, sectionDefaultsCollapsed } from "../lib/review";
 import { anchorKey } from "../lib/diffRows";
+import { IconAction } from "../ui/IconAction";
 import { CommentMarkdown } from "../ui/CommentMarkdown";
 import { normalizeGuideMarkdown } from "../lib/guideMarkdown";
 import { useConversation } from "./conversation";
-import { useGuideScroll } from "./useGuideScroll";
+import { useGuideScroll, type GuideScrollLocation } from "./useGuideScroll";
 
 import { GuideMargin } from "./GuideMargin";
 import { orderedAnnotations } from "../lib/guideAnnotations";
@@ -58,6 +60,8 @@ type Props = {
   onDiscuss: (anchor: Anchor) => void;
   onProgress: (progress: ReviewProgress) => void;
   onFinish: () => void;
+  onOriginalGuide?: () => void;
+  onNewGuide?: () => void;
   renderHunks: (ids: string[]) => ReactNode;
   split: boolean;
   onSplit: () => void;
@@ -67,6 +71,12 @@ export function GuideFlow(props: Props) {
   const { t } = useTranslation();
   const conversation = useConversation();
   const root = useRef<HTMLDivElement>(null);
+  const [sectionRequest, setSectionRequest] = useState<{
+    id: string;
+    sequence: number;
+    location?: GuideScrollLocation;
+    revealed: Record<string, number>;
+  } | null>(null);
   const [indexJump, setIndexJump] = useState<GuideJump | null>(null);
   const [navigationHost, setNavigationHost] = useState<HTMLElement | null>(
     null,
@@ -75,13 +85,14 @@ export function GuideFlow(props: Props) {
     setNavigationHost(
       (
         root.current?.closest(".review-tabs") ??
+        root.current?.closest("[data-review-workspace]") ??
         root.current?.closest(".review-document")
       )?.querySelector<HTMLElement>("#review-guide-navigation") ?? null,
     );
   }, []);
   const sections = w.guide.sections;
   const index = sections.findIndex((s) => s.id === w.progress.activeSection);
-  const navigate = useGuideScroll(
+  const scrollTo = useGuideScroll(
     root,
     [OVERVIEW, ...sections.map((s) => s.id)].join("/"),
     w.progress.activeSection ?? OVERVIEW,
@@ -89,6 +100,20 @@ export function GuideFlow(props: Props) {
       onProgress({ ...w.progress, activeSection: id === OVERVIEW ? null : id }),
     !!navigationHost,
   );
+  const navigate = useCallback((id: string, location?: GuideScrollLocation) => {
+    setSectionRequest((previous) => {
+      const sequence = (previous?.sequence ?? 0) + 1;
+      return {
+        id,
+        sequence,
+        location,
+        revealed: { ...previous?.revealed, [id]: sequence },
+      };
+    });
+  }, []);
+  useLayoutEffect(() => {
+    if (sectionRequest) scrollTo(sectionRequest.id, sectionRequest.location);
+  }, [sectionRequest, scrollTo]);
   const counts = countProgress(w);
   useLayoutEffect(() => {
     if (!indexJump) return;
@@ -273,6 +298,52 @@ export function GuideFlow(props: Props) {
           <h2 id="guide-overview-heading" tabIndex={-1}>
             {t("PR overview")}
           </h2>
+          {w.guide.previousRevision && (
+            <aside
+              className="guide-revision-notice"
+              aria-label={t("Saved guide from an earlier revision")}
+            >
+              <strong>
+                <Clock3 size={16} aria-hidden />
+                {t("Your saved guide, with current code")}
+              </strong>
+              <p>
+                {t(
+                  "Generated for {{commit}}. The overview and explanations reflect that revision; the diffs below show the current PR.",
+                  { commit: w.guide.previousRevision.head.slice(0, 8) },
+                )}
+              </p>
+              <p>
+                {t("{{count}} outdated sections", {
+                  count: w.guide.previousRevision.outdatedSections.length,
+                })}{" "}
+                ·{" "}
+                {t("{{count}} updated hunks awaiting analysis", {
+                  count: w.guide.previousRevision.unassessedHunks,
+                })}
+              </p>
+              <p>
+                {t(
+                  "Notes on unchanged code are retained. Notes on changed or removed code remain in the original guide.",
+                )}
+              </p>
+              <div>
+                {props.onNewGuide && (
+                  <Button className="secondary" onPress={props.onNewGuide}>
+                    {t("Generate updated guide")}
+                  </Button>
+                )}
+                {props.onOriginalGuide && (
+                  <Button
+                    className="text-button"
+                    onPress={props.onOriginalGuide}
+                  >
+                    {t("View original guide")}
+                  </Button>
+                )}
+              </div>
+            </aside>
+          )}
           <NamingOverview sections={sections} onNavigate={navigate} />
           {w.guide.source === "provisional" ? (
             <>
@@ -355,6 +426,7 @@ export function GuideFlow(props: Props) {
               section={section}
               index={i}
               total={sections.length}
+              reveal={sectionRequest?.revealed[section.id] ?? 0}
             />
           ))}
         </div>
@@ -398,22 +470,30 @@ function GuideChapter({
   section: s,
   index,
   total,
+  reveal,
   selection,
   onDiscuss,
   onProgress,
   renderHunks,
   split,
   onSplit,
+  onOriginalGuide,
 }: Props & {
   section: GuideSection;
   index: number;
   total: number;
+  reveal: number;
 }) {
   const { t } = useTranslation();
   const conversation = useConversation();
   const jump = useGuideJump(s.hunkIds);
   const chapter = useRef<HTMLElement>(null);
-  const [collapsedAt, setCollapsedAt] = useState<string | null>(null);
+  const [dismissedReveal, setDismissedReveal] = useState<{
+    selection: string | null;
+    focus: number | null;
+    navigation: number;
+  }>({ selection: null, focus: null, navigation: 0 });
+  const restoreToggleFocus = useRef(false);
   const [contextOpen, setContextOpen] = useState(true);
   const [notesOpen, setNotesOpen] = useState(false);
   const [noteRequest, setNoteRequest] = useState<{
@@ -443,15 +523,55 @@ function GuideChapter({
     selection && s.hunkIds.includes(selection.hunkId) ? selection : null;
   const editing = conversation?.inline.draft?.anchor;
   const editingHere = editing && s.hunkIds.includes(editing.hunkId);
-  const expansionKey = `${editingHere ? conversation?.inline.focus : 0}/${selected ? anchorKey(selected) : ""}/${jump?.sequence ?? 0}`;
+  const selectedKey = selected ? anchorKey(selected) : null;
+  const editorFocus = editingHere ? conversation!.inline.focus : null;
+  const requested =
+    (selectedKey !== null && selectedKey !== dismissedReveal.selection) ||
+    (editorFocus !== null && editorFocus !== dismissedReveal.focus) ||
+    reveal > dismissedReveal.navigation;
+  const automatic = sectionDefaultsCollapsed(s, w);
   const expanded =
-    collapsedAt !== expansionKey &&
-    (!s.foldable ||
-      w.progress.expanded.includes(s.id) ||
-      sectionHasDiscussion(s, w) ||
-      !!selected ||
-      !!jump ||
-      !!editingHere);
+    requested ||
+    (!(w.progress.collapsed ?? []).includes(s.id) &&
+      (!automatic || w.progress.expanded.includes(s.id)));
+  const setExpanded = (open: boolean) => {
+    restoreToggleFocus.current = true;
+    if (!open)
+      setDismissedReveal({
+        selection: selectedKey,
+        focus: editorFocus,
+        navigation: reveal,
+      });
+    onProgress({
+      ...w.progress,
+      expanded: open
+        ? [...new Set([...w.progress.expanded, s.id])]
+        : w.progress.expanded.filter((id) => id !== s.id),
+      collapsed: open
+        ? (w.progress.collapsed ?? []).filter((id) => id !== s.id)
+        : [...new Set([...(w.progress.collapsed ?? []), s.id])],
+    });
+  };
+  useLayoutEffect(() => {
+    if (!restoreToggleFocus.current) return;
+    restoreToggleFocus.current = false;
+    const element = chapter.current;
+    const viewport = element?.closest<HTMLElement>("[data-review-scroll]");
+    element
+      ?.querySelector<HTMLElement>(".section-collapse")
+      ?.focus({ preventScroll: true });
+    if (!element || !viewport) return;
+    const bounds = element.getBoundingClientRect();
+    const view = viewport.getBoundingClientRect();
+    const inset =
+      parseFloat(getComputedStyle(element).getPropertyValue("--guide-inset")) ||
+      16;
+    if (bounds.top < view.top + inset || bounds.bottom > view.bottom)
+      viewport.scrollTo({
+        top: viewport.scrollTop + bounds.top - view.top - inset,
+        behavior: "instant",
+      });
+  }, [expanded]);
   const reviewed =
     s.hunkIds.length > 0 &&
     s.hunkIds.every((id) => w.progress.reviewed.includes(id));
@@ -469,7 +589,9 @@ function GuideChapter({
     [s, w.snapshot.files],
   );
   const titleId = `guide-title-${s.id}`;
+  const outdated = w.guide.previousRevision?.outdatedSections.includes(s.id);
   const contextId = `guide-context-${s.id}`;
+  const contentId = `guide-content-${s.id}`;
   const mark = (kind: "reviewed" | "acknowledged" | "deferred") =>
     onProgress({
       ...w.progress,
@@ -485,106 +607,65 @@ function GuideChapter({
   return (
     <section
       ref={chapter}
-      className="guide-chapter"
+      className={`guide-chapter${expanded ? "" : " is-collapsed"}`}
+      data-section-collapsed={!expanded}
       data-guide-section={s.id}
       aria-labelledby={titleId}
     >
-      <GuideMargin notes={annotations} title={s.title} onRead={readNote}>
-        <div className="chapter-number">
-          {t("Section {{current}} of {{total}}", { current: index + 1, total })}
-        </div>
-        <div className="section-meta">
-          <span className={`badge ${s.attention}`}>
-            {s.attention === "high" && <Flag size={12} />}{" "}
-            {t(labels[s.attention])}
-          </span>
-          <span>
-            {s.assessed
-              ? w.guide.source === "sample"
-                ? t("Sample assessment")
-                : t("Assessed by AI")
-              : t("Provisional")}
-          </span>
-        </div>
-        <h2 id={titleId} className="section-title" tabIndex={-1}>
-          {s.title}
-        </h2>
-        <div className="annotation-summary">
-          <CommentMarkdown body={s.summary} />
-        </div>
-        <div className="annotation-reason">
-          <strong>
-            {t(
-              s.attention === "high"
-                ? "Why this needs your attention"
-                : "Review context",
+      {!expanded ? (
+        <div className="collapsed-chapter">
+          <div className="section-meta">
+            <span>
+              {t("Section {{current}} of {{total}}", {
+                current: index + 1,
+                total,
+              })}
+            </span>
+            <span className={`badge ${s.attention}`}>
+              {t(labels[s.attention])}
+            </span>
+            {reviewed && (
+              <span className="collapsed-reviewed">
+                <Check size={13} aria-hidden />
+                {t("Code reviewed")}
+              </span>
             )}
-          </strong>
-          <CommentMarkdown body={s.reason} />
-        </div>
-        <p className="annotation-counts">
-          {t("{{count}} files", { count: files.length })} ·{" "}
-          {t("{{count}} hunks", { count: s.hunkIds.length })}
-        </p>
-        {!!s.namingDecisions?.length && (
-          <p className="naming-section-cue">
-            <Tag size={14} aria-hidden />
-            {t("{{count}} names to confirm", {
-              count: s.namingDecisions.length,
-            })}
-          </p>
-        )}
-        <Button
-          className="text-button"
-          aria-expanded={contextOpen}
-          aria-controls={contextOpen ? contextId : undefined}
-          onPress={() => setContextOpen(!contextOpen)}
-        >
-          {t(contextOpen ? "Hide walkthrough" : "Show walkthrough")}
-          <ChevronDown size={14} />
-        </Button>
-      </GuideMargin>
-      <div className="guide-code">
-        <NamingDecisions section={s} onDiscuss={onDiscuss} />
-        {contextOpen && <Walkthrough id={contextId} section={s} />}
-        {annotations.length > 0 && (
-          <GuideCodeNotes
-            sectionId={s.id}
-            notes={annotations}
-            open={notesOpen}
-            onOpen={setNotesOpen}
-            request={noteRequest}
-          />
-        )}
-        {!expanded ? (
-          <div className="fold-card">
-            <ChevronsUpDown size={23} />
-            <h3>
-              {t(
-                s.foldable
-                  ? "Routine changes, kept together"
-                  : "Changes collapsed",
-              )}
-            </h3>
-            <p>
-              {s.hunkIds.length} {t("hunks ·")} {files.length} {t("files")}
-            </p>
-            <p className="muted">
-              {t("Read the summary, or expand to inspect every line.")}
-            </p>
+            {outdated && <span>{t("Outdated explanation")}</span>}
+          </div>
+          <h2 id={titleId} tabIndex={-1}>
             <Button
-              className="secondary"
-              onPress={() => {
-                setCollapsedAt(null);
-                onProgress({
-                  ...w.progress,
-                  expanded: [...new Set([...w.progress.expanded, s.id])],
-                });
-              }}
+              className="section-collapse"
+              aria-expanded={false}
+              aria-label={t("Expand section: {{title}}", { title: s.title })}
+              onPress={() => setExpanded(true)}
             >
-              <Eye size={15} />
-              {t("Expand all changes")}
+              <ChevronRight size={18} aria-hidden />
+              {s.title}
             </Button>
+          </h2>
+          <div className="collapsed-chapter-summary">
+            <CommentMarkdown body={s.summary} />
+          </div>
+          <div className="collapsed-chapter-details">
+            <span>
+              {t("{{count}} files", { count: files.length })} ·{" "}
+              {t("{{count}} hunks", { count: s.hunkIds.length })}
+            </span>
+            {automatic && !(w.progress.collapsed ?? []).includes(s.id) && (
+              <span>{t("Routine section · collapsed automatically")}</span>
+            )}
+            {!!s.findings.length && (
+              <span>
+                {t("{{count}} findings", { count: s.findings.length })}
+              </span>
+            )}
+            {!!s.namingDecisions?.length && (
+              <span>
+                {t("{{count}} names to confirm", {
+                  count: s.namingDecisions.length,
+                })}
+              </span>
+            )}
             <Button
               className="text-button"
               onPress={() => mark("acknowledged")}
@@ -592,8 +673,109 @@ function GuideChapter({
               {t("Acknowledge summary")}
             </Button>
           </div>
-        ) : (
-          <>
+        </div>
+      ) : (
+        <div id={contentId} className="guide-chapter-content">
+          <GuideMargin notes={annotations} title={s.title} onRead={readNote}>
+            <div className="chapter-number">
+              <span>
+                {t("Section {{current}} of {{total}}", {
+                  current: index + 1,
+                  total,
+                })}
+              </span>
+              <IconAction
+                className="icon-button section-collapse"
+                aria-expanded={true}
+                aria-controls={contentId}
+                label={t("Collapse section: {{title}}", {
+                  title: s.title,
+                })}
+                onPress={() => setExpanded(false)}
+              >
+                <ChevronDown size={16} aria-hidden />
+              </IconAction>
+            </div>
+            <div className="section-meta">
+              <span className={`badge ${s.attention}`}>
+                {s.attention === "high" && <Flag size={12} />}{" "}
+                {t(labels[s.attention])}
+              </span>
+              <span>
+                {outdated
+                  ? t("Outdated explanation")
+                  : s.assessed
+                    ? w.guide.source === "sample"
+                      ? t("Sample assessment")
+                      : t("Assessed by AI")
+                    : t("Provisional")}
+              </span>
+            </div>
+            <h2 id={titleId} className="section-title" tabIndex={-1}>
+              {s.title}
+            </h2>
+            <div className="annotation-summary">
+              <CommentMarkdown body={s.summary} />
+            </div>
+            <div className="annotation-reason">
+              <strong>
+                {t(
+                  s.attention === "high"
+                    ? "Why this needs your attention"
+                    : "Review context",
+                )}
+              </strong>
+              <CommentMarkdown body={s.reason} />
+            </div>
+            <p className="annotation-counts">
+              {t("{{count}} files", { count: files.length })} ·{" "}
+              {t("{{count}} hunks", { count: s.hunkIds.length })}
+            </p>
+            {!!s.namingDecisions?.length && (
+              <p className="naming-section-cue">
+                <Tag size={14} aria-hidden />
+                {t("{{count}} names to confirm", {
+                  count: s.namingDecisions.length,
+                })}
+              </p>
+            )}
+            <Button
+              className="text-button"
+              aria-expanded={contextOpen}
+              aria-controls={contextOpen ? contextId : undefined}
+              onPress={() => setContextOpen(!contextOpen)}
+            >
+              {t(contextOpen ? "Hide walkthrough" : "Show walkthrough")}
+              <ChevronDown size={14} />
+            </Button>
+          </GuideMargin>
+          <div className="guide-code">
+            {outdated && (
+              <div className="guide-section-outdated">
+                <Clock3 size={15} aria-hidden />
+                <span>
+                  {t(
+                    "Code in this section has changed. Its saved explanation may be outdated; updated code appears in the unassessed sections below.",
+                  )}
+                </span>
+                {onOriginalGuide && (
+                  <Button className="text-button" onPress={onOriginalGuide}>
+                    {t("View original guide")}
+                  </Button>
+                )}
+              </div>
+            )}
+            <NamingDecisions section={s} onDiscuss={onDiscuss} />
+            {contextOpen && <Walkthrough id={contextId} section={s} />}
+            {annotations.length > 0 && (
+              <GuideCodeNotes
+                sectionId={s.id}
+                notes={annotations}
+                open={notesOpen}
+                onOpen={setNotesOpen}
+                request={noteRequest}
+              />
+            )}
             <div className="code-toolbar">
               <span>
                 <FileCode2 size={14} />
@@ -602,54 +784,57 @@ function GuideChapter({
               <Button onPress={onSplit}>
                 {t(split ? "Unified view" : "Split view")}
               </Button>
-              <Button onPress={() => setCollapsedAt(expansionKey)}>
-                {t("Collapse changes")}
-              </Button>
             </div>
             {renderHunks(s.hunkIds)}
-          </>
-        )}
-        {s.findings.map((f, i) => (
-          <Button
-            className="finding"
-            data-guide-index-target={findingTarget(s.id, i)}
-            key={i}
-            onPress={() => onDiscuss(f.anchor)}
-          >
-            <span className="badge high">
-              {f.severity} {t("finding")}
-            </span>
-            <strong>{f.title}</strong>
-            <p>{f.body}</p>
-            <code>
-              {f.anchor.path}:{f.anchor.line}
-            </code>
-          </Button>
-        ))}
-        {s.unavailablePaths.map((path) => (
-          <div className="callout" key={path}>
-            <FileCode2 size={17} />
-            <div>
-              <strong>{path}</strong>
-              <p>{files.find((f) => f.path === path)?.unavailable}</p>
+            {s.findings.map((f, i) => (
+              <Button
+                className="finding"
+                data-guide-index-target={findingTarget(s.id, i)}
+                key={i}
+                onPress={() => onDiscuss(f.anchor)}
+              >
+                <span className="badge high">
+                  {f.severity} {t("finding")}
+                </span>
+                <strong>{f.title}</strong>
+                <p>{f.body}</p>
+                <code>
+                  {f.anchor.path}:{f.anchor.line}
+                </code>
+              </Button>
+            ))}
+            {s.unavailablePaths.map((path) => (
+              <div className="callout" key={path}>
+                <FileCode2 size={17} />
+                <div>
+                  <strong>{path}</strong>
+                  <p>{files.find((f) => f.path === path)?.unavailable}</p>
+                </div>
+              </div>
+            ))}
+            <div className="section-actions">
+              <Button
+                className={reviewed ? "reviewed-button" : "primary"}
+                isDisabled={!s.hunkIds.length}
+                onPress={() => mark("reviewed")}
+              >
+                <Check size={16} />
+                {t(reviewed ? "Code reviewed" : "Mark code reviewed")}
+              </Button>
+              <Button className="secondary" onPress={() => mark("deferred")}>
+                <ArrowDown size={15} />
+                {t("Defer")}
+              </Button>
+              <Button
+                className="text-button"
+                onPress={() => setExpanded(false)}
+              >
+                {t("Collapse section")}
+              </Button>
             </div>
           </div>
-        ))}
-        <div className="section-actions">
-          <Button
-            className={reviewed ? "reviewed-button" : "primary"}
-            isDisabled={!s.hunkIds.length}
-            onPress={() => mark("reviewed")}
-          >
-            <Check size={16} />
-            {t(reviewed ? "Code reviewed" : "Mark code reviewed")}
-          </Button>
-          <Button className="secondary" onPress={() => mark("deferred")}>
-            <ArrowDown size={15} />
-            {t("Defer")}
-          </Button>
         </div>
-      </div>
+      )}
     </section>
   );
 }

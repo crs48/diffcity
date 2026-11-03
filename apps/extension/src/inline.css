@@ -1,0 +1,48 @@
+html,
+body,
+#root {
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+.embedded-review {
+  padding: 8px;
+  font-family: var(
+    --font-sans,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif
+  );
+  color: var(--text);
+}
+.embedded-review .inline-thread {
+  margin: 0;
+  max-width: none;
+}
+.embedded-review .inline-thread > header {
+  position: static;
+}
+.embedded-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.embedded-footer .text-button {
+  font-size: inherit;
+}
+.embedded-error,
+.embedded-loading {
+  padding: 12px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.embedded-error {
+  color: var(--danger, #d1242f);
+}

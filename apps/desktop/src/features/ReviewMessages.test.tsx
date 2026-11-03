@@ -8,6 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { useRef } from "react";
 import { ReviewMessages } from "./ReviewMessages";
 import type { Conversation } from "./conversation";
 import type { AiRun } from "./useAiRuns";
@@ -199,3 +200,78 @@ it.each([true, false])(
     expect(order()).toEqual(["q1", "a1", "q2", "a2"]);
   },
 );
+
+it("renders only a viewport of a large history and makes later messages reachable", async () => {
+  const rect = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockReturnValue({
+      width: 500,
+      height: 500,
+      top: 0,
+      left: 0,
+      bottom: 500,
+      right: 500,
+      x: 0,
+      y: 0,
+      toJSON() {},
+    });
+  const height = vi
+    .spyOn(HTMLElement.prototype, "clientHeight", "get")
+    .mockReturnValue(500);
+  const width = vi
+    .spyOn(HTMLElement.prototype, "clientWidth", "get")
+    .mockReturnValue(500);
+  const itemHeight = vi
+    .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+    .mockReturnValue(500);
+  const previousScroll = Element.prototype.scrollTo;
+  Element.prototype.scrollTo = vi.fn();
+  const workspace = indexedWorkspace();
+  const remote = Array.from({ length: 1200 }, (_, index) => ({
+    ...workspace.comments[0],
+    id: `comment-${index}`,
+    body: `Review comment ${index}`,
+    url: `https://github.com/example/repo/pull/1#discussion_r${index}`,
+    createdAt: new Date(1700000000000 + index * 1000).toISOString(),
+  }));
+  const c = { workspace, runs: [] } as unknown as Conversation;
+  function History() {
+    const ref = useRef<HTMLDivElement>(null);
+    return (
+      <div
+        ref={ref}
+        data-testid="history"
+        style={{ height: 500, overflow: "auto" }}
+      >
+        <ReviewMessages
+          notes={[]}
+          remote={remote}
+          conversation={c}
+          scrollElementRef={ref}
+        />
+      </div>
+    );
+  }
+  try {
+    const { container } = render(<History />);
+    await waitFor(() =>
+      expect(screen.getByText("Review comment 0")).toBeTruthy(),
+    );
+    expect(container.querySelectorAll("article").length).toBeLessThan(15);
+    expect(screen.queryByText("Review comment 1199")).toBeNull();
+    const history = screen.getByTestId("history");
+    history.scrollTop = 120000;
+    fireEvent.scroll(history);
+    await waitFor(() =>
+      expect(screen.queryByText("Review comment 0")).toBeNull(),
+    );
+    expect(container.querySelectorAll("article").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll("article").length).toBeLessThan(15);
+  } finally {
+    rect.mockRestore();
+    height.mockRestore();
+    width.mockRestore();
+    itemHeight.mockRestore();
+    Element.prototype.scrollTo = previousScroll;
+  }
+});

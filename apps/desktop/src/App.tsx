@@ -299,7 +299,7 @@ export default function App() {
       event.preventDefault();
       try {
         await flush();
-        await getCurrentWindow().destroy();
+        await getCurrentWindow().hide();
       } catch (e) {
         onError(e);
       }
@@ -1674,6 +1674,19 @@ export default function App() {
                             onDiscuss={(a) => void select(a, true)}
                             onProgress={progress}
                             onFinish={() => void finish()}
+                            onOriginalGuide={
+                              workspace.guide.previousRevision &&
+                              workspace.guide.id
+                                ? () => {
+                                    void selectGuide(
+                                      workspace.guide.id!,
+                                      workspace.guide.previousRevision!
+                                        .snapshotId,
+                                    ).catch(onError);
+                                  }
+                                : undefined
+                            }
+                            onNewGuide={() => setDialog("new-guide")}
                             mode={mode}
                           />
                         </ReviewScope>

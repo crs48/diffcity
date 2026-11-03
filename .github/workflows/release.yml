@@ -70,6 +70,9 @@ jobs:
           pnpm contracts
           git diff --exit-code -- packages/contracts
           cargo fmt --all -- --check
+          pnpm extension:check
+          pnpm extension:test
+          pnpm extension:build
           pnpm check
           pnpm lint
           cargo test --workspace --locked

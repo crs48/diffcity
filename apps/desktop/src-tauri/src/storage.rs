@@ -128,6 +128,62 @@ impl Store {
             .map(|row| Ok(serde_json::from_str(&row?)?))
             .collect()
     }
+    /// Metadata only; never deserialize every historical diff/guide to open a PR.
+    pub fn guide_history(&self, snapshot: &Snapshot) -> Result<Vec<GuideVersion>> {
+        let db = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Local database lock unavailable"))?;
+        let mut stmt = db.prepare(r#"
+            WITH runs AS (
+                SELECT coalesce(json_extract(g.value, '$.id'), 'legacy/' || s.key) AS id,
+                       s.key AS snapshot_id, json_extract(s.value, '$.pull.head') AS head,
+                       json_extract(g.value, '$.source') AS source,
+                       json_extract(g.value, '$.model') AS model,
+                       json_extract(g.value, '$.reasoningEffort') AS effort,
+                       json_extract(g.value, '$.generatedAt') AS generated,
+                       json_array_length(g.value, '$.sections') AS sections,
+                       row_number() OVER (
+                           PARTITION BY coalesce(json_extract(g.value, '$.id'), 'legacy/' || s.key)
+                           ORDER BY g.kind DESC
+                       ) AS rank
+                FROM documents g JOIN documents s
+                  ON s.kind IN ('snapshot', 'comparison-snapshot') AND s.key=json_extract(g.value, '$.snapshotId')
+                WHERE g.kind IN ('guide', 'guide-version') AND (
+                    s.key=?1 OR (
+                        s.kind='snapshot' AND EXISTS (SELECT 1 FROM documents WHERE kind='snapshot' AND key=?1)
+                        AND json_extract(s.value, '$.pull.repository')=?2 COLLATE NOCASE
+                        AND json_extract(s.value, '$.pull.number')=?3
+                        AND json_extract(s.value, '$.capturedAt')<=?4
+                        AND json_extract(g.value, '$.source') IN ('codex', 'claude')
+                    )
+                )
+            ) SELECT id, snapshot_id, head, source, model, effort, generated, sections
+              FROM runs WHERE rank=1 ORDER BY snapshot_id=?1 DESC, generated DESC, id
+        "#)?;
+        stmt.query_map(
+            params![
+                snapshot.id,
+                snapshot.pull.repository,
+                snapshot.pull.number,
+                snapshot.captured_at
+            ],
+            |row| {
+                Ok(GuideVersion {
+                    id: row.get(0)?,
+                    snapshot_id: row.get(1)?,
+                    head: row.get(2)?,
+                    source: row.get(3)?,
+                    model: row.get(4)?,
+                    reasoning_effort: row.get(5)?,
+                    generated_at: row.get(6)?,
+                    section_count: row.get::<_, u32>(7)? as usize,
+                })
+            },
+        )?
+        .map(|row| Ok(row?))
+        .collect()
+    }
     pub fn batch(&self, documents: &[(&str, &str, serde_json::Value)]) -> Result<()> {
         let mut db = self
             .connection

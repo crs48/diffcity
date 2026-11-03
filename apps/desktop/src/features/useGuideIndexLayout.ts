@@ -23,6 +23,7 @@ export function useGuideIndexLayout(
 ) {
   const track = useRef<HTMLDivElement>(null);
   const indicator = useRef<HTMLDivElement>(null);
+  const scrubber = useRef<HTMLDivElement>(null);
   const registry = useContext(FileNavigationContext);
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [groups, setGroups] = useState<IndexGroup[]>([]);
@@ -59,6 +60,15 @@ export function useGuideIndexLayout(
       );
       indicator.current.style.transform = `translateY(${start * trackHeight}px)`;
       indicator.current.style.height = `${Math.max(3, (end - start) * trackHeight)}px`;
+      scrubber.current?.setAttribute(
+        "aria-valuenow",
+        String(
+          Math.round(
+            (100 * viewport.scrollTop) /
+              Math.max(1, viewport.scrollHeight - viewport.clientHeight),
+          ),
+        ),
+      );
     };
     const measure = () => {
       frame = 0;
@@ -176,5 +186,5 @@ export function useGuideIndexLayout(
       stopScroll();
     };
   }, [root, entries, registry, host]);
-  return { host, groups, sectionRanges, track, indicator };
+  return { host, groups, sectionRanges, track, indicator, scrubber };
 }

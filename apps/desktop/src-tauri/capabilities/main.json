@@ -24,7 +24,6 @@
     "allow-review-baseline",
     "allow-compare-review",
     "allow-save-review-checkpoint",
-    "core:window:allow-destroy",
     "allow-check-pull",
     "allow-save-note",
     "allow-delete-note",
@@ -46,6 +45,8 @@
     "allow-save-code-roots",
     "allow-bind-local-repository",
     "allow-repository-context",
-    "allow-choose-code-folder"
+    "allow-choose-code-folder",
+    "core:window:allow-hide",
+    "allow-install-browser-companion"
   ]
 }

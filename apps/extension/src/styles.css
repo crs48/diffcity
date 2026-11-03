@@ -1,0 +1,134 @@
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  min-width: 0;
+}
+.browser-review {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+}
+.browser-header,
+.browser-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  min-height: 42px;
+  flex-shrink: 0;
+}
+.browser-header > svg {
+  color: var(--green);
+}
+.browser-pr {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+.browser-toolbar {
+  flex-wrap: wrap;
+}
+.browser-toolbar [aria-pressed="true"] {
+  background: var(--subtle);
+  font-weight: 600;
+}
+.browser-spacer {
+  flex: 1;
+}
+.browser-review .review-body {
+  flex: 1;
+  min-height: 0;
+}
+.browser-review .review-document {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.browser-panel .discussion {
+  position: static;
+  inset: auto;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  flex: 1;
+}
+.browser-panel .discussion-compose {
+  max-height: 50dvh;
+  overflow: auto;
+}
+.browser-panel .composer-model {
+  max-width: 110px;
+}
+.browser-panel .review-body {
+  display: flex;
+}
+.browser-setup {
+  padding: 28px 20px;
+  max-width: 560px;
+  margin: auto;
+}
+.browser-setup h1 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+.browser-setup p {
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.browser-error,
+.browser-ready,
+.browser-job {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.browser-error {
+  background: var(--red-soft);
+}
+.browser-error span,
+.browser-ready span {
+  flex: 1;
+}
+.browser-ready {
+  background: var(--green-soft);
+}
+.browser-comment-context {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  font-size: 12px;
+  max-height: 180px;
+  overflow: auto;
+}
+.browser-comment-context .comment-markdown {
+  font-size: 12px;
+}
+.browser-guide .guide-enrichment {
+  margin: 8px 18px;
+}
+@media (max-width: 700px) {
+  .browser-toolbar {
+    font-size: 12px;
+  }
+  .browser-toolbar #review-guide-navigation {
+    order: 2;
+    width: 100%;
+  }
+}

@@ -497,6 +497,10 @@ pub struct GuideEnrichment {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Guide {
+    // A derived view of a saved guide against newer code; the original is immutable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub previous_revision: Option<GuideRevision>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub enrichment: Option<GuideEnrichment>,
@@ -516,11 +520,22 @@ pub struct Guide {
     pub policy_version: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct GuideRevision {
+    pub snapshot_id: String,
+    pub head: String,
+    pub outdated_sections: Vec<String>,
+    pub unassessed_hunks: usize,
+}
+
 /// Lightweight history entry; guide bodies are loaded only when selected.
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct GuideVersion {
     pub id: String,
+    pub snapshot_id: String,
+    pub head: String,
     pub source: String,
     pub model: String,
     pub reasoning_effort: Option<String>,
@@ -575,12 +590,18 @@ pub struct ReviewProgress {
     pub acknowledged: Vec<String>,
     pub deferred: Vec<String>,
     pub expanded: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(optional, as = "Option<Vec<String>>")]
+    pub collapsed: Vec<String>,
     pub active_section: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoteComment {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub resolved: Option<bool>,
     pub id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]

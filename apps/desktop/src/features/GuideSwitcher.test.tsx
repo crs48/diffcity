@@ -11,6 +11,8 @@ afterEach(() => {
 });
 const version: GuideVersion = {
   id: "astra-1",
+  snapshotId: "revision-1",
+  head: "abc12345",
   source: "codex",
   model: "gpt-6-astra",
   reasoningEffort: "xhigh",
@@ -67,4 +69,29 @@ it("keeps the active guide visible when loading history fails and allows retry",
   );
   await userEvent.setup().click(screen.getByRole("button", { name: "Retry" }));
   await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+});
+
+it("offers earlier-revision guides alongside current runs and labels their origin", async () => {
+  vi.spyOn(api, "guides").mockResolvedValue([
+    version,
+    {
+      ...version,
+      id: "older-claude",
+      snapshotId: "previous",
+      head: "fedcba9876",
+      source: "claude",
+      model: "claude-fable-5",
+    },
+  ]);
+  const onSelect = vi.fn().mockResolvedValue(undefined);
+  render(<GuideSwitcher guide={guide} disabled={false} onSelect={onSelect} />);
+  await waitFor(() =>
+    expect(
+      screen.getByRole("option", { name: /Earlier revision fedcba98/ }),
+    ).toBeTruthy(),
+  );
+  await userEvent
+    .setup()
+    .selectOptions(screen.getByRole("combobox"), "older-claude");
+  expect(onSelect).toHaveBeenCalledWith("older-claude");
 });

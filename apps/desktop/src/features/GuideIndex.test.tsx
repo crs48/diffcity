@@ -17,6 +17,8 @@ import { indexedWorkspace } from "../lib/guideIndex.fixture";
 import type { ReviewWorkspace } from "../lib/api";
 import { namingTarget, noteTarget, threadTarget } from "../lib/guideIndex";
 import "../i18n";
+import type { AiRun } from "./useAiRuns";
+import { readReplies, replyScope } from "../lib/readReplies";
 vi.mock("../ui/MermaidDiagram", () => ({ MermaidDiagram: () => <figure /> }));
 beforeEach(() => {
   vi.stubGlobal(
@@ -34,6 +36,9 @@ beforeEach(() => {
   }));
   Element.prototype.scrollTo = vi.fn();
   Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.setPointerCapture = vi.fn();
+  Element.prototype.hasPointerCapture = vi.fn(() => false);
+  Element.prototype.releasePointerCapture = vi.fn();
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
     function (this: HTMLElement) {
       return {
@@ -60,15 +65,17 @@ const ask = vi.fn();
 const onSelect = vi.fn();
 function Example({
   initial = indexedWorkspace(),
+  runs = [],
 }: {
   initial?: ReviewWorkspace;
+  runs?: AiRun[];
 }) {
   const [w, setW] = useState(initial);
   const c = {
     workspace: w,
     inline: { draft: null, focus: 0 },
     chat: { draft: null },
-    runs: [],
+    runs,
     isBusy: () => false,
     modelFor: () => ({ model: "claude-fable-5" }),
     ask,
@@ -120,6 +127,52 @@ async function jumpTo(title: string) {
     .click(within(dialog).getByRole("button", { name: `Jump to ${title}` }));
 }
 
+it("shows activity on grouped markers and keeps unread replies until they are actually viewed", async () => {
+  const w = indexedWorkspace();
+  w.snapshot.pull.repository = "example/rail-activity";
+  const run: AiRun = {
+    id: "run",
+    snapshotId: w.snapshot.id,
+    kind: "question",
+    question: w.notes[0],
+    phase: "working",
+    text: "Thinking",
+    stream: "",
+    preference: {
+      provider: "claude",
+      model: "claude-fable-5",
+      reasoningEffort: "high",
+    },
+  };
+  const view = render(<Example initial={w} runs={[run]} />);
+  const rail = screen.getByRole("navigation", { name: "Guide index" });
+  const marker = await waitFor(() => {
+    const item = rail.querySelector<HTMLButtonElement>(
+      '[data-index-marker][aria-label*="Unread AI response"]',
+    );
+    expect(item).toBeTruthy();
+    return item!;
+  });
+  expect(marker.querySelector(".reply-thinking .spin")).toBeTruthy();
+  expect(marker.querySelector(".reply-unread-dot")).toBeTruthy();
+  view.rerender(<Example initial={w} />);
+  expect(marker.querySelector(".reply-thinking")).toBeNull();
+  const dialog = await browse();
+  await userEvent
+    .setup()
+    .click(within(dialog).getByRole("button", { name: "Unread AI" }));
+  expect(within(dialog).getAllByRole("listitem")).toHaveLength(1);
+  await userEvent.setup().click(
+    within(dialog).getByRole("button", {
+      name: "Jump to Invitation migration rollout",
+    }),
+  );
+  expect(marker.querySelector(".reply-unread-dot")).toBeTruthy();
+  // The receipt comes from the visible response, not the navigation click.
+  act(() => readReplies(replyScope(w.snapshot.pull)).mark(["answer"]));
+  expect(marker.querySelector(".reply-unread-dot")).toBeNull();
+});
+
 it("scrolls directly to grouped markers with mouse or keyboard without opening another picker", async () => {
   render(<Example />);
   const user = userEvent.setup();
@@ -132,7 +185,7 @@ it("scrolls directly to grouped markers with mouse or keyboard without opening a
   const marker = screen
     .getAllByRole("button", { name: /guide locations near/ })
     .find((button) => button.classList.contains("activity"))!;
-  expect(marker.hasAttribute("aria-haspopup")).toBe(false);
+  expect(marker.getAttribute("aria-haspopup")).toBe("dialog");
   openChat.mockClear();
   const scroll = vi.mocked(Element.prototype.scrollTo);
   scroll.mockClear();
@@ -198,13 +251,17 @@ it("previews every comment in a five-location group and still jumps directly", a
     name: /5 guide locations near/,
   });
   await userEvent.setup().hover(marker);
-  const preview = await screen.findByRole("tooltip");
+  const preview = await screen.findByRole("dialog", {
+    name: "Guide locations",
+  });
   for (let i = 1; i <= 5; i++)
     expect(within(preview).getByText(`Review detail ${i}`)).toBeTruthy();
   expect(preview.querySelectorAll(".guide-index-preview")).toHaveLength(5);
   expect(
-    within(preview).getByText("Click to scroll to this area"),
-  ).toBeTruthy();
+    within(preview).getAllByRole("button", { name: /^Jump to / }),
+  ).toHaveLength(5);
+  await userEvent.setup().hover(preview);
+  expect(preview.isConnected).toBe(true);
   vi.mocked(Element.prototype.scrollTo).mockClear();
   await userEvent.setup().click(marker);
   expect(Element.prototype.scrollTo).toHaveBeenCalled();
@@ -225,7 +282,9 @@ it("keeps the map outside the scrolling document and supports hover, keyboard an
   fireEvent.keyDown(markers[0], { key: "ArrowDown" });
   expect(document.activeElement).toBe(markers[1]);
   await userEvent.setup().hover(markers[1]);
-  expect(await screen.findByRole("tooltip")).toBeTruthy();
+  expect(
+    await screen.findByRole("dialog", { name: "Guide locations" }),
+  ).toBeTruthy();
   const dialog = await browse();
   await userEvent
     .setup()
@@ -240,6 +299,52 @@ it("keeps the map outside the scrolling document and supports hover, keyboard an
   expect(within(dialog).getByText("No matching locations.")).toBeTruthy();
   await userEvent.setup().keyboard("{Escape}");
   expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("opens previews on focus and jumps from an individual item into a collapsed section", async () => {
+  const w = indexedWorkspace();
+  const section = w.guide.sections[0];
+  w.progress.collapsed = [section.id];
+  w.progress.expanded = [];
+  render(<Example initial={w} />);
+  const chapter = screen.getByRole("region", { name: section.title });
+  expect(chapter.querySelector(".guide-code")).toBeNull();
+  const marker = (
+    await screen.findAllByRole("button", { name: /guide locations near/ })
+  ).find((button) => button.classList.contains("activity"))!;
+  const user = userEvent.setup();
+  await user.keyboard("{Tab}");
+  act(() => marker.focus());
+  const preview = await screen.findByRole("dialog", {
+    name: "Guide locations",
+  });
+  await user.tab();
+  expect(preview.contains(document.activeElement)).toBe(true);
+  await user.keyboard("{Escape}");
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Guide locations" }),
+    ).toBeNull(),
+  );
+  await waitFor(() => expect(document.activeElement).toBe(marker));
+  act(() => screen.getByRole("slider", { name: "Guide position" }).focus());
+  await user.unhover(marker);
+  await user.hover(marker);
+  const reopened = await screen.findByRole("dialog", {
+    name: "Guide locations",
+  });
+  await user.click(
+    within(reopened).getByRole("button", {
+      name: "Jump to Backfill existing invitations",
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      (document.activeElement as HTMLElement).dataset.guideIndexTarget,
+    ).toBe(noteTarget(section.id, "backfill")),
+  );
+  expect(chapter.querySelector(".guide-code")).not.toBeNull();
+  expect(screen.queryByRole("dialog", { name: "Guide locations" })).toBeNull();
 });
 
 it("jumps to exact names, findings and full code notes without sending messages", async () => {
@@ -296,11 +401,13 @@ it("jumps to margin notes beside their code on wide layouts, including after col
     );
     await userEvent
       .setup()
-      .click(within(chapter).getByRole("button", { name: "Collapse changes" }));
-    await waitFor(() => expect(slot.hidden).toBe(true));
+      .click(within(chapter).getByRole("button", { name: "Collapse section" }));
+    await waitFor(() => expect(slot.isConnected).toBe(false));
     await jumpTo("Backfill existing invitations");
     await waitFor(() =>
-      expect(document.activeElement).toBe(slot.querySelector("h3")),
+      expect(document.activeElement).toBe(
+        chapter.querySelector('.guide-margin [data-note-id="backfill"] h3'),
+      ),
     );
     expect(
       chapter.querySelector<HTMLDetailsElement>(".chapter-code-notes")?.open,
@@ -343,7 +450,7 @@ it("reopens a collapsed conversation, file, and chapter when navigating back to 
   });
   await userEvent
     .setup()
-    .click(within(chapter).getByRole("button", { name: "Collapse changes" }));
+    .click(within(chapter).getByRole("button", { name: "Collapse section" }));
   expect(thread()).toBeUndefined();
   await jumpTo("Please add smoke coverage.");
   await waitFor(() => expect(document.activeElement).toBe(thread()));
