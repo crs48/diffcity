@@ -290,6 +290,53 @@ it("rejects foreign, embedded, inactive, or stale-PR messages after navigation",
   expect(browser.sidePanel.open).not.toHaveBeenCalled();
 });
 
+it.each(["outdated", "outside-diff", "unknown"])(
+  "handles %s comments without inventing a current code anchor",
+  async (kind) => {
+    const w = indexedWorkspace();
+    const url = `https://github.com/${w.snapshot.pull.repository}/pull/${w.snapshot.pull.number}`;
+    const commentUrl = `${url}#discussion_r1`;
+    w.comments = [
+      {
+        ...w.comments[1],
+        url: kind === "unknown" ? `${url}#discussion_r2` : commentUrl,
+        commit: kind === "outdated" ? "previous-commit" : w.snapshot.pull.head,
+        line: kind === "outside-diff" ? 999999 : 1,
+      },
+    ];
+    const respond = vi.fn();
+    browser.runtime.onMessage.addListener.mock.calls[0][0](
+      {
+        type: "create-inline",
+        context: {
+          repository: w.snapshot.pull.repository,
+          number: w.snapshot.pull.number,
+          commentUrl,
+        },
+      },
+      { url, frameId: 0, tab: { id: 1, url: commentUrl } },
+      respond,
+    );
+    const request = native.postMessage.mock.calls[0][0];
+    native.onMessage.addListener.mock.calls[0][0]({
+      message: crypto.randomUUID(),
+      chunk: JSON.stringify({ id: request.id, result: w }),
+      last: true,
+    });
+    await vi.waitFor(() => expect(respond).toHaveBeenCalled());
+    expect(respond).toHaveBeenCalledWith(
+      kind === "unknown"
+        ? { error: expect.any(String) }
+        : { fallback: "comment-panel" },
+    );
+    expect(browser.storage.session.set).not.toHaveBeenCalled();
+    expect(browser.sidePanel.open).not.toHaveBeenCalled();
+    expect(JSON.stringify(respond.mock.calls)).not.toContain(
+      w.comments[0].body,
+    );
+  },
+);
+
 it("restricts embedded frames to a saved grant on the same tab and PR", async () => {
   const id = "12345678-1234-1234-1234-123456789abc";
   const url = "https://github.com/example/repo/pull/1/files";

@@ -9,6 +9,7 @@ let toolbar: HTMLElement | undefined;
 let selectionAction: HTMLElement | undefined;
 let lineAction: HTMLElement | undefined;
 let selectedCode: { context: PullContext; target: Element } | undefined;
+let commentFallback: HTMLElement | undefined;
 let currentUrl = "";
 let restoredUrl = "";
 let restoringUrl = "";
@@ -46,6 +47,11 @@ async function openInline(context: PullContext, target: Element) {
       context.number !== pullFromUrl(location.href)?.number
     )
       return;
+    if (result.fallback === "comment-panel") {
+      commentFallback?.remove();
+      commentFallback = showCommentFallback(target, () => send("ask", context));
+      return;
+    }
     const threadKey = result.key ?? key;
     if (inlineThreads.has(threadKey)) inlineThreads.reveal(threadKey);
     else inlineThreads.open(threadKey, context, target, result);
@@ -58,6 +64,49 @@ async function openInline(context: PullContext, target: Element) {
   } finally {
     openingInline.delete(key);
   }
+}
+function showCommentFallback(target: Element, open: () => void) {
+  const row = target.closest("tr");
+  const host = document.createElement(row ? "tr" : "div");
+  host.dataset.diffcity = "true";
+  let content: HTMLElement = host;
+  if (row) {
+    const cell = document.createElement("td");
+    cell.colSpan = row.cells.length || 1;
+    host.append(cell);
+    content = document.createElement("div");
+    cell.append(content);
+  }
+  const shadow = content.attachShadow({ mode: "open" });
+  const style = document.createElement("style");
+  style.textContent = `
+    :host { display: block; }
+    aside { padding: 12px 16px; margin: 8px; border: 1px solid var(--borderColor-default, #d1d9e0); border-radius: 8px; background: var(--bgColor-default, #fff); color: var(--fgColor-default, #1f2328); font: 14px/1.5 system-ui; }
+    p { margin: 0 0 8px; }
+    button { font: inherit; cursor: pointer; padding: 4px 10px; border: 1px solid var(--borderColor-default, #d1d9e0); border-radius: 6px; color: inherit; background: var(--bgColor-muted, #f6f8fa); margin-right: 8px; }
+    button:hover { background: var(--bgColor-neutral-muted, #818b981f); }
+    button:focus-visible { outline: 2px solid var(--focus-outlineColor, #0969da); outline-offset: 2px; }
+  `;
+  const notice = document.createElement("aside");
+  notice.setAttribute("aria-label", "Diff City comment context");
+  const text = document.createElement("p");
+  text.textContent =
+    "This comment’s code is not available in the current diff. Continue in PR chat with the comment and its replies attached.";
+  const action = document.createElement("button");
+  action.type = "button";
+  action.textContent = "Continue in PR chat";
+  action.addEventListener("click", (event) => {
+    if (event.isTrusted) open();
+  });
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.textContent = "Dismiss";
+  dismiss.addEventListener("click", () => host.remove());
+  notice.append(text, action, dismiss);
+  shadow.append(style, notice);
+  (row ?? target).after(host);
+  action.focus({ preventScroll: true });
+  return host;
 }
 function button(
   label: string,
@@ -194,6 +243,8 @@ function refreshPage() {
     roots.clear();
     placements.clear();
     inlineThreads.clear();
+    commentFallback?.remove();
+    commentFallback = undefined;
     actionsInView.clear();
     lineAction?.remove();
     selectedCode = undefined;

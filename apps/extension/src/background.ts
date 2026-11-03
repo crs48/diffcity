@@ -376,10 +376,23 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           refresh: !!context.commentUrl,
         })) as ReviewWorkspace;
         const anchor = inlineAnchor(workspace, context);
-        if (!anchor)
+        if (!anchor) {
+          if (
+            context.commentUrl &&
+            workspace.comments.some(
+              (comment) => comment.url === context.commentUrl,
+            )
+          ) {
+            // Preserve a verified comment's context when its original code is
+            // outdated, deleted, or outside the captured diff. Opening the native
+            // side panel requires a fresh click, not this asynchronous response.
+            respond({ fallback: "comment-panel" });
+            return;
+          }
           throw new Error(
             "This code could not be matched to the current PR. Refresh GitHub or open the full guide.",
           );
+        }
         const stored = await chrome.storage.session.get(null);
         const existing = Object.entries(stored).find(([key, value]) => {
           const grant = value as InlineGrant;
