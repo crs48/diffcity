@@ -1,0 +1,161 @@
+---
+import Icon from "./Icon.astro";
+import { repository } from "../config";
+const scenes = [
+  {
+    id: "inline",
+    label: "Ask beside the code",
+    image: "github-inline",
+    title: "A private conversation, right in the GitHub diff.",
+    description:
+      "Select code or pick a line, ask your agent a question, and read the answer in place. Follow-ups stay attached to that code as you move through the PR.",
+    alt: "GitHub’s Files changed view for the Diff City demo PR, with a private inline AI conversation reviewing a delete endpoint.",
+  },
+  {
+    id: "chat",
+    label: "Continue in PR chat",
+    image: "github-chat",
+    title: "Keep GitHub open. Bring your agent alongside.",
+    description:
+      "Continue a code conversation in the side panel, or ask about an existing review comment with its discussion attached. Open the full guide in a separate tab when you want the walkthrough.",
+    alt: "GitHub’s Diff City demo PR with the extension’s PR chat side panel displaying a code review conversation and its code context.",
+  },
+];
+---
+
+<section
+  id="chrome-extension"
+  class="companion container"
+  aria-labelledby="companion-title"
+>
+  <div class="companion-intro">
+    <div>
+      <span class="eyebrow">
+        <Icon name="github" size={16} /> Chrome companion · source alpha
+      </span>
+      <h2 id="companion-title">
+        Your agent.
+        <br />
+        Inside GitHub.
+      </h2>
+      <p class="section-description">
+        Bring Claude Code or Codex into the PR you’re already reading. Ask about
+        code and review comments, then pick up the same saved work in Diff City.
+      </p>
+    </div>
+    <div class="companion-setup">
+      <a
+        class="button button-primary"
+        href={`${repository}/blob/main/docs/chrome-extension.md`}
+      >
+        Set up the extension <Icon name="arrow" size={17} />
+      </a>
+      <p>
+        For Mac + Chrome. Build the companion and desktop app together, then
+        load the extension in Developer mode. The published v0.1.0-alpha.1
+        desktop download does not include the connection yet.
+      </p>
+      <span>Not listed in the Chrome Web Store.</span>
+    </div>
+  </div>
+  <div
+    class="companion-tabs"
+    role="tablist"
+    aria-label="Explore Diff City in GitHub"
+  >
+    {scenes.map((scene, i) => (
+      <button
+        type="button"
+        role="tab"
+        id={`companion-tab-${scene.id}`}
+        aria-controls={`companion-panel-${scene.id}`}
+        aria-selected={i === 0 ? "true" : "false"}
+        tabindex={i === 0 ? 0 : -1}
+      >
+        <Icon name={i === 0 ? "chat" : "spark"} size={16} />
+        {scene.label}
+      </button>
+    ))}
+  </div>
+  {scenes.map((scene, i) => (
+    <div
+      role="tabpanel"
+      id={`companion-panel-${scene.id}`}
+      aria-labelledby={`companion-tab-${scene.id}`}
+      tabindex="0"
+      hidden={i !== 0}
+    >
+      <figure class="app-preview">
+        <a
+          class="screenshot-link"
+          href={`/screenshots/${scene.image}.webp`}
+          target="_blank"
+          rel="noopener"
+          aria-label={`View full size: ${scene.label}`}
+        >
+          <img
+            src={`/screenshots/${scene.image}-1440.webp`}
+            srcset={`/screenshots/${scene.image}-960.webp 960w, /screenshots/${scene.image}-1440.webp 1440w, /screenshots/${scene.image}.webp 2880w`}
+            sizes="(max-width: 700px) calc(100vw - 36px), (max-width: 1244px) calc(100vw - 64px), 1180px"
+            width="2880"
+            height="2000"
+            alt={scene.alt}
+            loading="lazy"
+            decoding="async"
+          />
+          <span class="screenshot-expand">
+            <Icon name="plus" size={14} /> View full size
+          </span>
+        </a>
+        <figcaption>
+          <div>
+            <strong>{scene.title}</strong>
+            <p>{scene.description}</p>
+          </div>
+          <a href={`${repository}/pull/18`}>
+            Explore the sample <Icon name="arrow" size={14} />
+          </a>
+        </figcaption>
+      </figure>
+    </div>
+  ))}
+  <p class="capture-note">
+    Real extension, real agent response, public Diff City demo PR. Full browser
+    captures at normal zoom; no private repositories or other account avatars
+    are shown. Conversations stay private until you explicitly publish feedback.
+  </p>
+</section>
+
+<script>
+  const tabs = Array.from(
+    document.querySelectorAll<HTMLButtonElement>(
+      '.companion-tabs [role="tab"]',
+    ),
+  );
+  const activate = (tab: HTMLButtonElement, focus = false) => {
+    tabs.forEach((item) => {
+      const active = item === tab;
+      item.setAttribute("aria-selected", String(active));
+      item.tabIndex = active ? 0 : -1;
+      const panel = document.getElementById(
+        item.getAttribute("aria-controls")!,
+      );
+      if (panel) panel.hidden = !active;
+    });
+    if (focus) tab.focus();
+  };
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => activate(tab));
+    tab.addEventListener("keydown", (event) => {
+      const next = {
+        ArrowRight: (index + 1) % tabs.length,
+        ArrowLeft: (index + tabs.length - 1) % tabs.length,
+        Home: 0,
+        End: tabs.length - 1,
+      }[event.key];
+      if (next === undefined) return;
+      event.preventDefault();
+      activate(tabs[next], true);
+    });
+  });
+</script>

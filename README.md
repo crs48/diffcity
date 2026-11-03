@@ -1,12 +1,33 @@
 # diffcity
 
-AI code review for GitHub pull requests with your existing **Claude Code** or **OpenAI Codex** agent. Diff City is a desktop workspace for guided diffs, inline AI conversations, and local review drafts. Consequential changes come first; assessed routine changes fold into summaries you can expand.
+AI code review for GitHub pull requests with your existing **Claude Code** or **OpenAI Codex** agent. Diff City gives you guided diffs, inline AI conversations, and local review drafts in a desktop workspace, with a **Chrome companion** for reviewing directly inside GitHub. Consequential changes come first; assessed routine changes fold into summaries you can expand.
 
 **Status:** public macOS alpha. **Owner:** Christopher Smothers. **License:** [MIT](LICENSE).
 
-[Download for Mac](https://github.com/crs48/diffcity/releases) · [Website](https://diff.city) · [Installation](docs/installation.md) · [Contributing](CONTRIBUTING.md)
+[Download for Mac](https://github.com/crs48/diffcity/releases) · [Chrome extension](docs/chrome-extension.md) · [Website](https://diff.city) · [Installation](docs/installation.md) · [Contributing](CONTRIBUTING.md)
 
 Apple silicon (M1 or newer), macOS 14+. Download the DMG from Releases and drag Diff City into Applications. Early unsigned alphas are **not notarized** and require macOS approval on first launch; the release notes state the signing status. Bring your GitHub CLI login and a local Codex or Claude Code installation. No Diff City account is required. Updates are manual for now.
+
+## Your coding agent, inside GitHub
+
+The **Chrome companion** adds Diff City to the PR you’re already reading:
+
+- **Ask beside the code.** Click the Diff City icon on a line or selected text and have a private AI conversation inline in GitHub’s diff.
+- **Discuss review comments.** Ask about an existing GitHub comment with its discussion attached, or continue a code conversation in the PR chat side panel.
+- **Open the full guide.** Follow the walkthrough in a separate browser tab, using the same saved guides, conversations, and review progress as the desktop app.
+
+![GitHub’s Diff City demo PR with a private inline AI conversation reviewing a delete endpoint](apps/site/public/screenshots/github-inline.webp)
+
+<details>
+<summary>See the PR chat side panel</summary>
+
+![GitHub’s Diff City demo PR with the extension’s contextual AI chat alongside the code](apps/site/public/screenshots/github-chat.webp)
+
+</details>
+
+Real extension captures from [public demo PR #18](https://github.com/crs48/diffcity/pull/18), at normal zoom, with a real agent response. No private repositories or other account avatars are shown. Questions remain private; posting GitHub feedback is a separate, explicit action.
+
+**Try the source alpha:** [build and install the Chrome companion](docs/chrome-extension.md). It currently requires Chrome 120+ on an Apple silicon Mac, a matching source build of the desktop app, and **Developer mode → Load unpacked**. The published **v0.1.0-alpha.1** desktop download predates the Chrome connection. The extension is not currently listed in the Chrome Web Store.
 
 ## See the review workflow
 

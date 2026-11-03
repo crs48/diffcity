@@ -146,7 +146,7 @@ const screenshots = [
 </p>
 <script>
   const tabs = Array.from(
-    document.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+    document.querySelectorAll<HTMLButtonElement>('.preview-tabs [role="tab"]'),
   );
   const activate = (tab: HTMLButtonElement, focus = false) => {
     tabs.forEach((item) => {
