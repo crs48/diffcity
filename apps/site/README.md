@@ -52,7 +52,7 @@ The extension gallery was captured on November 3, 2026 on public [demo PR #18](h
 
 The question asks for three checks before approving the demo delete endpoint. Codex discusses authorization, the path parameter contract, and failure cases, and identifies the file as an intentionally defective fixture. The response is shown as generated; it is not a verified security assessment. No comments were published to GitHub for these captures.
 
-The companion currently requires the matching source build documented in [the setup guide](../../docs/chrome-extension.md). The published `v0.1.0-alpha.1` desktop download predates the browser connection. Keep this distinction visible until a compatible release is published; do not imply a Chrome Web Store listing exists. Check both companion tabs independently of the desktop gallery, including arrow-key navigation, after editing either component.
+The companion has matching desktop and Chrome ZIP downloads from `v0.1.0-alpha.2`, documented in [the setup guide](../../docs/chrome-extension.md). Set `PUBLIC_CHROME_DOWNLOAD_URL` to the extension ZIP alongside `PUBLIC_MACOS_DOWNLOAD_URL`; the site rejects URLs from different releases. Publish and verify both artifacts before changing these variables. The extension uses Developer mode installation; do not imply a Chrome Web Store listing exists. Check both companion tabs independently of the desktop gallery, including arrow-key navigation, after editing either component.
 
 ## Refreshing screenshots
 

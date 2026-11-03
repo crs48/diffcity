@@ -27,7 +27,7 @@ The **Chrome companion** adds Diff City to the PR you’re already reading:
 
 Real extension captures from [public demo PR #18](https://github.com/crs48/diffcity/pull/18), at normal zoom, with a real agent response. No private repositories or other account avatars are shown. Questions remain private; posting GitHub feedback is a separate, explicit action.
 
-**Try the source alpha:** [build and install the Chrome companion](docs/chrome-extension.md). It currently requires Chrome 120+ on an Apple silicon Mac, a matching source build of the desktop app, and **Developer mode → Load unpacked**. The published **v0.1.0-alpha.1** desktop download predates the Chrome connection. The extension is not currently listed in the Chrome Web Store.
+**Download the matching alpha:** [Mac app](https://github.com/crs48/diffcity/releases/download/v0.1.0-alpha.2/diffcity-macos-arm64.dmg) + [Chrome extension ZIP](https://github.com/crs48/diffcity/releases/download/v0.1.0-alpha.2/diffcity-chrome-0.1.0.2.zip). The browser connection is included in **v0.1.0-alpha.2**. Install the Mac app, enable **Connections → Enable Chrome connection**, then unzip the extension into a permanent folder and load it with **Developer mode → Load unpacked**. No source build is needed. Requires Chrome 120+ and an Apple silicon Mac running macOS 14+. [Setup, checksums, and manual updates](docs/chrome-extension.md). The extension is not currently listed in the Chrome Web Store.
 
 ## See the review workflow
 
