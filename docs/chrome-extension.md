@@ -2,13 +2,19 @@
 
 Diff City's Chrome extension brings local Codex and Claude conversations to GitHub pull requests. The full guide uses the desktop app's renderer: Markdown and Mermaid overviews, code notes, naming decisions, inline conversations, the navigation rail, and review progress.
 
-## Try the source alpha
+## Install the alpha
 
-The companion is an early source preview for **Chrome 120+ on Apple silicon Macs running macOS 14+**. It is not listed in the Chrome Web Store. The published **v0.1.0-alpha.1** desktop release predates the Chrome connection, so it cannot be used with this preview. Build both components from the same revision below.
+The companion supports **Chrome 120+ on Apple silicon Macs running macOS 14+**. The connection is included in **Diff City v0.1.0-alpha.2**; no source build is needed. The extension is installed manually, not through the Chrome Web Store.
 
-1. [Build the preview](#build-the-preview) and copy the resulting `diffcity.app` into Applications. Sign into GitHub CLI and your local Codex or Claude Code installation as described in the [development setup](../README.md#run-locally).
+Download both components from [the same alpha release](https://github.com/crs48/diffcity/releases/tag/v0.1.0-alpha.2):
+
+- [Diff City for Mac](https://github.com/crs48/diffcity/releases/download/v0.1.0-alpha.2/diffcity-macos-arm64.dmg)
+- [Chrome companion ZIP](https://github.com/crs48/diffcity/releases/download/v0.1.0-alpha.2/diffcity-chrome-0.1.0.2.zip)
+- [SHA256 checksums](https://github.com/crs48/diffcity/releases/download/v0.1.0-alpha.2/SHA256SUMS.txt)
+
+1. Install `diffcity.app` in Applications and follow the [macOS installation instructions](installation.md), including unsigned-alpha approval and your GitHub/agent CLI logins. The older alpha.1 desktop download does not support this connection.
 2. In Diff City, open **Connections → Enable Chrome connection**. Keep the app installed at that location. If you move it, enable the connection again.
-3. Locate `apps/extension/dist` in your checkout, or unzip the archive generated in `.local/extension`.
+3. Unzip the Chrome companion into a permanent folder, such as `~/Applications/Diff City Chrome`. Keep that folder in place after loading it.
 4. In Chrome 120 or later, open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the extracted directory containing `manifest.json`.
 5. Open a GitHub pull request. Use the book icon to **Open Diff City guide**, or the colored Diff City logo to ask about the PR, a file, a comment, or selected code. Hover over an icon for its tooltip; every button also has an accessible name. You can also use the extension toolbar button or right-click selected code and choose **Ask Diff City about this selection**.
 
@@ -24,14 +30,14 @@ The extension has no separate API keys. It uses the desktop app's configured pro
 
 Code selections must match the captured PR code uniquely. If GitHub doesn't expose enough context, Diff City asks you to select the code in its guide instead of silently sending the wrong code. GitHub comment bodies and replies come from the API, not scraped HTML. Review conversations remain private unless you explicitly prepare drafts and publish through **Finish review**.
 
-## Build the preview
+## Build from source
 
-Use the [development prerequisites](../README.md#run-locally). This known preview revision includes the desktop connection and matching extension; both are still being developed in [PR #24](https://github.com/crs48/diffcity/pull/24). Use a new directory so the checkout does not disturb work in an existing clone.
+Alternatively, use the [development prerequisites](../README.md#run-locally) and build both components from the same release tag:
 
 ```sh
 git clone https://github.com/crs48/diffcity.git diffcity-chrome
 cd diffcity-chrome
-git checkout 057c288
+git checkout v0.1.0-alpha.2
 pnpm install --frozen-lockfile
 pnpm extension:check
 pnpm extension:test
@@ -40,9 +46,15 @@ pnpm desktop:build
 open target/aarch64-apple-darwin/release/bundle/macos
 ```
 
-Copy `diffcity.app` from that folder into Applications, then open it and enable the Chrome connection. Source builds are ad-hoc signed, not notarized; see the [macOS installation notes](installation.md). Keep your extension directory in place after loading it. Updates are manual: build both components from the new preview revision, replace the desktop app, re-enable its Chrome connection, reload the extension at `chrome://extensions`, and refresh your GitHub tabs.
+Copy `diffcity.app` from that folder into Applications, then open it and enable the Chrome connection. Source builds are ad-hoc signed, not notarized; see the [macOS installation notes](installation.md).
 
 The unpacked extension is in `apps/extension/dist`; the zip is in `.local/extension`. Load the unpacked directory for development and reload it in Chrome after rebuilding. The public manifest key stabilizes the extension ID; it is not a secret or signing credential. Native host registration must match this ID.
+
+## Manual updates
+
+Quit Diff City and back up its workspace as described in [updates and recovery](installation.md#updates-and-recovery). Install the new desktop app, replace the contents of your unpacked extension folder with the ZIP from the same release, and enable the Chrome connection again. Click **Reload** for Diff City at `chrome://extensions`, then refresh your GitHub tabs. Saved guides and completed conversations remain in the desktop workspace; no source checkout is required. If you previously loaded `apps/extension/dist`, you can replace its contents with the downloaded ZIP and reload it, or load the extracted ZIP from a new permanent folder.
+
+Chrome displays the numeric extension version **0.1.0.2** with release label **0.1.0-alpha.2**. The release's `release.json` records both versions. Follow the [checksum instructions](installation.md#verify-your-download) before installing.
 
 ### Verify the native side panel
 

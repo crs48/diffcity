@@ -10,6 +10,10 @@ Diff City currently supports **Apple silicon Macs (M1 or newer), macOS 14 or lat
 
 No Diff City account is required. AI requests use your model provider's subscription or API billing. The desktop **Limited** access mode is the default; review the implications before enabling broader access.
 
+## Chrome companion
+
+The browser connection is included in **v0.1.0-alpha.2 and later**. Download the desktop app and Chrome companion ZIP from the **same release**. In the installed app, choose **Connections → Enable Chrome connection**, then unzip the extension into a permanent folder and load it using Chrome's **Developer mode → Load unpacked**. See the [complete Chrome setup guide](chrome-extension.md). No source build or Chrome Web Store account is needed.
+
 ## Verify your download
 
 Download `SHA256SUMS.txt` from the same release into the same folder as the DMG or ZIP, then run:

@@ -1,6 +1,6 @@
 ---
 import Icon from "./Icon.astro";
-import { repository } from "../config";
+import { repository, chromeDownloadUrl } from "../config";
 const scenes = [
   {
     id: "inline",
@@ -31,7 +31,7 @@ const scenes = [
   <div class="companion-intro">
     <div>
       <span class="eyebrow">
-        <Icon name="github" size={16} /> Chrome companion · source alpha
+        <Icon name="github" size={16} /> Chrome companion · alpha
       </span>
       <h2 id="companion-title">
         Your agent.
@@ -46,15 +46,25 @@ const scenes = [
     <div class="companion-setup">
       <a
         class="button button-primary"
-        href={`${repository}/blob/main/docs/chrome-extension.md`}
+        href={
+          chromeDownloadUrl ??
+          `${repository}/blob/main/docs/chrome-extension.md`
+        }
       >
-        Set up the extension <Icon name="arrow" size={17} />
+        {chromeDownloadUrl ? "Download for Chrome" : "Set up the extension"}{" "}
+        <Icon name="arrow" size={17} />
       </a>
       <p>
-        For Mac + Chrome. Build the companion and desktop app together, then
-        load the extension in Developer mode. The published v0.1.0-alpha.1
-        desktop download does not include the connection yet.
+        For Mac + Chrome. Install <a href="#download">Diff City for Mac</a>,
+        enable the Chrome connection in Connections, then unzip and load the
+        extension in Developer mode. No source build needed.
       </p>
+      <a
+        class="text-link"
+        href={`${repository}/blob/main/docs/chrome-extension.md`}
+      >
+        Installation instructions <Icon name="arrow" size={14} />
+      </a>
       <span>Not listed in the Chrome Web Store.</span>
     </div>
   </div>
