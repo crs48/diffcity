@@ -11,24 +11,30 @@ export type PullContext = {
     side?: "LEFT" | "RIGHT";
   };
 };
-export function pullFromUrl(input: string): PullContext | null {
+export function githubPageUrl(input: string | undefined): URL | null {
+  if (!input) return null;
   try {
     const url = new URL(input);
-    if (url.origin !== "https://github.com" || url.username || url.password)
-      return null;
-    const match = url.pathname.match(
-      /^\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)(?:\/|$)/,
-    );
-    const number = Number(match?.[2]);
-    return match &&
-      Number.isSafeInteger(number) &&
-      number > 0 &&
-      number <= 0xffffffff
-      ? { repository: match[1], number }
+    return url.origin === "https://github.com" && !url.username && !url.password
+      ? url
       : null;
   } catch {
     return null;
   }
+}
+export function pullFromUrl(input: string): PullContext | null {
+  const url = githubPageUrl(input);
+  if (!url) return null;
+  const match = url.pathname.match(
+    /^\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)(?:\/|$)/,
+  );
+  const number = Number(match?.[2]);
+  return match &&
+    Number.isSafeInteger(number) &&
+    number > 0 &&
+    number <= 0xffffffff
+    ? { repository: match[1], number }
+    : null;
 }
 export function safeContext(raw: unknown, tabUrl: string): PullContext | null {
   const pull = pullFromUrl(tabUrl);

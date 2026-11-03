@@ -11,6 +11,7 @@ import { savedInlineThreads } from "./inlineRestore";
 import { anchorKey } from "../../desktop/src/lib/diffRows";
 import { inlineAnchor } from "./context";
 import {
+  githubPageUrl,
   pullFromUrl,
   safeContext,
   trustedPage,
@@ -290,13 +291,18 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     return true;
   }
   const tabId = sender.tab?.id;
+  const tabUrl = sender.tab?.url;
   if (
     tabId !== undefined &&
-    sender.url &&
-    sender.url === sender.tab?.url &&
-    (sender.frameId ?? 0) === 0
+    tabUrl &&
+    githubPageUrl(sender.url) &&
+    sender.frameId === 0 &&
+    (!sender.documentLifecycle || sender.documentLifecycle === "active")
   ) {
-    const context = safeContext(message?.context, sender.url);
+    // Chrome retains the content script's original document URL across GitHub's
+    // same-document navigation (including comment hashes and switching PRs).
+    // Trust only a GitHub top frame, and scope every request to its CURRENT tab PR.
+    const context = safeContext(message?.context, tabUrl);
     if (!context) {
       respond({ error: "Invalid GitHub pull request context" });
       return;
@@ -316,7 +322,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
               if (
                 !key.startsWith("inline:") ||
                 grant.tabId !== tabId ||
-                !safeContext(grant.context, sender.url!) ||
+                !safeContext(grant.context, tabUrl) ||
                 Date.now() - grant.createdAt > 24 * 60 * 60 * 1000
               )
                 return false;
@@ -380,7 +386,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
           return (
             key.startsWith("inline:") &&
             grant.tabId === tabId &&
-            !!safeContext(grant.context, sender.url!) &&
+            !!safeContext(grant.context, tabUrl) &&
             Date.now() - grant.createdAt <= 24 * 60 * 60 * 1000 &&
             sameAnchor(grant.anchor ?? null, anchor)
           );

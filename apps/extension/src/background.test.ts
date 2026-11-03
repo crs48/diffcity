@@ -168,6 +168,128 @@ it("page messages can only navigate to the same PR and never dispatch an agent c
   expect(browser.runtime.connectNative).not.toHaveBeenCalled();
 });
 
+it.each([
+  "https://github.com/example/repo/pull/1",
+  "https://github.com/example/repo/pull/1/files?diff=split#diff-abc",
+  "https://github.com/example/repo/pull/2",
+  "https://github.com/example/repo/pulls",
+])(
+  "uses the current PR after same-document navigation from %s",
+  async (url) => {
+    const currentUrl = "https://github.com/example/repo/pull/1#discussion_r1";
+    const sender = { url, frameId: 0, tab: { id: 1, url: currentUrl } };
+    const context = {
+      repository: "example/repo",
+      number: 1,
+      commentUrl: currentUrl,
+    };
+    const send = browser.runtime.onMessage.addListener.mock.calls[0][0];
+    const respond = vi.fn();
+    send({ type: "ask", context }, sender, respond);
+    // The panel must still open in the original click's synchronous call stack.
+    expect(browser.sidePanel.open).toHaveBeenCalledWith({ tabId: 1 });
+    await vi.waitFor(() => expect(respond).toHaveBeenCalledWith({ ok: true }));
+    expect(browser.storage.session.set).toHaveBeenCalledWith({
+      reviewContext: { context, tabId: 1, nonce: expect.any(String) },
+    });
+    expect(browser.runtime.connectNative).not.toHaveBeenCalled();
+  },
+);
+
+it("creates and reuses a comment conversation after a GitHub URL change", async () => {
+  const w = indexedWorkspace();
+  const url = `https://github.com/${w.snapshot.pull.repository}/pull/${w.snapshot.pull.number}`;
+  w.comments.forEach((comment) => {
+    comment.url = `${url}#discussion_r${comment.id === "root" ? 1 : 2}`;
+  });
+  const context = {
+    repository: w.snapshot.pull.repository,
+    number: w.snapshot.pull.number,
+    commentUrl: `${url}#discussion_r1`,
+  };
+  const sender = {
+    url: "https://github.com/example/repo/pulls",
+    frameId: 0,
+    tab: { id: 1, url: `${url}/files#discussion_r1` },
+  };
+  const send = browser.runtime.onMessage.addListener.mock.calls[0][0];
+  const respond = vi.fn();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    respond.mockClear();
+    expect(send({ type: "create-inline", context }, sender, respond)).toBe(
+      true,
+    );
+    const request = native.postMessage.mock.calls.at(-1)![0];
+    expect(request).toMatchObject({
+      command: "open_pull",
+      args: {
+        repository: context.repository,
+        number: context.number,
+        refresh: true,
+      },
+    });
+    native.onMessage.addListener.mock.calls[0][0]({
+      message: crypto.randomUUID(),
+      chunk: JSON.stringify({ id: request.id, result: w }),
+      last: true,
+    });
+    await vi.waitFor(() => expect(respond).toHaveBeenCalled());
+    const stored = browser.storage.session.set.mock.calls[0][0];
+    const id = Object.keys(stored)[0].slice("inline:".length);
+    expect(respond).toHaveBeenCalledWith({
+      id,
+      key: expect.any(String),
+      url: `${origin}/inline.html?id=${id}`,
+    });
+    browser.storage.session.get.mockResolvedValue(stored);
+  }
+  expect(browser.storage.session.set).toHaveBeenCalledTimes(1);
+});
+
+it("rejects foreign, embedded, inactive, or stale-PR messages after navigation", () => {
+  const url = "https://github.com/example/repo/pull/1";
+  const context = { repository: "example/repo", number: 1 };
+  const send = browser.runtime.onMessage.addListener.mock.calls[0][0];
+  for (const sender of [
+    {
+      url: "https://github.com.attacker.test/",
+      frameId: 0,
+      tab: { id: 1, url },
+    },
+    { url: "http://github.com/", frameId: 0, tab: { id: 1, url } },
+    { url: "https://token@github.com/", frameId: 0, tab: { id: 1, url } },
+    { url, frameId: 1, tab: { id: 1, url } },
+    { url, frameId: 0, documentLifecycle: "cached", tab: { id: 1, url } },
+    { url, frameId: 0, tab: { id: 1, url: `${url}0` } },
+    {
+      url,
+      frameId: 0,
+      tab: { id: 1, url: "https://github.com/other/repo/pull/1" },
+    },
+    {
+      url,
+      frameId: 0,
+      tab: { id: 1, url: "https://github.com/example/repo/issues/1" },
+    },
+    { url, frameId: 0, tab: { id: 1 } },
+    { url, tab: { id: 1, url } },
+  ]) {
+    const respond = vi.fn();
+    send(
+      {
+        type: "create-inline",
+        context: { ...context, commentUrl: `${url}#discussion_r1` },
+      },
+      sender,
+      respond,
+    );
+    expect(respond).toHaveBeenCalledWith({ error: expect.any(String) });
+  }
+  expect(browser.runtime.connectNative).not.toHaveBeenCalled();
+  expect(browser.storage.session.set).not.toHaveBeenCalled();
+  expect(browser.sidePanel.open).not.toHaveBeenCalled();
+});
+
 it("restricts embedded frames to a saved grant on the same tab and PR", async () => {
   const id = "12345678-1234-1234-1234-123456789abc";
   const url = "https://github.com/example/repo/pull/1/files";
@@ -257,7 +379,11 @@ it("restores only this PR's saved inline locations, reusing drafts without leaki
   browser.storage.session.get.mockResolvedValue({ [`inline:${id}`]: grant });
   const send = browser.runtime.onMessage.addListener.mock.calls[0][0];
   const respond = vi.fn();
-  const sender = { url, frameId: 0, tab: { id: 1, url } };
+  const sender = {
+    url: "https://github.com/example/repo/pulls",
+    frameId: 0,
+    tab: { id: 1, url },
+  };
   send(
     {
       type: "restore-inline",
