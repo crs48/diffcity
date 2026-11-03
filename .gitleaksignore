@@ -1,0 +1,3 @@
+# Chrome manifest.key is an RSA SPKI PUBLIC key that stabilizes the extension ID.
+# It is not a signing key or API credential. Ignore only this historical finding.
+be7674f373a350a33dc44154f23dbcd6037d36d7:apps/extension/public/manifest.json:generic-api-key:7
