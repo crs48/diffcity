@@ -17,6 +17,8 @@ import { indexedWorkspace } from "../lib/guideIndex.fixture";
 import type { ReviewWorkspace } from "../lib/api";
 import { namingTarget, noteTarget, threadTarget } from "../lib/guideIndex";
 import "../i18n";
+import type { AiRun } from "./useAiRuns";
+import { readReplies, replyScope } from "../lib/readReplies";
 vi.mock("../ui/MermaidDiagram", () => ({ MermaidDiagram: () => <figure /> }));
 beforeEach(() => {
   vi.stubGlobal(
@@ -63,15 +65,17 @@ const ask = vi.fn();
 const onSelect = vi.fn();
 function Example({
   initial = indexedWorkspace(),
+  runs = [],
 }: {
   initial?: ReviewWorkspace;
+  runs?: AiRun[];
 }) {
   const [w, setW] = useState(initial);
   const c = {
     workspace: w,
     inline: { draft: null, focus: 0 },
     chat: { draft: null },
-    runs: [],
+    runs,
     isBusy: () => false,
     modelFor: () => ({ model: "claude-fable-5" }),
     ask,
@@ -122,6 +126,52 @@ async function jumpTo(title: string) {
     .setup()
     .click(within(dialog).getByRole("button", { name: `Jump to ${title}` }));
 }
+
+it("shows activity on grouped markers and keeps unread replies until they are actually viewed", async () => {
+  const w = indexedWorkspace();
+  w.snapshot.pull.repository = "example/rail-activity";
+  const run: AiRun = {
+    id: "run",
+    snapshotId: w.snapshot.id,
+    kind: "question",
+    question: w.notes[0],
+    phase: "working",
+    text: "Thinking",
+    stream: "",
+    preference: {
+      provider: "claude",
+      model: "claude-fable-5",
+      reasoningEffort: "high",
+    },
+  };
+  const view = render(<Example initial={w} runs={[run]} />);
+  const rail = screen.getByRole("navigation", { name: "Guide index" });
+  const marker = await waitFor(() => {
+    const item = rail.querySelector<HTMLButtonElement>(
+      '[data-index-marker][aria-label*="Unread AI response"]',
+    );
+    expect(item).toBeTruthy();
+    return item!;
+  });
+  expect(marker.querySelector(".reply-thinking .spin")).toBeTruthy();
+  expect(marker.querySelector(".reply-unread-dot")).toBeTruthy();
+  view.rerender(<Example initial={w} />);
+  expect(marker.querySelector(".reply-thinking")).toBeNull();
+  const dialog = await browse();
+  await userEvent
+    .setup()
+    .click(within(dialog).getByRole("button", { name: "Unread AI" }));
+  expect(within(dialog).getAllByRole("listitem")).toHaveLength(1);
+  await userEvent.setup().click(
+    within(dialog).getByRole("button", {
+      name: "Jump to Invitation migration rollout",
+    }),
+  );
+  expect(marker.querySelector(".reply-unread-dot")).toBeTruthy();
+  // The receipt comes from the visible response, not the navigation click.
+  act(() => readReplies(replyScope(w.snapshot.pull)).mark(["answer"]));
+  expect(marker.querySelector(".reply-unread-dot")).toBeNull();
+});
 
 it("scrolls directly to grouped markers with mouse or keyboard without opening another picker", async () => {
   render(<Example />);

@@ -23,6 +23,14 @@ import { threadTarget } from "../lib/guideIndex";
 import { useGuideJump } from "./guideJump";
 import { CopyConversation } from "./CopyConversation";
 import { resolvedThread } from "../lib/commentContext";
+import { replyScope } from "../lib/readReplies";
+import {
+  emptyActivity,
+  replyActivity,
+  replyThreadKey,
+  useReadReplies,
+} from "./useReplyActivity";
+import { ReplyActivity } from "./ReplyActivity";
 
 export function InlineDiscussion({
   thread,
@@ -37,6 +45,12 @@ export function InlineDiscussion({
 }) {
   const { t } = useTranslation();
   const c = useConversation();
+  const read = useReadReplies(c ? replyScope(c.workspace.snapshot.pull) : "");
+  const activity = c
+    ? (replyActivity(thread.notes, c.runs, c.workspace.snapshot.id, read).get(
+        replyThreadKey(thread.anchor),
+      ) ?? emptyActivity)
+    : emptyActivity;
   const root = useRef<HTMLElement>(null);
   const header = useRef<HTMLElement>(null);
   const keepHeader = useRef(false);
@@ -110,6 +124,7 @@ export function InlineDiscussion({
             {t("Private AI conversation")}
             {resolved && ` · ${t("Resolved")}`}
           </span>
+          <ReplyActivity activity={activity} />
         </div>
         <CopyConversation
           conversation={c}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type RefObject } from "react";
+import { useEffect, useId, useMemo, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
   Button,
@@ -36,6 +36,22 @@ import {
 import { IconAction } from "../ui/IconAction";
 import { useGuideIndexLayout } from "./useGuideIndexLayout";
 import { useGuideIndexScrub } from "./useGuideIndexScrub";
+import { useConversation } from "./conversation";
+import { replyScope } from "../lib/readReplies";
+import {
+  combinedActivity,
+  emptyActivity,
+  replyActivity,
+  useReadReplies,
+  type ReplyActivity as Activity,
+} from "./useReplyActivity";
+import { ReplyActivity, replyActivityLabel } from "./ReplyActivity";
+
+type Activities = ReadonlyMap<string, Activity>;
+const entryActivity = (entry: GuideIndexEntry, activities: Activities) =>
+  entry.kind === "conversation"
+    ? (activities.get(entry.id.slice("conversation:".length)) ?? emptyActivity)
+    : emptyActivity;
 
 const kinds = {
   overview: { label: "Overview", Icon: BookOpen },
@@ -66,9 +82,13 @@ function EntryIcon({ entry }: { entry: GuideIndexEntry }) {
 
 function EntryPreview({
   entry,
+  activity,
+  statusId,
   compact = false,
 }: {
   entry: GuideIndexEntry;
+  activity: Activity;
+  statusId: string;
   compact?: boolean;
 }) {
   const { t } = useTranslation();
@@ -80,6 +100,12 @@ function EntryPreview({
         {entry.chat ? ` · ${t("PR chat")}` : ""}
       </span>
       <strong>{entry.title || t(kinds[entry.kind].label)}</strong>
+      <span
+        id={statusId}
+        hidden={!activity.unread && !activity.working && !activity.queued}
+      >
+        <ReplyActivity activity={activity} />
+      </span>
       {entry.reviewed && (
         <span className="guide-index-reviewed-label">
           <Check size={13} aria-hidden />
@@ -103,21 +129,25 @@ function EntryPreview({
 
 function IndexList({
   entries,
+  activities,
   onJump,
   close,
   title,
 }: {
   entries: GuideIndexEntry[];
+  activities: Activities;
   onJump: (entry: GuideIndexEntry) => void;
   close: () => void;
   title: string;
 }) {
   const { t } = useTranslation();
+  const statusPrefix = useId();
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<GuideIndexKind | null>(null);
+  const [kind, setKind] = useState<GuideIndexKind | "unread" | null>(null);
   const filtered = entries.filter(
     (e) =>
       (!kind ||
+        (kind === "unread" && entryActivity(e, activities).unread > 0) ||
         e.kind === kind ||
         (kind === "section" && e.kind === "overview")) &&
       `${e.title} ${e.body} ${e.anchor?.path ?? ""}`
@@ -158,6 +188,13 @@ function IndexList({
         <Button aria-pressed={!kind} onPress={() => setKind(null)}>
           {t("All locations")}
         </Button>
+        <Button
+          aria-pressed={kind === "unread"}
+          onPress={() => setKind(kind === "unread" ? null : "unread")}
+        >
+          <span className="reply-unread-dot" aria-hidden />
+          {t("Unread AI")}
+        </Button>
         {categories
           .filter((k) => entries.some((e) => e.kind === k))
           .map((k) => {
@@ -180,15 +217,20 @@ function IndexList({
         role="list"
         aria-label={t("Guide locations")}
       >
-        {filtered.map((entry) => (
+        {filtered.map((entry, index) => (
           <div role="listitem" key={entry.id}>
             <Button
               onPress={() => choose(entry)}
+              aria-describedby={`${statusPrefix}-${index}`}
               aria-label={t("Jump to {{title}}", {
                 title: entry.title || t(kinds[entry.kind].label),
               })}
             >
-              <EntryPreview entry={entry} />
+              <EntryPreview
+                entry={entry}
+                activity={entryActivity(entry, activities)}
+                statusId={`${statusPrefix}-${index}`}
+              />
             </Button>
           </div>
         ))}
@@ -202,6 +244,7 @@ function IndexList({
 
 function IndexMarker({
   group,
+  activities,
   active,
   tabIndex,
   onFocus,
@@ -211,6 +254,7 @@ function IndexMarker({
   didDrag,
 }: {
   group: IndexGroup;
+  activities: Activities;
   active: boolean;
   tabIndex: number;
   onFocus: () => void;
@@ -220,11 +264,16 @@ function IndexMarker({
   didDrag: RefObject<boolean>;
 }) {
   const { t } = useTranslation();
+  const statusPrefix = useId();
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (scrubbing) setOpen(false);
   }, [scrubbing]);
   const { items } = group;
+  const activity = combinedActivity(
+    items.map((entry) => entryActivity(entry, activities)),
+  );
+  const busy = activity.working + activity.queued > 0;
   const mixed = new Set(items.map((e) => e.kind)).size > 1;
   const first = items[0];
   const label =
@@ -250,11 +299,13 @@ function IndexMarker({
       >
         <Button
           className={`guide-index-marker ${group.lane} index-${mixed ? "mixed" : first.kind}`}
-          aria-label={
-            items.length === 1 && first.reviewed
-              ? `${label} · ${t("Code reviewed")}`
-              : label
-          }
+          aria-label={[
+            label,
+            items.length === 1 && first.reviewed ? t("Code reviewed") : "",
+            replyActivityLabel(activity, t),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
           aria-current={active ? "location" : undefined}
           data-index-marker={group.id}
           excludeFromTabOrder={tabIndex < 0}
@@ -271,13 +322,14 @@ function IndexMarker({
             else onJump(first);
           }}
         >
-          {group.lane === "sections" ? (
+          {busy ? null : group.lane === "sections" ? (
             <span className="guide-index-chapter-dot" aria-hidden />
           ) : mixed ? (
             <Layers size={15} aria-hidden />
           ) : (
             <EntryIcon entry={first} />
           )}
+          <ReplyActivity activity={activity} compact />
           {items.length > 1 && group.lane === "activity" && (
             <span className="guide-index-count">
               {items.length > 99 ? "99+" : items.length}
@@ -297,9 +349,10 @@ function IndexMarker({
               role="list"
               aria-label={t("Guide locations")}
             >
-              {items.map((entry) => (
+              {items.map((entry, index) => (
                 <div key={entry.id} role="listitem">
                   <Button
+                    aria-describedby={`${statusPrefix}-${index}`}
                     aria-label={t("Jump to {{title}}", {
                       title: entry.title || t(kinds[entry.kind].label),
                     })}
@@ -309,7 +362,12 @@ function IndexMarker({
                       requestAnimationFrame(() => onJump(entry));
                     }}
                   >
-                    <EntryPreview entry={entry} compact={items.length > 1} />
+                    <EntryPreview
+                      entry={entry}
+                      activity={entryActivity(entry, activities)}
+                      statusId={`${statusPrefix}-${index}`}
+                      compact={items.length > 1}
+                    />
                   </Button>
                 </div>
               ))}
@@ -334,6 +392,16 @@ export function GuideIndex({
 }) {
   const { t } = useTranslation();
   const { snapshot, guide, notes, comments, progress } = w;
+  const conversation = useConversation();
+  const read = useReadReplies(replyScope(snapshot.pull));
+  // Keep activity out of the geometry inputs: streamed tokens and read receipts
+  // should only repaint status, never rescan the guide's layout.
+  const activities = replyActivity(
+    notes,
+    conversation?.runs ?? [],
+    snapshot.id,
+    read,
+  );
   const entries = useMemo(
     () => buildGuideIndex({ snapshot, guide, notes, comments, progress }),
     [snapshot, guide, notes, comments, progress],
@@ -387,6 +455,7 @@ export function GuideIndex({
             {({ close }) => (
               <IndexList
                 entries={entries}
+                activities={activities}
                 title={t("Guide index")}
                 close={close}
                 onJump={onJump}
@@ -457,6 +526,7 @@ export function GuideIndex({
           <IndexMarker
             key={group.id}
             group={group}
+            activities={activities}
             active={group.items.some(
               (e) =>
                 (e.kind === "section" || e.kind === "overview") &&
@@ -483,6 +553,12 @@ export function GuideIndex({
           <p className="guide-index-legend">
             <span className="guide-index-reviewed-swatch" aria-hidden />
             {t("Reviewed section")}
+          </p>
+          <p className="guide-index-legend">
+            <ReplyActivity activity={{ ...emptyActivity, working: 1 }} />
+          </p>
+          <p className="guide-index-legend">
+            <ReplyActivity activity={{ ...emptyActivity, unread: 1 }} />
           </p>
           {categories.map((kind) => {
             const Icon = kinds[kind].Icon;

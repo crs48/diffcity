@@ -4575,6 +4575,47 @@
     background: var(--bg);
     color: var(--muted);
   }
+  .reply-activity,
+  .reply-thinking,
+  .reply-unread {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--blue);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .reply-activity {
+    flex-wrap: wrap;
+    gap: 5px 10px;
+  }
+  .reply-unread-dot {
+    display: inline-block;
+    flex: 0 0 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--blue);
+    forced-color-adjust: none;
+  }
+  .guide-index-marker > .reply-activity.compact {
+    position: absolute;
+    inset: 0;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .guide-index-marker .reply-unread {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reply-thinking .spin {
+      animation: none;
+    }
+  }
   .guide-index .index-conversation,
   .guide-index-type:has(.lucide-sparkles),
   .guide-index-legend.index-conversation,

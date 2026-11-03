@@ -681,5 +681,9 @@
   "{{count}} findings_one": "{{count}} hallazgo",
   "{{count}} findings_other": "{{count}} hallazgos",
   "Guide position": "Posición en la guía",
-  "Hover to browse locations. Click a preview to jump there. Click or drag the rail to scroll. Use arrow keys to move between markers.": "Pasa el cursor para explorar ubicaciones. Haz clic en una vista previa para ir allí. Haz clic o arrastra la barra para desplazarte. Usa las flechas para moverte entre marcadores."
+  "Hover to browse locations. Click a preview to jump there. Click or drag the rail to scroll. Use arrow keys to move between markers.": "Pasa el cursor para explorar ubicaciones. Haz clic en una vista previa para ir allí. Haz clic o arrastra la barra para desplazarte. Usa las flechas para moverte entre marcadores.",
+  "AI is thinking": "La IA está pensando",
+  "AI response queued": "Respuesta de IA en cola",
+  "Unread AI response": "Respuesta de IA sin leer",
+  "Unread AI": "IA sin leer"
 }

@@ -28,6 +28,8 @@ import { visibleReply } from "../lib/threadTitle";
 import { orderReviewMessages, type ReviewMessage } from "./orderReviewMessages";
 import { IconAction } from "../ui/IconAction";
 import { CopyAction } from "../ui/CopyAction";
+import { isAiReply, replyScope } from "../lib/readReplies";
+import { useReplyReceipt } from "./useReplyActivity";
 
 const noComments: RemoteComment[] = [];
 
@@ -47,6 +49,7 @@ export function ReviewMessages({
   followReplies?: RefObject<boolean>;
 }) {
   const { t } = useTranslation();
+  const trackReply = useReplyReceipt(replyScope(c.workspace.snapshot.pull));
   const ordered = useMemo(
     () => orderReviewMessages(notes, remote, c.runs),
     [notes, remote, c.runs],
@@ -100,6 +103,7 @@ export function ReviewMessages({
       const n = entry.message;
       return (
         <article
+          ref={isAiReply(n) ? trackReply : undefined}
           className={`message ${n.role}${n.githubDraft || n.publishedUrl ? " github-comment" : ""}`}
           key={`local:${n.id}`}
           data-note-id={n.id}
