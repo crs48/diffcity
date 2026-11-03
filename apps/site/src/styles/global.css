@@ -305,15 +305,59 @@
     padding: 0 7px;
     color: var(--line);
   }
+  .hero-companion {
+    margin-top: 18px;
+    color: var(--green);
+  }
+  .companion {
+    padding-bottom: 90px;
+  }
+  .companion-intro {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    align-items: center;
+    gap: 64px;
+    margin-bottom: 34px;
+    border-top: 1px solid var(--line);
+    padding-top: 72px;
+  }
+  .companion h2 {
+    margin: 18px 0;
+  }
+  .companion .section-description {
+    max-width: 54ch;
+  }
+  .companion-setup {
+    border-left: 2px solid var(--green);
+    padding-left: 24px;
+  }
+  .companion-setup p {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+    margin-top: 16px;
+    max-width: 46ch;
+  }
+  .companion-setup > span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 10px;
+  }
+  .companion [role="tabpanel"] {
+    border-radius: 13px;
+  }
   .workflow {
     scroll-margin-top: 105px;
   }
-  .preview-tabs {
+  .preview-tabs,
+  .companion-tabs {
     @apply flex flex-wrap items-center justify-center;
     gap: 4px;
     margin: 0 auto 22px;
   }
-  .preview-tabs button {
+  .preview-tabs button,
+  .companion-tabs button {
     @apply inline-flex items-center justify-center;
     gap: 7px;
     background: transparent;
@@ -323,12 +367,14 @@
     font-size: 11px;
     border-radius: 6px;
   }
-  .preview-tabs button[aria-selected="true"] {
+  .preview-tabs button[aria-selected="true"],
+  .companion-tabs button[aria-selected="true"] {
     background: var(--green-light);
     border-color: var(--pr-green);
     color: var(--green);
   }
-  .preview-tabs button:hover {
+  .preview-tabs button:hover,
+  .companion-tabs button:hover {
     color: var(--ink);
   }
   .app-preview {
@@ -778,6 +824,17 @@
   }
 }
 @media (max-width: 700px) {
+  .companion {
+    padding-bottom: 55px;
+  }
+  .companion-intro {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding-top: 45px;
+  }
+  .companion-tabs button {
+    padding: 10px;
+  }
   .container {
     width: calc(100% - 36px);
   }

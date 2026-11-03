@@ -1,4 +1,3 @@
-# Chrome's public RSA identity key fixes the unpacked extension ID; it is
-# distributed in every extension manifest, not an API credential/private key.
-# Ignore only this exact historical match, keeping other key checks enabled.
+# Chrome manifest.key is an RSA SPKI PUBLIC key that stabilizes the extension ID.
+# It is not a signing key or API credential. Ignore only this historical finding.
 be7674f373a350a33dc44154f23dbcd6037d36d7:apps/extension/public/manifest.json:generic-api-key:7

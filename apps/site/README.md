@@ -35,12 +35,24 @@ In repository **Settings → Pages**, the build source must be **GitHub Actions*
 
 - `src/pages/index.astro`: page content, metadata, theme toggle.
 - `src/components/ReviewPreview.astro`: keyboard-accessible media tabs, captions, playback controls, and source PR links.
+- `src/components/ChromeCompanion.astro`: extension setup and a separate, keyboard-accessible GitHub screenshot gallery.
 - `src/styles/global.css`: Tailwind entry point, neutral surfaces, responsive styles.
 - `../../packages/brand/palette.css`: shared GitHub PR colors for both themes; see the [palette reference](../../packages/brand/README.md).
 - `src/config.ts`: repository and validated optional download URL.
 - `public/`: domain, favicon, social image, robots file, and sitemap.
 
 Run `pnpm --filter @diffcity/site format` to format this package. Verify the built page at desktop and phone widths, all four workflow tabs, keyboard navigation, and both themes before deploying visual changes.
+
+## Chrome companion screenshots
+
+The extension gallery was captured on November 3, 2026 on public [demo PR #18](https://github.com/crs48/diffcity/pull/18), using the real extension and its local desktop connection. The browser was signed out of GitHub, with only the demo PR tab open; no private repositories or unrelated organization avatars appear. The full Chrome window is captured at normal zoom, at 2880 × 2000 pixels. Responsive WebP variants scale the entire capture without cropping or changing its content.
+
+- `github-inline`: a question on `tests/corpus/data/api/openapi.yaml` line 8 and the actual **Codex · GPT-6 Astra** response inside GitHub's diff.
+- `github-chat`: the same conversation open in the side panel, with the selected code context above the composer.
+
+The question asks for three checks before approving the demo delete endpoint. Codex discusses authorization, the path parameter contract, and failure cases, and identifies the file as an intentionally defective fixture. The response is shown as generated; it is not a verified security assessment. No comments were published to GitHub for these captures.
+
+The companion currently requires the matching source build documented in [the setup guide](../../docs/chrome-extension.md). The published `v0.1.0-alpha.1` desktop download predates the browser connection. Keep this distinction visible until a compatible release is published; do not imply a Chrome Web Store listing exists. Check both companion tabs independently of the desktop gallery, including arrow-key navigation, after editing either component.
 
 ## Refreshing screenshots
 

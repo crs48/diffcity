@@ -4,6 +4,7 @@ import "../styles/global.css";
 import Icon from "../components/Icon.astro";
 import Logo from "../components/Logo.astro";
 import ReviewPreview from "../components/ReviewPreview.astro";
+import ChromeCompanion from "../components/ChromeCompanion.astro";
 import { repository, downloadUrl, releasesUrl, notarized } from "../config";
 const features = [
   {
@@ -54,7 +55,7 @@ const details = [
   ],
 ];
 const description =
-  "AI code review for GitHub pull requests with your existing Claude Code or OpenAI Codex agent. Explore guided diffs, ask inline questions, and prepare review drafts.";
+  "Review GitHub PRs with your Claude Code or Codex agent. Guided diffs and inline AI conversations in a desktop app and Chrome extension.";
 const title = "Diff City — AI code review with Claude Code and Codex";
 ---
 
@@ -106,6 +107,7 @@ const title = "Diff City — AI code review with Claude Code and Codex";
         <div class="nav-links">
           <a href="#workflow">Workflow</a>
           <a href="#features">Features</a>
+          <a href="#chrome-extension">Extension</a>
           <a href={repository} class="github-link">
             <Icon name="github" size={17} />
             <span>GitHub</span>
@@ -165,6 +167,9 @@ const title = "Diff City — AI code review with Claude Code and Codex";
           macOS · Apple silicon <span> / </span>{" "}
           {downloadUrl ? "Early alpha" : "Open source · MIT licensed"}
         </p>
+        <a class="hero-companion text-link" href="#chrome-extension">
+          Also inside GitHub <Icon name="arrow" size={14} />
+        </a>
       </section>
       <section
         id="workflow"
@@ -228,6 +233,7 @@ const title = "Diff City — AI code review with Claude Code and Codex";
           ))}
         </div>
       </section>
+      <ChromeCompanion />
       <section class="details-section" aria-labelledby="details-title">
         <div class="container details-layout">
           <div>
@@ -338,6 +344,21 @@ const title = "Diff City — AI code review with Claude Code and Codex";
       <section class="faq container" aria-labelledby="faq-title">
         <h2 id="faq-title">A few things to know.</h2>
         <div>
+          <details>
+            <summary>
+              Can I use Diff City inside GitHub?
+              <Icon name="plus" size={18} />
+            </summary>
+            <p>
+              Yes. The <a href="#chrome-extension">Chrome companion</a> adds
+              private inline AI conversations and a PR chat side panel to
+              GitHub. Full guides open in their own tab. It connects to the Diff
+              City desktop app and uses your existing local Claude Code or Codex
+              login. The current preview requires a source build of both
+              components and manual installation; it is not in the Chrome Web
+              Store.
+            </p>
+          </details>
           <details>
             <summary>
               Does my code stay on my Mac?
